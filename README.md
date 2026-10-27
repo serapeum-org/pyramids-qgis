@@ -43,6 +43,16 @@ built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need pyramids-mesh 
 | Convert mesh format | `UgridDataset.read_file/to_file`  | any format → UGRID NetCDF or a driver   |
 | Mesh to vector      | `UgridDataset.to_geodataframe`    | faces/nodes/edges → GeoJSON             |
 
+### Earth-observation algorithms
+
+These wrap [pyramids-eo](https://github.com/serapeum-org/pyramids-eo) (the EO tier on top of
+pyramids) directly, since it has no CLI. They need `pyramids-eo` installed.
+
+| Algorithm             | pyramids-eo API         | Notes                                        |
+|-----------------------|-------------------------|----------------------------------------------|
+| Contrast stretch (EO) | `enhance.stretch`       | linear/crude/cira/histogram + gamma, to dtype |
+| Tasseled cap transform| `spectral.tasseled_cap` | Landsat 5/7/8 reflectance → brightness/greenness/wetness |
+
 More of the pyramids surface (terrain: slope/aspect/hillshade; sieve/fill/proximity; vector
 H3 / voronoi / quadtree; STAC; datacube reductions) is planned — see **Roadmap**.
 
@@ -70,6 +80,10 @@ conda install -c conda-forge pyramids-core
 alone. To read or write the other mesh formats (2DM, Selafin, DFSU, XMDF, PLY, …), also install
 `pyramids-mesh` into the same QGIS Python (`<qgis-python> -m pip install pyramids-mesh`); the
 plugin warns when it is absent.
+
+**Optional — Earth observation.** The EO algorithms (contrast stretch, tasseled cap) need
+`pyramids-eo` in the same QGIS Python (`<qgis-python> -m pip install pyramids-eo`); they raise a
+clear message when it is absent.
 
 ## Install the plugin
 

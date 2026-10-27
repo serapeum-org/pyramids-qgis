@@ -44,6 +44,33 @@ def ensure_pyramids() -> None:
         raise QgsProcessingException(_INSTALL_HINT)
 
 
+_EO_HINT = (
+    "pyramids-eo is not installed, so the Earth-observation algorithms are unavailable.\n"
+    "Install it into the QGIS Python environment:\n"
+    "  <qgis-python> -m pip install pyramids-eo"
+)
+
+
+def pyramids_eo_installed() -> bool:
+    """Return whether the ``pyramids_eo`` package can be located."""
+    return importlib.util.find_spec("pyramids_eo") is not None
+
+
+def ensure_pyramids_eo() -> None:
+    """Raise a Processing-friendly error when ``pyramids_eo`` is not importable.
+
+    Unlike pyramids-mesh (optional, soft warning), pyramids-eo is a hard requirement for the
+    Earth-observation algorithms — without it there is nothing to run.
+
+    Raises:
+        QgsProcessingException: ``pyramids_eo`` cannot be found in QGIS's Python.
+    """
+    from qgis.core import QgsProcessingException
+
+    if not pyramids_eo_installed():
+        raise QgsProcessingException(_EO_HINT)
+
+
 _MESH_DRIVERS_HINT = (
     "pyramids-mesh is not installed, so only UGRID NetCDF meshes can be read or written.\n"
     "Install it into the QGIS Python environment to enable the other mesh formats "

@@ -11,6 +11,8 @@ from .calc import RasterCalc
 from .clip import ClipRaster
 from .cog import CreateCog
 from .convert import ConvertRaster
+from .eo_stretch import EoStretch
+from .eo_tasseled_cap import TasseledCap
 from .merge import MergeRasters
 from .mesh_convert import MeshConvert
 from .mesh_to_vector import MeshToVector
@@ -30,6 +32,8 @@ ALGORITHMS = [
     CreateCog,
     MeshConvert,
     MeshToVector,
+    EoStretch,
+    TasseledCap,
 ]
 
 __all__ = ["ALGORITHMS"]
