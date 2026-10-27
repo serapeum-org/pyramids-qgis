@@ -44,6 +44,34 @@ def ensure_pyramids() -> None:
         raise QgsProcessingException(_INSTALL_HINT)
 
 
+_MESH_DRIVERS_HINT = (
+    "pyramids-mesh is not installed, so only UGRID NetCDF meshes can be read or written.\n"
+    "Install it into the QGIS Python environment to enable the other mesh formats "
+    "(2DM, Selafin, DFSU, XMDF, PLY, ...):\n"
+    "  <qgis-python> -m pip install pyramids-mesh"
+)
+
+
+def pyramids_mesh_installed() -> bool:
+    """Return whether the ``pyramids_mesh`` driver package can be located."""
+    return importlib.util.find_spec("pyramids_mesh") is not None
+
+
+def mesh_drivers_warning() -> str | None:
+    """Return a hint when pyramids-mesh is absent, else ``None``.
+
+    pyramids-mesh is optional: the built-in UGRID NetCDF read/write works without it, but every
+    other mesh format (2DM, Selafin, DFSU, ...) is provided by a pyramids-mesh driver. This is a
+    soft warning, not an error — a NetCDF-only workflow is fine without it.
+
+    Returns:
+        str | None: The install hint when pyramids-mesh is missing, otherwise ``None``.
+    """
+    if not pyramids_mesh_installed():
+        return _MESH_DRIVERS_HINT
+    return None
+
+
 def vendored_gdal_warning() -> str | None:
     """Return a warning if the installed pyramids vendors its own GDAL, else ``None``.
 

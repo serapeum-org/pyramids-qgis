@@ -1,7 +1,7 @@
 # pyramids-qgis
 
-A QGIS plugin that exposes the [pyramids](https://github.com/serapeum-org/pyramids) GIS toolkit
-(`pyramids-core`) as a **QGIS Processing provider**. The algorithms appear in the Processing
+A QGIS plugin that exposes the [pyramids](https://github.com/serapeum-org/pyramids) GIS toolkit (`pyramids-core`) as a
+**QGIS Processing provider**. The algorithms appear in the Processing
 Toolbox under **Pyramids**, so they work in the toolbox, the graphical modeler, batch mode, and
 the Python `processing.run(...)` API — the same as any native QGIS algorithm.
 
@@ -21,16 +21,27 @@ sharing live `gdal.Dataset` handles across two GDAL builds in one process.
 
 ## Algorithms in v0.1.0
 
-| Algorithm | pyramids command | Notes |
-|---|---|---|
-| Reproject raster (warp) | `warp` | target CRS + resampling |
-| Clip raster | `clip` | by polygon mask or extent |
-| Merge rasters (mosaic) | `merge` | two or more inputs |
-| Raster calculator | `calc` | expression over A, B, C … (safe AST) |
-| Convert raster format | `convert` | driver from extension or explicit |
-| Rasterize (vector → raster) | `rasterize` | cell size or template grid |
-| Polygonize raster | `shapes` | one feature per cell, GeoJSON out |
-| Create Cloud Optimized GeoTIFF | `cog create` | validated COG |
+| Algorithm                      | pyramids command | Notes                                |
+|--------------------------------|------------------|--------------------------------------|
+| Reproject raster (warp)        | `warp`           | target CRS + resampling              |
+| Clip raster                    | `clip`           | by polygon mask or extent            |
+| Merge rasters (mosaic)         | `merge`          | two or more inputs                   |
+| Raster calculator              | `calc`           | expression over A, B, C … (safe AST) |
+| Convert raster format          | `convert`        | driver from extension or explicit    |
+| Rasterize (vector → raster)    | `rasterize`      | cell size or template grid           |
+| Polygonize raster              | `shapes`         | one feature per cell, GeoJSON out    |
+| Create Cloud Optimized GeoTIFF | `cog create`     | validated COG                        |
+
+### Mesh algorithms
+
+These wrap pyramids' `UgridDataset` (with [pyramids-mesh](https://github.com/serapeum-org/pyramids-mesh)
+providing the format drivers) rather than the CLI, since pyramids-mesh has no CLI. UGRID NetCDF is
+built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need pyramids-mesh installed.
+
+| Algorithm           | pyramids API                      | Notes                                   |
+|---------------------|-----------------------------------|-----------------------------------------|
+| Convert mesh format | `UgridDataset.read_file/to_file`  | any format → UGRID NetCDF or a driver   |
+| Mesh to vector      | `UgridDataset.to_geodataframe`    | faces/nodes/edges → GeoJSON             |
 
 More of the pyramids surface (terrain: slope/aspect/hillshade; sieve/fill/proximity; vector
 H3 / voronoi / quadtree; STAC; datacube reductions) is planned — see **Roadmap**.
@@ -54,6 +65,11 @@ conda install -c conda-forge pyramids-core
 # Linux / macOS:
 <qgis-python> -m pip install pyramids-core
 ```
+
+**Optional — mesh formats.** The two mesh algorithms work on UGRID NetCDF with `pyramids-core`
+alone. To read or write the other mesh formats (2DM, Selafin, DFSU, XMDF, PLY, …), also install
+`pyramids-mesh` into the same QGIS Python (`<qgis-python> -m pip install pyramids-mesh`); the
+plugin warns when it is absent.
 
 ## Install the plugin
 

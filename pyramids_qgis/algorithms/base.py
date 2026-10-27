@@ -46,6 +46,24 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
         """Translate ``text`` (no-op passthrough until translations are added)."""
         return text
 
+    def check_pyramids(self, feedback) -> None:
+        """Ensure pyramids is importable and warn on a vendored-GDAL build.
+
+        Shared by the CLI runner and the mesh algorithms (which call the pyramids library
+        directly rather than through the CLI), so every algorithm applies the same import
+        guard and GDAL-conflict warning before touching pyramids.
+
+        Args:
+            feedback: The Processing feedback object for log messages.
+
+        Raises:
+            QgsProcessingException: pyramids is not importable from QGIS's Python.
+        """
+        ensure_pyramids()
+        warning = vendored_gdal_warning()
+        if warning:
+            feedback.pushWarning(warning)
+
     def run_pyramids(self, argv: list[str], feedback) -> None:
         """Run ``pyramids <argv>`` in-process and surface its output through ``feedback``.
 
@@ -61,10 +79,7 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
         Raises:
             QgsProcessingException: pyramids is missing, or the command exited non-zero.
         """
-        ensure_pyramids()
-        warning = vendored_gdal_warning()
-        if warning:
-            feedback.pushWarning(warning)
+        self.check_pyramids(feedback)
 
         from pyramids import cli
 

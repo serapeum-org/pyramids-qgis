@@ -12,6 +12,8 @@ from .clip import ClipRaster
 from .cog import CreateCog
 from .convert import ConvertRaster
 from .merge import MergeRasters
+from .mesh_convert import MeshConvert
+from .mesh_to_vector import MeshToVector
 from .polygonize import Polygonize
 from .rasterize import Rasterize
 from .warp import WarpRaster
@@ -26,6 +28,8 @@ ALGORITHMS = [
     Rasterize,
     Polygonize,
     CreateCog,
+    MeshConvert,
+    MeshToVector,
 ]
 
 __all__ = ["ALGORITHMS"]
