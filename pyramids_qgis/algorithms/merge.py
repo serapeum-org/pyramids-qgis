@@ -37,9 +37,7 @@ class MergeRasters(PyramidsAlgorithm):
                 self.INPUT, "Input rasters (two or more)", layerType=QgsProcessing.TypeRaster
             )
         )
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(self.OUTPUT, "Merged raster")
-        )
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Merged raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids merge`` command."""

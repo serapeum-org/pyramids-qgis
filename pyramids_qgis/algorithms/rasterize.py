@@ -65,9 +65,7 @@ class Rasterize(PyramidsAlgorithm):
                 optional=True,
             )
         )
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(self.OUTPUT, "Rasterized output")
-        )
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Rasterized output"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids rasterize`` command."""

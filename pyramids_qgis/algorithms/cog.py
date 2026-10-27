@@ -61,9 +61,7 @@ class CreateCog(PyramidsAlgorithm):
                 minValue=16,
             )
         )
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(self.OUTPUT, "COG output")
-        )
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "COG output"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids cog create`` command."""

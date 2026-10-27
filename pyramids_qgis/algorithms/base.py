@@ -85,9 +85,7 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
         if out_text:
             feedback.pushInfo(out_text)
         if code != 0:
-            raise QgsProcessingException(
-                err_text or f"pyramids {argv[0]} exited with code {code}"
-            )
+            raise QgsProcessingException(err_text or f"pyramids {argv[0]} exited with code {code}")
         if err_text:
             feedback.pushInfo(err_text)
 

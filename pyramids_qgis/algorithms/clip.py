@@ -43,12 +43,8 @@ class ClipRaster(PyramidsAlgorithm):
         self.addParameter(
             QgsProcessingParameterVectorLayer(self.MASK, "Mask layer (polygons)", optional=True)
         )
-        self.addParameter(
-            QgsProcessingParameterExtent(self.EXTENT, "Clip extent", optional=True)
-        )
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(self.OUTPUT, "Clipped raster")
-        )
+        self.addParameter(QgsProcessingParameterExtent(self.EXTENT, "Clip extent", optional=True))
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Clipped raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids clip`` command."""
@@ -68,9 +64,7 @@ class ClipRaster(PyramidsAlgorithm):
         else:
             extent = self.parameterAsExtent(parameters, self.EXTENT, context, layer.crs())
             if extent.isNull():
-                raise QgsProcessingException(
-                    "Provide either a mask layer or a clip extent."
-                )
+                raise QgsProcessingException("Provide either a mask layer or a clip extent.")
             argv += [
                 "--bbox",
                 str(extent.xMinimum()),

@@ -65,9 +65,7 @@ def deploy(plugins_dir: Path, *, symlink: bool) -> Path:
     if symlink:
         target.symlink_to(_PLUGIN_SRC, target_is_directory=True)
     else:
-        shutil.copytree(
-            _PLUGIN_SRC, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
-        )
+        shutil.copytree(_PLUGIN_SRC, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     return target
 
 
@@ -82,9 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = argparse.ArgumentParser(description="Deploy pyramids_qgis into a QGIS profile.")
     parser.add_argument("--profile", default="default", help="QGIS profile name")
-    parser.add_argument(
-        "--plugins-dir", help="explicit plugins directory (overrides --profile)"
-    )
+    parser.add_argument("--plugins-dir", help="explicit plugins directory (overrides --profile)")
     parser.add_argument(
         "--symlink", action="store_true", help="symlink instead of copying (dev workflow)"
     )

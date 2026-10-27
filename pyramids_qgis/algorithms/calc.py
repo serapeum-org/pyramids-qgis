@@ -61,9 +61,7 @@ class RasterCalc(PyramidsAlgorithm):
                 self.DTYPE, "Output dtype (optional, e.g. float32)", optional=True
             )
         )
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(self.OUTPUT, "Result raster")
-        )
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Result raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids calc`` command."""

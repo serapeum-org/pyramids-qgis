@@ -43,9 +43,7 @@ class ConvertRaster(PyramidsAlgorithm):
                 self.DRIVER, "Driver (optional; default: from extension)", optional=True
             )
         )
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(self.OUTPUT, "Converted raster")
-        )
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Converted raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids convert`` command."""
