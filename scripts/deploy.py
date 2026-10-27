@@ -1,0 +1,106 @@
+"""Deploy the ``pyramids_qgis`` plugin into a QGIS profile's plugin directory.
+
+Copies (default) or symlinks the plugin package so QGIS can load it. Run it with the QGIS
+profile open closed — restart QGIS (or re-enable the plugin) afterwards to pick up changes
+when copying; a symlink deploy reflects edits live after a QGIS restart.
+
+Usage:
+    python scripts/deploy.py                 # copy into the 'default' profile
+    python scripts/deploy.py --symlink       # symlink instead (developer workflow)
+    python scripts/deploy.py --profile foo   # target a non-default profile
+    python scripts/deploy.py --plugins-dir "C:/path/to/python/plugins"
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import platform
+import shutil
+import sys
+from pathlib import Path
+
+PLUGIN_NAME = "pyramids_qgis"
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_PLUGIN_SRC = _REPO_ROOT / PLUGIN_NAME
+
+
+def default_plugins_dir(profile: str) -> Path:
+    """Return the QGIS plugins directory for ``profile`` on this OS.
+
+    Args:
+        profile: The QGIS profile name (usually ``"default"``).
+
+    Returns:
+        Path: ``.../QGIS3/profiles/<profile>/python/plugins``.
+    """
+    system = platform.system()
+    if system == "Windows":
+        base = Path(os.environ["APPDATA"]) / "QGIS" / "QGIS3"
+    elif system == "Darwin":
+        base = Path.home() / "Library" / "Application Support" / "QGIS" / "QGIS3"
+    else:
+        base = Path.home() / ".local" / "share" / "QGIS" / "QGIS3"
+    return base / "profiles" / profile / "python" / "plugins"
+
+
+def deploy(plugins_dir: Path, *, symlink: bool) -> Path:
+    """Install the plugin into ``plugins_dir``, replacing any existing copy.
+
+    Args:
+        plugins_dir: The target QGIS plugins directory.
+        symlink: Symlink the source instead of copying it.
+
+    Returns:
+        Path: The deployed plugin path.
+    """
+    plugins_dir.mkdir(parents=True, exist_ok=True)
+    target = plugins_dir / PLUGIN_NAME
+
+    if target.is_symlink() or target.is_file():
+        target.unlink()
+    elif target.is_dir():
+        shutil.rmtree(target)
+
+    if symlink:
+        target.symlink_to(_PLUGIN_SRC, target_is_directory=True)
+    else:
+        shutil.copytree(
+            _PLUGIN_SRC, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+        )
+    return target
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Parse arguments and deploy the plugin.
+
+    Args:
+        argv: Argument list (defaults to ``sys.argv[1:]``).
+
+    Returns:
+        int: ``0`` on success.
+    """
+    parser = argparse.ArgumentParser(description="Deploy pyramids_qgis into a QGIS profile.")
+    parser.add_argument("--profile", default="default", help="QGIS profile name")
+    parser.add_argument(
+        "--plugins-dir", help="explicit plugins directory (overrides --profile)"
+    )
+    parser.add_argument(
+        "--symlink", action="store_true", help="symlink instead of copying (dev workflow)"
+    )
+    args = parser.parse_args(argv)
+
+    if not _PLUGIN_SRC.is_dir():
+        print(f"error: plugin source not found at {_PLUGIN_SRC}", file=sys.stderr)
+        return 1
+
+    plugins_dir = Path(args.plugins_dir) if args.plugins_dir else default_plugins_dir(args.profile)
+    target = deploy(plugins_dir, symlink=args.symlink)
+    verb = "symlinked" if args.symlink else "copied"
+    print(f"{verb} {PLUGIN_NAME} -> {target}")
+    print("Restart QGIS (or toggle the plugin) and enable 'Pyramids' in the Plugin Manager.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

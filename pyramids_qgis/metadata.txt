@@ -1,0 +1,29 @@
+[general]
+name=Pyramids
+qgisMinimumVersion=3.22
+description=GDAL-powered raster and vector processing from the pyramids library, as QGIS Processing algorithms.
+version=0.1.0
+author=Mostafa Farrag
+email=moah.farag@gmail.com
+about=Exposes the pyramids GIS toolkit (the pyramids-core Python package) as a QGIS
+    Processing provider. The first release ships file-in / file-out algorithms that
+    mirror the `pyramids` command-line interface: clip, reproject (warp), merge/mosaic,
+    raster calculator, rasterize, polygonize, Cloud Optimized GeoTIFF creation and raster
+    format conversion. The plugin calls the pyramids CLI in-process, so it stays a thin
+    adapter over the library's stable contract. It requires the pyramids-core package to be
+    importable from the QGIS Python environment — install it so it binds to QGIS's own GDAL
+    (conda-forge, or `pip install pyramids-core` into the QGIS interpreter); do NOT use a
+    platform wheel that vendors its own GDAL inside the QGIS process.
+
+tracker=https://github.com/serapeum-org/pyramids-qgis/issues
+repository=https://github.com/serapeum-org/pyramids-qgis
+homepage=https://serapeum-org.github.io/
+category=Analysis
+icon=resources/icon.svg
+
+experimental=True
+deprecated=False
+
+tags=raster,vector,gdal,cog,reproject,rasterize,polygonize,processing,pyramids
+
+hasProcessingProvider=yes
