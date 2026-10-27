@@ -16,8 +16,8 @@ from qgis.core import (
     QgsProcessingParameterVectorDestination,
 )
 
-from ..dependencies import mesh_drivers_warning
-from .base import PyramidsAlgorithm
+from ...dependencies import mesh_drivers_warning
+from ..base import PyramidsAlgorithm
 
 #: Mesh locations, passed to ``to_geodataframe(location=...)``.
 LOCATION = ["face", "node", "edge"]

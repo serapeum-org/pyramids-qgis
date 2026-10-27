@@ -11,7 +11,7 @@ from qgis.core import (
     QgsProcessingParameterVectorLayer,
 )
 
-from .base import PyramidsAlgorithm, layer_source_path, validate_input_path
+from ..base import PyramidsAlgorithm, layer_source_path, validate_input_path
 
 
 class Rasterize(PyramidsAlgorithm):

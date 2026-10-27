@@ -9,7 +9,7 @@ from qgis.core import (
     QgsProcessingParameterString,
 )
 
-from .base import PyramidsAlgorithm, layer_source_path, validate_input_path
+from ..base import PyramidsAlgorithm, layer_source_path, validate_input_path
 
 
 class ConvertRaster(PyramidsAlgorithm):

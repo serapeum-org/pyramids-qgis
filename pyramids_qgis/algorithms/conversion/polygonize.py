@@ -15,7 +15,7 @@ from qgis.core import (
     QgsProcessingParameterVectorDestination,
 )
 
-from .base import PyramidsAlgorithm, layer_source_path, validate_input_path
+from ..base import PyramidsAlgorithm, layer_source_path, validate_input_path
 
 #: Per-cell geometry options, passed to ``--geometry``.
 GEOMETRY = ["polygon", "point"]

@@ -1,37 +1,48 @@
 """Algorithm registry for the Pyramids Processing provider.
 
-Each algorithm is a thin adapter over one ``pyramids`` CLI command. To add another command,
-implement a :class:`~pyramids_qgis.algorithms.base.PyramidsAlgorithm` subclass and append it
-to :data:`ALGORITHMS` — the provider picks it up with no further wiring.
+Algorithms are grouped into subpackages by origin and theme:
+
+- ``raster`` — core raster processing (reproject, clip, merge, band calculator).
+- ``conversion`` — format / representation conversion (convert, rasterize, polygonize, COG).
+- ``mesh`` — pyramids-mesh-backed mesh algorithms.
+- ``eo`` — pyramids-eo-backed Earth-observation algorithms.
+
+Each algorithm is a thin adapter over the pyramids stack. To add one, implement a
+:class:`~pyramids_qgis.algorithms.base.PyramidsAlgorithm` subclass in the right subpackage and
+append it to :data:`ALGORITHMS` — the provider picks it up with no further wiring.
 """
 
 from __future__ import annotations
 
-from .calc import RasterCalc
-from .clip import ClipRaster
-from .cog import CreateCog
-from .convert import ConvertRaster
-from .eo_stretch import EoStretch
-from .eo_tasseled_cap import TasseledCap
-from .merge import MergeRasters
-from .mesh_convert import MeshConvert
-from .mesh_to_vector import MeshToVector
-from .polygonize import Polygonize
-from .rasterize import Rasterize
-from .warp import WarpRaster
+from .conversion.cog import CreateCog
+from .conversion.convert import ConvertRaster
+from .conversion.polygonize import Polygonize
+from .conversion.rasterize import Rasterize
+from .eo.stretch import EoStretch
+from .eo.tasseled_cap import TasseledCap
+from .mesh.convert import MeshConvert
+from .mesh.to_vector import MeshToVector
+from .raster.calc import RasterCalc
+from .raster.clip import ClipRaster
+from .raster.merge import MergeRasters
+from .raster.warp import WarpRaster
 
-#: Every algorithm class the provider registers, grouped loosely by theme.
+#: Every algorithm class the provider registers, grouped by subpackage.
 ALGORITHMS = [
+    # raster
     WarpRaster,
     ClipRaster,
     MergeRasters,
     RasterCalc,
+    # conversion
     ConvertRaster,
     Rasterize,
     Polygonize,
     CreateCog,
+    # mesh (pyramids-mesh)
     MeshConvert,
     MeshToVector,
+    # eo (pyramids-eo)
     EoStretch,
     TasseledCap,
 ]

@@ -10,7 +10,7 @@ from qgis.core import (
     QgsProcessingParameterString,
 )
 
-from .base import PyramidsAlgorithm, layer_source_path, validate_input_path
+from ..base import PyramidsAlgorithm, layer_source_path, validate_input_path
 
 #: COG group label, shared by future COG algorithms (validate / info).
 _COG_GROUP = "Cloud Optimized GeoTIFF"

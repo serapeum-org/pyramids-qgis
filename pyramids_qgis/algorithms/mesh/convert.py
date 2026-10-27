@@ -15,8 +15,8 @@ from qgis.core import (
     QgsProcessingParameterString,
 )
 
-from ..dependencies import mesh_drivers_warning
-from .base import PyramidsAlgorithm
+from ...dependencies import mesh_drivers_warning
+from ..base import PyramidsAlgorithm
 
 
 class MeshConvert(PyramidsAlgorithm):

@@ -16,8 +16,8 @@ from qgis.core import (
     QgsProcessingParameterString,
 )
 
-from ..dependencies import ensure_pyramids_eo
-from .base import PyramidsAlgorithm, layer_source_path, validate_input_path
+from ...dependencies import ensure_pyramids_eo
+from ..base import PyramidsAlgorithm, layer_source_path, validate_input_path
 
 #: Sensors with a bundled tasseled-cap coefficient table.
 SENSOR = ["landsat8_oli", "landsat7_etm", "landsat5_tm"]

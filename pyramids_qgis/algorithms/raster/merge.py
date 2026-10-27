@@ -9,7 +9,7 @@ from qgis.core import (
     QgsProcessingParameterRasterDestination,
 )
 
-from .base import PyramidsAlgorithm, layer_source_path, validate_input_path
+from ..base import PyramidsAlgorithm, layer_source_path, validate_input_path
 
 
 class MergeRasters(PyramidsAlgorithm):

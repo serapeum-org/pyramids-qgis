@@ -110,10 +110,14 @@ pyramids_qgis/              the plugin package (this is what gets deployed)
   metadata.txt              QGIS plugin metadata (hasProcessingProvider=yes)
   plugin.py                 registers/unregisters the provider
   provider.py               QgsProcessingProvider listing the algorithms
-  dependencies.py           pyramids import check + vendored-GDAL warning
+  dependencies.py           pyramids / pyramids-mesh / pyramids-eo checks + GDAL warning
   algorithms/
     base.py                 PyramidsAlgorithm base + CLI runner + CRS/path helpers
-    warp.py clip.py …       one file per algorithm
+    __init__.py             the ALGORITHMS registry
+    raster/                 reproject, clip, merge, calc
+    conversion/             convert, rasterize, polygonize, cog
+    mesh/                   pyramids-mesh: convert, to_vector
+    eo/                     pyramids-eo: stretch, tasseled_cap
   resources/icon.svg
 scripts/deploy.py           copy/symlink the plugin into a QGIS profile
 ```

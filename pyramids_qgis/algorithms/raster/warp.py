@@ -10,7 +10,7 @@ from qgis.core import (
     QgsProcessingParameterRasterLayer,
 )
 
-from .base import PyramidsAlgorithm, crs_to_pyramids, layer_source_path, validate_input_path
+from ..base import PyramidsAlgorithm, crs_to_pyramids, layer_source_path, validate_input_path
 
 #: Resampling methods forwarded verbatim to ``Dataset.to_crs(method=...)``.
 RESAMPLING = ["nearest neighbor", "bilinear", "cubic", "cubic spline", "lanczos", "average", "mode"]
