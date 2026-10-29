@@ -63,7 +63,17 @@ def deploy(plugins_dir: Path, *, symlink: bool) -> Path:
         shutil.rmtree(target)
 
     if symlink:
-        target.symlink_to(_PLUGIN_SRC, target_is_directory=True)
+        try:
+            target.symlink_to(_PLUGIN_SRC, target_is_directory=True)
+        except OSError as exc:
+            # On Windows, creating a symlink needs Developer Mode or an elevated shell; without
+            # it os.symlink raises OSError/WinError 1314. Turn that into a clean, actionable
+            # message instead of a raw traceback (review L3).
+            raise RuntimeError(
+                f"could not create a symlink at {target}: {exc}. On Windows, symlinks require "
+                "Developer Mode enabled or an elevated shell — re-run from an admin shell, or "
+                "deploy without --symlink to copy instead."
+            ) from exc
     else:
         shutil.copytree(_PLUGIN_SRC, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     return target
@@ -91,7 +101,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     plugins_dir = Path(args.plugins_dir) if args.plugins_dir else default_plugins_dir(args.profile)
-    target = deploy(plugins_dir, symlink=args.symlink)
+    try:
+        target = deploy(plugins_dir, symlink=args.symlink)
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     verb = "symlinked" if args.symlink else "copied"
     print(f"{verb} {PLUGIN_NAME} -> {target}")
     print("Restart QGIS (or toggle the plugin) and enable 'Pyramids' in the Plugin Manager.")
