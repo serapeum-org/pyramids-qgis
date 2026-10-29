@@ -103,7 +103,10 @@ def main(argv: list[str] | None = None) -> int:
     plugins_dir = Path(args.plugins_dir) if args.plugins_dir else default_plugins_dir(args.profile)
     try:
         target = deploy(plugins_dir, symlink=args.symlink)
-    except RuntimeError as exc:
+    except (RuntimeError, OSError) as exc:
+        # RuntimeError: the wrapped symlink failure. OSError: an unwrapped failure on the copy
+        # path (rmtree / copytree / unlink on a locked or read-only destination). Both get a
+        # one-line message and a non-zero exit instead of a raw traceback (review R2-L3).
         print(f"error: {exc}", file=sys.stderr)
         return 1
     verb = "symlinked" if args.symlink else "copied"

@@ -87,6 +87,18 @@ def test_main_reports_symlink_failure_as_exit_one(tmp_path, monkeypatch, capsys)
     assert "could not create a symlink" in capsys.readouterr().err
 
 
+def test_main_reports_copy_oserror_as_exit_one(tmp_path, monkeypatch, capsys):
+    """An OSError from the copy path (locked/read-only destination) is reported and exits 1."""
+    monkeypatch.setattr(deploy, "default_plugins_dir", lambda profile: tmp_path)
+
+    def boom(plugins_dir, *, symlink):
+        raise OSError("WinError 5 access denied")
+
+    monkeypatch.setattr(deploy, "deploy", boom)
+    assert deploy.main([]) == 1
+    assert "access denied" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     ("system", "tail"),
     [
