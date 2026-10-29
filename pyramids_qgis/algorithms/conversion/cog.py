@@ -20,7 +20,7 @@ _COG_GROUP_ID = "cog"
 class CreateCog(PyramidsAlgorithm):
     """Convert a raster into a validated Cloud Optimized GeoTIFF."""
 
-    GROUP = _COG_GROUP
+    GROUP_LABEL = _COG_GROUP
     GROUP_ID = _COG_GROUP_ID
 
     INPUT = "INPUT"

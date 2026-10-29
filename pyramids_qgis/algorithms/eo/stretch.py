@@ -25,7 +25,7 @@ KIND = ["linear", "crude", "cira", "histogram"]
 class EoStretch(PyramidsAlgorithm):
     """Map a raster's values onto a display range and dtype (contrast stretch)."""
 
-    GROUP = "Earth Observation"
+    GROUP_LABEL = "Earth Observation"
     GROUP_ID = "eo"
 
     INPUT = "INPUT"

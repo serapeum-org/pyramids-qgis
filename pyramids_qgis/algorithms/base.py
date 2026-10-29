@@ -44,7 +44,7 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
     """Base class: name/group boilerplate plus the shared pyramids CLI runner."""
 
     #: Processing group this algorithm appears under; overridden per subclass.
-    GROUP = "Raster"
+    GROUP_LABEL = "Raster"
     #: Lowercase, stable group id; overridden per subclass.
     GROUP_ID = "raster"
 
@@ -54,7 +54,7 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
 
     def group(self) -> str:
         """Return the display name of the algorithm's group."""
-        return self.GROUP
+        return self.GROUP_LABEL
 
     def groupId(self) -> str:  # noqa: N802  (QGIS-mandated method name)
         """Return the stable id of the algorithm's group."""

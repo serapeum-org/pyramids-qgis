@@ -26,7 +26,7 @@ LOCATION = ["face", "node", "edge"]
 class MeshToVector(PyramidsAlgorithm):
     """Convert a mesh to a vector layer (faces/nodes/edges), written as GeoJSON."""
 
-    GROUP = "Mesh"
+    GROUP_LABEL = "Mesh"
     GROUP_ID = "mesh"
 
     INPUT = "INPUT"

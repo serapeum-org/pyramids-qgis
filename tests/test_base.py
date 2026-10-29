@@ -201,7 +201,7 @@ def test_createinstance_returns_a_fresh_instance():
 def test_group_groupid_and_tr():
     """group/groupId return the class constants and tr is an identity passthrough."""
     algorithm = base.PyramidsAlgorithm()
-    assert algorithm.group() == base.PyramidsAlgorithm.GROUP
+    assert algorithm.group() == base.PyramidsAlgorithm.GROUP_LABEL
     assert algorithm.groupId() == base.PyramidsAlgorithm.GROUP_ID
     assert algorithm.tr("hello") == "hello"
 

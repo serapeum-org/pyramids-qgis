@@ -26,7 +26,7 @@ SENSOR = ["landsat8_oli", "landsat7_etm", "landsat5_tm"]
 class TasseledCap(PyramidsAlgorithm):
     """Rotate a reflectance band stack into tasseled-cap components."""
 
-    GROUP = "Earth Observation"
+    GROUP_LABEL = "Earth Observation"
     GROUP_ID = "eo"
 
     INPUT = "INPUT"

@@ -21,7 +21,7 @@ from ..base import PyramidsAlgorithm, crs_to_pyramids, layer_source_path, valida
 class EditRasterInfo(PyramidsAlgorithm):
     """Assign a CRS and/or set the NoData value, writing a new raster (no reprojection)."""
 
-    GROUP = "Raster"
+    GROUP_LABEL = "Raster"
     GROUP_ID = "raster"
 
     INPUT = "INPUT"

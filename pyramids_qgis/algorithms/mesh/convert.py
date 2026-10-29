@@ -22,7 +22,7 @@ from ..base import PyramidsAlgorithm
 class MeshConvert(PyramidsAlgorithm):
     """Read a mesh in any supported format and write it to another format."""
 
-    GROUP = "Mesh"
+    GROUP_LABEL = "Mesh"
     GROUP_ID = "mesh"
 
     INPUT = "INPUT"
