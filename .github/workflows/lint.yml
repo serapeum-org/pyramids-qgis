@@ -1,0 +1,103 @@
+name: CI
+
+# Static checks for the plugin. Unlike pyramids, pyramids-qgis is not a pip-installable
+# package and has no pixi env: it runs inside QGIS's own Python, which provides PyQGIS and
+# GDAL. So CI cannot import the plugin (PyQGIS is absent on a bare runner) and instead does
+# what it can without QGIS: lint and format with ruff, and byte-compile every module across
+# the Python versions QGIS ships to catch syntax errors. End-to-end behaviour is verified by
+# running the algorithms inside QGIS, not here.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      # Pin the resolved version for reproducible CI; bump deliberately or via dependabot.
+      # Keep this in step with the [tool.ruff] config in pyproject.toml. --only-binary=:all:
+      # forbids building from sdist, so no package setup script runs during install (sonar S8541).
+      - run: "python -m pip install --only-binary=:all: ruff==0.17.3"
+
+      - name: Ruff lint
+        run: ruff check --output-format=github .
+
+      - name: Ruff format check
+        run: ruff format --check --diff .
+
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # The Python versions shipped by the QGIS releases this plugin targets
+        # (3.22 LTR through 4.x). compileall parses every module; it does not import
+        # PyQGIS, so it runs on a bare runner.
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Byte-compile all modules
+        run: python -m compileall -q pyramids_qgis scripts
+
+  # The QGIS-free unit tests. They cover the surface that does not need PyQGIS — the CLI
+  # runner and helpers (via the conftest qgis stub), the dependency probes, the provider's
+  # forced output extension and registry, and the deploy helper — so they run on a bare
+  # runner with no QGIS installed. The PyQGIS-dependent behaviour (initAlgorithm /
+  # processAlgorithm) is out of scope and verified by review + the compile job.
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      # --only-binary=:all: forbids building from sdist, so no package setup script runs (S8541).
+      - run: "python -m pip install --only-binary=:all: pytest==8.3.4"
+
+      - name: Run the QGIS-free test suite
+        run: python -m pytest tests/ -q
+
+  # Secret gate, mirroring pyramids / pyramids-mesh. The pinned gitleaks binary (with a
+  # SHA256 check) scans the whole working tree against the .github/gitleaks.toml allowlist;
+  # `gitleaks dir` exits non-zero on a leak, failing the job.
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Scan for secrets (gitleaks)
+        run: |
+          VER=8.30.0
+          SHA=79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
+          curl -sSL --proto '=https' --proto-redir '=https' -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz"
+          echo "${SHA}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks dir . -c .github/gitleaks.toml --redact --no-banner

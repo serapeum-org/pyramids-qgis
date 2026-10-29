@@ -1,0 +1,51 @@
+# Pre-commit hooks for pyramids-qgis. Adapted from pyramids-mesh's config to this repo's
+# toolchain: it is ruff-based (lint + format), matching pyproject.toml and the CI workflow,
+# rather than the black / flake8 / pydocstyle stack. There is no pytest hook — the plugin is
+# not pip-installable and its behaviour is verified inside QGIS, not on a bare interpreter;
+# the local hook byte-compiles instead, mirroring the CI `compile` job.
+#
+# Install once with `pre-commit install`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+        name: "[file - format] fix end of files"
+      - id: trailing-whitespace
+        name: "[file - format] trim trailing whitespace"
+        args: [--markdown-linebreak-ext=md]
+      - id: check-added-large-files
+        name: "[file -  check] large file"
+        args: [--maxkb=2000]
+      - id: check-merge-conflict
+        name: "[git  -  check] merge conflict"
+      - id: check-yaml
+        name: "[yaml -  check] validate yaml"
+      - id: check-json
+        name: "[json -  check] validate json"
+      - id: detect-private-key
+        name: "[cred -  check] private keys"
+      - id: mixed-line-ending
+        name: "[file - format] mixed line ending"
+        args: [--fix=auto]
+      - id: debug-statements
+        name: "[py   -  check] debug statements"
+
+  # Keep this rev in step with the ruff== pin in pyproject.toml and .github/workflows/lint.yml.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff
+        name: "[py   -   lint] ruff"
+        args: [--fix]
+      - id: ruff-format
+        name: "[py   - format] ruff"
+
+  - repo: local
+    hooks:
+      - id: compileall
+        name: "[py   -  check] byte-compile"
+        entry: python -m compileall -q pyramids_qgis scripts
+        language: system
+        pass_filenames: false
+        always_run: true

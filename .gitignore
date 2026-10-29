@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+.pixi/
+
+# QGIS / Processing
+*.qgs~
+*.qgz~
+
+# Packaging artifact
+pyramids_qgis.zip
+
+# Tooling
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
