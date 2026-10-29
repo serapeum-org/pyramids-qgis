@@ -12,8 +12,11 @@ from qgis.core import (
 
 from ..base import PyramidsAlgorithm, crs_to_pyramids, layer_source_path, validate_input_path
 
-#: Resampling methods forwarded verbatim to ``Dataset.to_crs(method=...)``.
-RESAMPLING = ["nearest neighbor", "bilinear", "cubic", "cubic spline", "lanczos", "average", "mode"]
+#: Resampling methods forwarded verbatim to ``Dataset.to_crs(method=...)``. Each must be an exact
+#: key of pyramids' ``INTERPOLATION_METHODS`` (see pyramids/base/_utils.py): snake_case, plus the
+#: historical ``"nearest neighbor"`` space-alias. ``resolve_resampling`` only lowercases/strips and
+#: does not map a space to an underscore, so ``"cubic_spline"`` must carry the underscore (review H1).
+RESAMPLING = ["nearest neighbor", "bilinear", "cubic", "cubic_spline", "lanczos", "average", "mode"]
 
 
 class WarpRaster(PyramidsAlgorithm):
