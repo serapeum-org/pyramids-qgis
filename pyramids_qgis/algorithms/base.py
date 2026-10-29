@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import threading
 from pathlib import Path
 
 from qgis.core import (
@@ -20,6 +21,16 @@ from qgis.core import (
 )
 
 from ..dependencies import ensure_pyramids, vendored_gdal_warning
+
+#: Serializes the process-global ``sys.stdout`` / ``sys.stderr`` capture in
+#: :meth:`PyramidsAlgorithm.run_pyramids`. QGIS runs ``processAlgorithm`` in a background
+#: ``QgsTask`` thread, and batch mode / the graphical modeler can run algorithms concurrently;
+#: ``contextlib.redirect_stdout`` replaces the streams process-wide, so without this lock two
+#: concurrent runs would corrupt each other's captured buffers. The lock makes the capture
+#: windows mutually exclusive. The residual caveat (unavoidable with global streams) is that
+#: unrelated main-thread output, e.g. the QGIS Python console, printed during a capture window is
+#: still absorbed into that run's buffer — acceptable because the window is a single fast CLI call.
+_CLI_CAPTURE_LOCK = threading.Lock()
 
 
 class PyramidsAlgorithm(QgsProcessingAlgorithm):
@@ -70,7 +81,10 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
         The pyramids CLI returns ``0`` on success and prints a one-line ``error: ...`` to
         stderr on an expected failure (bad CRS, missing file, ...). Both stdout and stderr
         are captured: stdout is echoed to the Processing log, and a non-zero exit is turned
-        into a :class:`QgsProcessingException` carrying the captured message.
+        into a :class:`QgsProcessingException` carrying the captured message. The capture
+        replaces the process-global streams, so it is serialized with :data:`_CLI_CAPTURE_LOCK`
+        to keep concurrent runs (batch mode / the modeler) from corrupting each other's
+        buffers; see that lock's note for the residual single-process-stream caveat.
 
         Args:
             argv: The CLI arguments, e.g. ``["warp", src, dst, "--crs", "EPSG:3857"]``.
@@ -86,8 +100,11 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("pyramids " + " ".join(argv))
         stdout, stderr = io.StringIO(), io.StringIO()
         try:
-            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-                code = cli.main(argv)
+            # Nested (not parenthesized) with-items: the parenthesized form is Python 3.10+,
+            # but the compile matrix includes 3.9 (QGIS 3.22 LTR).
+            with _CLI_CAPTURE_LOCK:
+                with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    code = cli.main(argv)
         except SystemExit as exc:  # defensive: main() returns an int, but guard anyway
             code = int(exc.code or 0)
         except QgsProcessingException:
