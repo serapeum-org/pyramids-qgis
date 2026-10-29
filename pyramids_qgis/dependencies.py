@@ -123,6 +123,10 @@ def vendored_gdal_warning() -> str | None:
     if spec is None or not spec.submodule_search_locations:
         return None
     for location in spec.submodule_search_locations:
+        # `_vendor/osgeo` is not a guess: it is the exact location pyramids' own runtime bootstrap
+        # ships and activates the vendored SWIG bindings from — see pyramids/base/_bootstrap.py
+        # (`pyramids/_vendor/osgeo/`), which `pyramids/__init__.py` calls via activate_vendored_osgeo.
+        # If pyramids ever changes that layout, update this path to match (review R2-L2).
         vendored = Path(location) / "_vendor" / "osgeo"
         if vendored.is_dir():
             return (
