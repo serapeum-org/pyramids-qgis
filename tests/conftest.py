@@ -62,11 +62,15 @@ def _install_qgis_stub() -> None:
         TypeRaster = 3
         TypeVectorAnyGeometry = -1
 
+    class QgsApplication:
+        """Placeholder so ``plugin.py`` imports; its registry is not exercised in tests."""
+
     core.QgsProcessingException = QgsProcessingException
     core.QgsProcessingAlgorithm = QgsProcessingAlgorithm
     core.QgsProcessingProvider = QgsProcessingProvider
     core.QgsCoordinateReferenceSystem = QgsCoordinateReferenceSystem
     core.QgsProcessing = QgsProcessing
+    core.QgsApplication = QgsApplication
     for name in _PARAMETER_CLASSES:
         setattr(core, name, type(name, (), {}))
     # A couple of class-level enums the algorithm dialogs read at initAlgorithm time.
