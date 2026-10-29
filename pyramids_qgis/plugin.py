@@ -29,7 +29,7 @@ class PyramidsPlugin:
         self.provider = PyramidsProvider()
         QgsApplication.processingRegistry().addProvider(self.provider)
 
-    def initGui(self) -> None:  # noqa: N802 # NOSONAR(python:S100) QGIS calls this exact method
+    def initGui(self) -> None:  # noqa: N802  (QGIS-mandated method name)
         """QGIS entry point called when the plugin is enabled."""
         self.init_processing()
 
