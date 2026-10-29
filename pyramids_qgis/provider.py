@@ -52,13 +52,14 @@ class PyramidsProvider(QgsProcessingProvider):
         """
         return ["geojson"]
 
-    def defaultVectorFileExtension(self, hasGeometry: bool = True) -> str:  # noqa: N802, N803
+    def defaultVectorFileExtension(self, has_geometry: bool = True) -> str:  # noqa: N802
         """Default this provider's vector destinations to ``.geojson``.
 
         Pairs with :meth:`supportedOutputVectorLayerExtensions` so the chosen extension cannot
-        diverge from the forced GeoJSON driver.
+        diverge from the forced GeoJSON driver. QGIS invokes this virtual positionally (via SIP),
+        so the snake_case parameter name does not affect the override.
 
         Args:
-            hasGeometry: Whether the output layer has geometry (unused; GeoJSON either way).
+            has_geometry: Whether the output layer has geometry (unused; GeoJSON either way).
         """
         return "geojson"
