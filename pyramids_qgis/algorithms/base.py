@@ -99,6 +99,7 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo("pyramids " + " ".join(argv))
         stdout, stderr = io.StringIO(), io.StringIO()
+        exit_message: str | None = None
         try:
             # Nested (not parenthesized) with-items: the parenthesized form is Python 3.10+,
             # but the compile matrix includes 3.9 (QGIS 3.22 LTR).
@@ -106,7 +107,16 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
                 with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                     code = cli.main(argv)
         except SystemExit as exc:  # defensive: main() returns an int, but guard anyway
-            code = int(exc.code or 0)
+            # exc.code is None (-> 0), an int (-> that code), or any other object such as the
+            # string from sys.exit("message") -- which int() would turn into a ValueError that
+            # bypasses the clean failure path below. Treat a non-int, non-None code as a failure
+            # and carry its text as the error message.
+            raw = exc.code
+            if raw is None or isinstance(raw, int):
+                code = raw or 0
+            else:
+                code = 1
+                exit_message = str(raw)
         except QgsProcessingException:
             raise
         except Exception as exc:  # noqa: BLE001  (report any library error cleanly)
@@ -117,7 +127,9 @@ class PyramidsAlgorithm(QgsProcessingAlgorithm):
         if out_text:
             feedback.pushInfo(out_text)
         if code != 0:
-            raise QgsProcessingException(err_text or f"pyramids {argv[0]} exited with code {code}")
+            raise QgsProcessingException(
+                err_text or exit_message or f"pyramids {argv[0]} exited with code {code}"
+            )
         if err_text:
             feedback.pushInfo(err_text)
 
