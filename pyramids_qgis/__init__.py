@@ -8,7 +8,7 @@ the heavy imports (``qgis.core``, ``pyramids``) live behind the factory, not her
 from __future__ import annotations
 
 
-def classFactory(iface):  # noqa: N802  (name mandated by the QGIS plugin API)
+def classFactory(iface):  # noqa: N802 # NOSONAR(python:S1542) QGIS imports/calls this exact name
     """Return the plugin instance QGIS drives.
 
     Args:
