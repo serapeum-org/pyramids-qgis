@@ -15,6 +15,7 @@ actionable message instead of a stack trace deep inside an algorithm:
 from __future__ import annotations
 
 import importlib.util
+from pathlib import Path
 
 _INSTALL_HINT = (
     "The 'pyramids-core' package is not importable from the QGIS Python environment.\n"
@@ -102,28 +103,31 @@ def mesh_drivers_warning() -> str | None:
 def vendored_gdal_warning() -> str | None:
     """Return a warning if the installed pyramids vendors its own GDAL, else ``None``.
 
-    Importing :mod:`pyramids` runs its vendor bootstrap. On a normal (conda-forge / plain
-    pip) install this is a no-op and ``osgeo`` resolves to QGIS's GDAL — the supported
-    setup. On a platform wheel the bootstrap ships a private ``osgeo`` under the package's
-    ``_vendor`` directory, which must not run inside QGIS.
+    A platform wheel ships a private ``osgeo`` under the package's ``_vendor`` directory and
+    activates it on import; that build must not run inside QGIS, which already has its own GDAL
+    loaded. Detection is by **filesystem**: the installed ``pyramids`` package is located with
+    :func:`importlib.util.find_spec` (which does not import it) and checked for a
+    ``_vendor/osgeo`` directory. This is deliberately independent of what ``osgeo`` is already
+    imported — inspecting ``osgeo.__file__`` would return QGIS's cached module once QGIS has
+    imported its own GDAL, hiding a genuinely vendored pyramids build (review L2).
 
     Returns:
-        str | None: A human-readable warning when a vendored GDAL is detected, otherwise
-        ``None``. Any import failure is reported as its own warning rather than raised.
+        str | None: A human-readable warning when a vendored build is detected on disk,
+        otherwise ``None`` (including when pyramids is not installed — that case is reported by
+        :func:`ensure_pyramids`, not here).
     """
     try:
-        import pyramids  # noqa: F401  (import for its side-effecting vendor bootstrap)
-        from osgeo import gdal
-    except Exception as exc:  # noqa: BLE001  (surface any import problem as a soft warning)
-        return f"Could not import pyramids / osgeo to verify the GDAL binding: {exc}"
-
-    osgeo_file = getattr(gdal, "__file__", "") or ""
-    normalized = osgeo_file.replace("\\", "/").lower()
-    if "_vendor" in normalized and "pyramids" in normalized:
-        return (
-            "The installed pyramids build vendors its own GDAL "
-            f"({osgeo_file}). Running it inside QGIS can conflict with QGIS's GDAL. "
-            "Reinstall pyramids-core from conda-forge or a plain pip wheel so it uses "
-            "QGIS's GDAL."
-        )
+        spec = importlib.util.find_spec("pyramids")
+    except (ImportError, ValueError):  # a broken/partial install can raise from find_spec
+        return None
+    if spec is None or not spec.submodule_search_locations:
+        return None
+    for location in spec.submodule_search_locations:
+        vendored = Path(location) / "_vendor" / "osgeo"
+        if vendored.is_dir():
+            return (
+                f"The installed pyramids build vendors its own GDAL (at {vendored}). "
+                "Running it inside QGIS can conflict with QGIS's GDAL. Reinstall pyramids-core "
+                "from conda-forge or a plain pip wheel so it uses QGIS's GDAL."
+            )
     return None

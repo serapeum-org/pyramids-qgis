@@ -18,3 +18,11 @@ target-version = "py311"
 # QGIS mandates camelCase method names (initGui, processAlgorithm, displayName, ...) and
 # single-char API names (id); those are silenced inline with per-line noqa, not globally.
 select = ["E", "F", "W", "I", "N"]
+
+# Tests cover only the QGIS-free surface: the plugin's algorithm modules import PyQGIS at load
+# and cannot run on a bare interpreter, but dependencies.py (QGIS imported lazily inside
+# functions) and scripts/deploy.py (pure stdlib) can. pythonpath makes both importable without
+# installing the plugin.
+[tool.pytest.ini_options]
+pythonpath = [".", "scripts"]
+testpaths = ["tests"]
