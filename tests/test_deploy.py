@@ -41,6 +41,52 @@ def test_deploy_symlink_oserror_becomes_runtimeerror(tmp_path, monkeypatch):
         deploy.deploy(tmp_path, symlink=True)
 
 
+def test_deploy_copy_replaces_an_existing_file_target(tmp_path):
+    """A plain file sitting where the package goes is unlinked and replaced by the copy."""
+    (tmp_path / "pyramids_qgis").write_text("stale file, not a dir")
+    target = deploy.deploy(tmp_path, symlink=False)
+    assert target.is_dir()
+    assert (target / "__init__.py").is_file()
+
+
+def test_main_copy_returns_zero(tmp_path, monkeypatch, capsys):
+    """`main` deploys to the resolved plugins dir and reports success (exit 0)."""
+    monkeypatch.setattr(deploy, "default_plugins_dir", lambda profile: tmp_path)
+    assert deploy.main([]) == 0
+    assert (tmp_path / "pyramids_qgis" / "__init__.py").is_file()
+    assert "copied pyramids_qgis" in capsys.readouterr().out
+
+
+def test_main_explicit_plugins_dir_overrides_profile(tmp_path, monkeypatch, capsys):
+    """`--plugins-dir` wins over `--profile` for the deploy target."""
+
+    def unexpected(profile):
+        raise AssertionError("default_plugins_dir must not be called when --plugins-dir is given")
+
+    monkeypatch.setattr(deploy, "default_plugins_dir", unexpected)
+    assert deploy.main(["--plugins-dir", str(tmp_path)]) == 0
+    assert (tmp_path / "pyramids_qgis").is_dir()
+
+
+def test_main_missing_plugin_source_returns_one(tmp_path, monkeypatch, capsys):
+    """`main` exits 1 with a message when the plugin source does not exist."""
+    monkeypatch.setattr(deploy, "_PLUGIN_SRC", tmp_path / "does-not-exist")
+    assert deploy.main([]) == 1
+    assert "plugin source not found" in capsys.readouterr().err
+
+
+def test_main_reports_symlink_failure_as_exit_one(tmp_path, monkeypatch, capsys):
+    """A RuntimeError from deploy (e.g. blocked symlink) is reported and exits 1."""
+    monkeypatch.setattr(deploy, "default_plugins_dir", lambda profile: tmp_path)
+
+    def boom(plugins_dir, *, symlink):
+        raise RuntimeError("could not create a symlink")
+
+    monkeypatch.setattr(deploy, "deploy", boom)
+    assert deploy.main(["--symlink"]) == 1
+    assert "could not create a symlink" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     ("system", "tail"),
     [

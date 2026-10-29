@@ -8,6 +8,9 @@ are deterministic and need neither pyramids nor QGIS installed.
 
 from __future__ import annotations
 
+import pytest
+from qgis.core import QgsProcessingException
+
 import pyramids_qgis.dependencies as deps
 
 
@@ -66,3 +69,39 @@ def test_vendored_warning_none_when_pyramids_absent(monkeypatch):
     """
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
     assert deps.vendored_gdal_warning() is None
+
+
+def test_vendored_warning_none_when_find_spec_raises(monkeypatch):
+    """A broken/partial install whose `find_spec` raises yields no warning rather than erroring."""
+
+    def boom(name):
+        raise ValueError("partial pyramids install")
+
+    monkeypatch.setattr(deps.importlib.util, "find_spec", boom)
+    assert deps.vendored_gdal_warning() is None
+
+
+def test_ensure_pyramids_raises_when_absent(monkeypatch):
+    """`ensure_pyramids` raises with the install hint when pyramids cannot be located."""
+    monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
+    with pytest.raises(QgsProcessingException, match="pyramids-core"):
+        deps.ensure_pyramids()
+
+
+def test_ensure_pyramids_silent_when_present(monkeypatch):
+    """`ensure_pyramids` returns without raising when the package is locatable."""
+    monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: object())
+    assert deps.ensure_pyramids() is None
+
+
+def test_ensure_pyramids_eo_raises_when_absent(monkeypatch):
+    """`ensure_pyramids_eo` raises with its own hint when pyramids-eo is missing."""
+    monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
+    with pytest.raises(QgsProcessingException, match="pyramids-eo"):
+        deps.ensure_pyramids_eo()
+
+
+def test_ensure_pyramids_eo_silent_when_present(monkeypatch):
+    """`ensure_pyramids_eo` returns without raising when pyramids-eo is locatable."""
+    monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: object())
+    assert deps.ensure_pyramids_eo() is None
