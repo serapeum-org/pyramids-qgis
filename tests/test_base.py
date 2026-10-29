@@ -68,37 +68,23 @@ def test_run_pyramids_nonzero_exit_raises_with_stderr(monkeypatch, pyramids_pres
         return 1
 
     _install_fake_cli(monkeypatch, main)
+    algorithm = base.PyramidsAlgorithm()
+    feedback = _Feedback()
     with pytest.raises(QgsProcessingException, match="bad crs"):
-        base.PyramidsAlgorithm().run_pyramids(["warp"], _Feedback())
+        algorithm.run_pyramids(["warp"], feedback)
 
 
-def test_run_pyramids_systemexit_string_is_surfaced(monkeypatch, pyramids_present):
-    """`sys.exit("msg")` becomes a failure carrying the message, not a ValueError (L5)."""
-
-    def main(argv):
-        raise SystemExit("boom")
-
-    _install_fake_cli(monkeypatch, main)
-    with pytest.raises(QgsProcessingException, match="boom"):
-        base.PyramidsAlgorithm().run_pyramids(["warp"], _Feedback())
-
-
-def test_run_pyramids_systemexit_int_is_an_exit_code(monkeypatch, pyramids_present):
-    """`sys.exit(2)` is treated as exit code 2."""
+def test_run_pyramids_does_not_swallow_systemexit(monkeypatch, pyramids_present):
+    """A SystemExit from the CLI propagates — it is never caught and converted (sonar S5754)."""
 
     def main(argv):
-        raise SystemExit(2)
+        raise SystemExit("stop")
 
     _install_fake_cli(monkeypatch, main)
-    with pytest.raises(QgsProcessingException, match="exited with code 2"):
-        base.PyramidsAlgorithm().run_pyramids(["warp"], _Feedback())
-
-
-def test_run_pyramids_systemexit_zero_is_success(monkeypatch, pyramids_present):
-    """`sys.exit(0)` and `sys.exit(None)` are clean exits, not failures."""
-    for code in (0, None):
-        _install_fake_cli(monkeypatch, lambda argv, c=code: (_ for _ in ()).throw(SystemExit(c)))
-        base.PyramidsAlgorithm().run_pyramids(["warp"], _Feedback())
+    algorithm = base.PyramidsAlgorithm()
+    feedback = _Feedback()
+    with pytest.raises(SystemExit):
+        algorithm.run_pyramids(["warp"], feedback)
 
 
 def test_run_pyramids_propagates_missing_pyramids(monkeypatch):
@@ -108,8 +94,10 @@ def test_run_pyramids_propagates_missing_pyramids(monkeypatch):
         raise QgsProcessingException("install pyramids-core")
 
     monkeypatch.setattr(base, "ensure_pyramids", guard)
+    algorithm = base.PyramidsAlgorithm()
+    feedback = _Feedback()
     with pytest.raises(QgsProcessingException, match="pyramids-core"):
-        base.PyramidsAlgorithm().run_pyramids(["warp"], _Feedback())
+        algorithm.run_pyramids(["warp"], feedback)
 
 
 def test_run_pyramids_library_error_is_wrapped(monkeypatch, pyramids_present):
@@ -119,8 +107,10 @@ def test_run_pyramids_library_error_is_wrapped(monkeypatch, pyramids_present):
         raise RuntimeError("gdal blew up")
 
     _install_fake_cli(monkeypatch, main)
+    algorithm = base.PyramidsAlgorithm()
+    feedback = _Feedback()
     with pytest.raises(QgsProcessingException, match="gdal blew up"):
-        base.PyramidsAlgorithm().run_pyramids(["warp"], _Feedback())
+        algorithm.run_pyramids(["warp"], feedback)
 
 
 def test_run_pyramids_passes_through_processing_exception(monkeypatch, pyramids_present):
@@ -130,8 +120,10 @@ def test_run_pyramids_passes_through_processing_exception(monkeypatch, pyramids_
         raise QgsProcessingException("passthrough")
 
     _install_fake_cli(monkeypatch, main)
+    algorithm = base.PyramidsAlgorithm()
+    feedback = _Feedback()
     with pytest.raises(QgsProcessingException, match="passthrough"):
-        base.PyramidsAlgorithm().run_pyramids(["warp"], _Feedback())
+        algorithm.run_pyramids(["warp"], feedback)
 
 
 class _Crs:
