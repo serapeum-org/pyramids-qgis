@@ -49,7 +49,7 @@ jobs:
         # The Python versions shipped by the QGIS releases this plugin targets
         # (3.22 LTR through 4.x). compileall parses every module; it does not import
         # PyQGIS, so it runs on a bare runner.
-        python-version: ["3.9", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
