@@ -36,7 +36,7 @@ from ..dependencies import ensure_pyramids, vendored_gdal_warning
 #: capture is what lets the CLI's one-line error be surfaced in the raised exception, and the only
 #: way to avoid the serialization is to drop that capture (losing the error detail to the log). A
 #: second residual caveat, unavoidable with global streams, is that unrelated main-thread output
-#: (e.g. the QGIS Python console) printed during a capture window is absorbed into that run's buffer.
+#: (e.g. the QGIS Python console) printed during a capture window is absorbed into that buffer.
 _CLI_CAPTURE_LOCK = threading.Lock()
 
 
