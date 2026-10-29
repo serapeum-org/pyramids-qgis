@@ -112,6 +112,13 @@ def test_default_plugins_dir_per_platform(monkeypatch, system, tail):
     assert deploy.default_plugins_dir("default").as_posix().endswith(tail)
 
 
+@pytest.mark.parametrize("bad", ["..", "../evil", "a/b", "a\\b", ".", ""])
+def test_default_plugins_dir_rejects_unsafe_profile(bad):
+    """A profile name with a separator or '..' is rejected before it reaches the filesystem."""
+    with pytest.raises(ValueError, match="invalid QGIS profile"):
+        deploy.default_plugins_dir(bad)
+
+
 def test_default_plugins_dir_windows_uses_appdata(monkeypatch):
     """On Windows the plugins directory is rooted at %APPDATA%\\QGIS\\QGIS3."""
     monkeypatch.setattr(deploy.platform, "system", lambda: "Windows")

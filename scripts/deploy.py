@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import os
 import platform
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -24,16 +25,30 @@ PLUGIN_NAME = "pyramids_qgis"
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _PLUGIN_SRC = _REPO_ROOT / PLUGIN_NAME
 
+#: A QGIS profile name is a single path component — letters, digits, '.', '_' or '-'. Validating it
+#: rejects a path-traversal attempt (e.g. ``--profile ../../etc``) before it reaches the plugins
+#: directory, so the deploy target cannot escape the QGIS profiles tree (sonar S8707).
+_PROFILE_RE = re.compile(r"[A-Za-z0-9._-]+")
+
 
 def default_plugins_dir(profile: str) -> Path:
     """Return the QGIS plugins directory for ``profile`` on this OS.
 
     Args:
-        profile: The QGIS profile name (usually ``"default"``).
+        profile: The QGIS profile name (usually ``"default"``). Must be a single safe path
+            component; a name containing a path separator or ``..`` is rejected.
 
     Returns:
         Path: ``.../QGIS3/profiles/<profile>/python/plugins``.
+
+    Raises:
+        ValueError: ``profile`` is not a single safe path component.
     """
+    if profile in {".", ".."} or not _PROFILE_RE.fullmatch(profile):
+        raise ValueError(
+            f"invalid QGIS profile name {profile!r}: expected a single path component of "
+            "letters, digits, '.', '_' or '-' (no path separators or '..')"
+        )
     system = platform.system()
     if system == "Windows":
         base = Path(os.environ["APPDATA"]) / "QGIS" / "QGIS3"
@@ -54,8 +69,14 @@ def deploy(plugins_dir: Path, *, symlink: bool) -> Path:
     Returns:
         Path: The deployed plugin path.
     """
-    plugins_dir.mkdir(parents=True, exist_ok=True)
+    # Resolve the destination and pin the target to the fixed plugin name directly under it, so the
+    # only directory this ever creates, replaces or removes is ``<plugins_dir>/pyramids_qgis`` and
+    # nothing can be redirected elsewhere (sonar S8707).
+    plugins_dir = plugins_dir.resolve()
     target = plugins_dir / PLUGIN_NAME
+    if target.parent != plugins_dir:  # pragma: no cover - PLUGIN_NAME is a separator-free constant
+        raise ValueError(f"refusing to deploy outside {plugins_dir}")
+    plugins_dir.mkdir(parents=True, exist_ok=True)
 
     if target.is_symlink() or target.is_file():
         target.unlink()

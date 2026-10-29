@@ -31,8 +31,9 @@ jobs:
           python-version: "3.12"
 
       # Pin the resolved version for reproducible CI; bump deliberately or via dependabot.
-      # Keep this in step with the [tool.ruff] config in pyproject.toml.
-      - run: python -m pip install ruff==0.17.3
+      # Keep this in step with the [tool.ruff] config in pyproject.toml. --only-binary=:all:
+      # forbids building from sdist, so no package setup script runs during install (sonar S8541).
+      - run: "python -m pip install --only-binary=:all: ruff==0.17.3"
 
       - name: Ruff lint
         run: ruff check --output-format=github .
@@ -76,7 +77,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: python -m pip install pytest==8.3.4
+      # --only-binary=:all: forbids building from sdist, so no package setup script runs (S8541).
+      - run: "python -m pip install --only-binary=:all: pytest==8.3.4"
 
       - name: Run the QGIS-free test suite
         run: python -m pytest tests/ -q
