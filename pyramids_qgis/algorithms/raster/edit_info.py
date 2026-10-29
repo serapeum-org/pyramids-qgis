@@ -84,7 +84,11 @@ class EditRasterInfo(PyramidsAlgorithm):
         if crs_str is not None:
             edit += ["--crs", crs_str]
         if has_nodata:
-            edit += ["--nodata", str(nodata)]
+            # Join with '=' rather than as two argv items: a typical float32 NoData such as
+            # -3.4e38 stringifies to "-3.4e+38", which argparse's negative-number heuristic does
+            # not match, so "--nodata -3.4e+38" would be read as an unknown option. "--nodata=..."
+            # is immune to that split (review R2-L4).
+            edit.append(f"--nodata={nodata}")
         self.run_pyramids(edit, feedback)
 
         return {self.OUTPUT: out}
