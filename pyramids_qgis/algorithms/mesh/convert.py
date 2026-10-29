@@ -91,6 +91,15 @@ class MeshConvert(PyramidsAlgorithm):
             self.parameterAsString(parameters, self.TARGET_DRIVER, context).strip() or None
         )
 
+        # UgridDataset.to_file never infers the format from the suffix, so a non-NetCDF target
+        # driver written to a .nc-named output makes content and extension disagree (review M1).
+        if target_driver is not None and out.lower().endswith(".nc"):
+            feedback.pushWarning(
+                f"target driver {target_driver!r} does not write NetCDF, but the output name "
+                f"ends in .nc ({out}); the file content and extension will disagree. Use an "
+                "output name whose extension matches the driver's format."
+            )
+
         feedback.pushInfo(
             f"reading {inp}"
             + (f" with driver {source_driver}" if source_driver else "")

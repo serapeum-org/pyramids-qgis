@@ -41,3 +41,24 @@ class PyramidsProvider(QgsProcessingProvider):
         if _ICON.is_file():
             return QIcon(str(_ICON))
         return super().icon()
+
+    def supportedOutputVectorLayerExtensions(self) -> list[str]:  # noqa: N802
+        """Restrict this provider's vector outputs to GeoJSON.
+
+        The vector-producing algorithms (polygonize, mesh-to-vector) write GeoJSON *content*
+        through a forced driver, so the destination extension must be ``.geojson`` too. Without
+        this, QGIS's default vector extension (commonly ``.gpkg`` / ``.shp``) would disagree with
+        the file content — a file named ``.gpkg`` holding GeoJSON (review M1).
+        """
+        return ["geojson"]
+
+    def defaultVectorFileExtension(self, hasGeometry: bool = True) -> str:  # noqa: N802, N803
+        """Default this provider's vector destinations to ``.geojson``.
+
+        Pairs with :meth:`supportedOutputVectorLayerExtensions` so the chosen extension cannot
+        diverge from the forced GeoJSON driver.
+
+        Args:
+            hasGeometry: Whether the output layer has geometry (unused; GeoJSON either way).
+        """
+        return "geojson"
