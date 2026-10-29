@@ -25,6 +25,7 @@ sharing live `gdal.Dataset` handles across two GDAL builds in one process.
 |--------------------------------|------------------|--------------------------------------|
 | Reproject raster (warp)        | `warp`           | target CRS + resampling              |
 | Clip raster                    | `clip`           | by polygon mask or extent            |
+| Assign CRS / NoData (edit info) | `edit-info`     | stamp CRS/nodata, no reprojection    |
 | Merge rasters (mosaic)         | `merge`          | two or more inputs                   |
 | Raster calculator              | `calc`           | expression over A, B, C … (safe AST) |
 | Convert raster format          | `convert`        | driver from extension or explicit    |

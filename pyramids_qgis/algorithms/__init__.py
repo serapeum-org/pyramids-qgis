@@ -24,6 +24,7 @@ from .mesh.convert import MeshConvert
 from .mesh.to_vector import MeshToVector
 from .raster.calc import RasterCalc
 from .raster.clip import ClipRaster
+from .raster.edit_info import EditRasterInfo
 from .raster.merge import MergeRasters
 from .raster.warp import WarpRaster
 
@@ -34,6 +35,7 @@ ALGORITHMS = [
     ClipRaster,
     MergeRasters,
     RasterCalc,
+    EditRasterInfo,
     # conversion
     ConvertRaster,
     Rasterize,
