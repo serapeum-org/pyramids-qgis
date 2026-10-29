@@ -26,10 +26,17 @@ from ..dependencies import ensure_pyramids, vendored_gdal_warning
 #: :meth:`PyramidsAlgorithm.run_pyramids`. QGIS runs ``processAlgorithm`` in a background
 #: ``QgsTask`` thread, and batch mode / the graphical modeler can run algorithms concurrently;
 #: ``contextlib.redirect_stdout`` replaces the streams process-wide, so without this lock two
-#: concurrent runs would corrupt each other's captured buffers. The lock makes the capture
-#: windows mutually exclusive. The residual caveat (unavoidable with global streams) is that
-#: unrelated main-thread output, e.g. the QGIS Python console, printed during a capture window is
-#: still absorbed into that run's buffer — acceptable because the window is a single fast CLI call.
+#: concurrent runs would corrupt each other's captured buffers. The lock makes the capture windows
+#: mutually exclusive.
+#:
+#: Trade-off (review M3): the lock necessarily spans the whole ``cli.main`` call, because that call
+#: is what produces the captured output — it cannot be narrowed below the work. So two concurrent
+#: pyramids operations run serially, and for a long op (``warp`` / ``merge`` / ``cog create`` on a
+#: large raster) that is seconds to minutes, not instant. This is a deliberate cost: global stream
+#: capture is what lets the CLI's one-line error be surfaced in the raised exception, and the only
+#: way to avoid the serialization is to drop that capture (losing the error detail to the log). A
+#: second residual caveat, unavoidable with global streams, is that unrelated main-thread output
+#: (e.g. the QGIS Python console) printed during a capture window is absorbed into that run's buffer.
 _CLI_CAPTURE_LOCK = threading.Lock()
 
 
