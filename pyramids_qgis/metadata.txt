@@ -18,11 +18,12 @@ about=Exposes the pyramids GIS toolkit (the pyramids-core Python package) as a Q
 tracker=https://github.com/serapeum-org/pyramids-qgis/issues
 repository=https://github.com/serapeum-org/pyramids-qgis
 homepage=https://serapeum-org.github.io/
-category=Analysis
-icon=resources/icon.svg
+category=Raster
+icon=resources/icon.png
 
 experimental=True
 deprecated=False
+supportsQt6=True
 
 tags=raster,vector,gdal,cog,reproject,rasterize,polygonize,processing,pyramids
 
