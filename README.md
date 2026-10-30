@@ -88,8 +88,9 @@ clear message when it is absent.
 
 ## Install the plugin
 
-Copy (or symlink) the `pyramids_qgis/` folder into your QGIS profile's plugin directory, then
-enable **Pyramids** in *Plugins → Manage and Install Plugins*. The deploy helper does this:
+Copy (or symlink) the `src/pyramids_qgis/` package into your QGIS profile's plugin directory (as
+`pyramids_qgis`), then enable **Pyramids** in *Plugins → Manage and Install Plugins*. The deploy
+helper does this:
 
 ```bash
 python scripts/deploy.py            # copy into the default profile
@@ -118,7 +119,8 @@ completion triggers **`publish`**, which builds the plugin zip with
 ## Repository layout
 
 ```
-pyramids_qgis/              the plugin package (this is what gets deployed)
+pyproject.toml              package metadata (pip-installable), pixi workspace, tooling config
+src/pyramids_qgis/          the plugin package (this is what gets deployed)
   __init__.py               classFactory — QGIS entry point
   metadata.txt              QGIS plugin metadata (hasProcessingProvider=yes)
   plugin.py                 registers/unregisters the provider

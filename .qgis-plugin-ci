@@ -1,7 +1,7 @@
 # Configuration for qgis-plugin-ci (https://qgis.github.io/qgis-plugin-ci/).
 # Drives .github/workflows/publish.yml: it builds the plugin zip from pyramids_qgis/ and, with
 # --github-token, uploads it as a GitHub Release asset.
-plugin_path: pyramids_qgis
+plugin_path: src/pyramids_qgis
 github_organization_slug: serapeum-org
 project_slug: pyramids-qgis
 # changelog injection is OFF: commitizen owns CHANGELOG.md and emits its native "## vX.Y.Z (date)"

@@ -23,7 +23,7 @@ from pathlib import Path
 
 PLUGIN_NAME = "pyramids_qgis"
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_PLUGIN_SRC = _REPO_ROOT / PLUGIN_NAME
+_PLUGIN_SRC = _REPO_ROOT / "src" / PLUGIN_NAME
 
 #: A QGIS profile name is a single path component — letters, digits, '.', '_' or '-'. Validating it
 #: rejects a path-traversal attempt (e.g. ``--profile ../../etc``) before it reaches the plugins
