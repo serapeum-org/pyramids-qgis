@@ -9,7 +9,10 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      # Semver tags only (e.g. v0.1.0). A loose `v*` would also match `v1` / `vtest`, which
+      # qgis-plugin-ci rejects as a non-x.y.z version — but only AFTER the Release was created.
+      # (Actions tag filters are globs, not regex, so this requires the two dots, not digit classes.)
+      - "v[0-9]*.[0-9]*.[0-9]*"
 
 permissions:
   contents: write  # create the GitHub Release and upload the zip / plugins.xml assets
