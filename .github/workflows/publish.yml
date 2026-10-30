@@ -89,27 +89,21 @@ jobs:
             echo "::error::could not verify release ${TAG} (GitHub API error, not a 404)"; cat "${ERR}"; exit 1
           fi
 
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-        if: steps.gate.outputs.publish == 'true'
-        with:
-          python-version: "3.12"
-
-      # No --only-binary here: qgis-plugin-ci depends on transifex-python, which ships sdist-only, so
-      # --only-binary=:all: cannot resolve it. 2.11.0 allows GitPython<3.3 (so the CVE-fixed 3.2.1 is
-      # used); 2.8.6 capped GitPython<3.2 and pinned the vulnerable 3.1.x.
-      - run: "python -m pip install qgis-plugin-ci==2.11.0"
-        if: steps.gate.outputs.publish == 'true'
-
       - name: Build and upload the plugin to the GitHub Release
         if: steps.gate.outputs.publish == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.gate.outputs.version }}
           TAG: ${{ steps.gate.outputs.tag }}
-        # Version is x.y.z (metadata.txt); --release-tag is the real vX.Y.Z tag so the tool finds
-        # the Release and the plugins.xml download URLs point at .../releases/download/vX.Y.Z/.
+        # Run via pipx (like pip-audit.yml), not `pip install`: qgis-plugin-ci depends on
+        # transifex-python which is sdist-only, so a wheels-only `pip install --only-binary=:all:`
+        # cannot resolve it — and omitting --only-binary trips a setup-script warning. pipx isolates
+        # the build in its own venv and sidesteps both. 2.11.0 allows GitPython<3.3, so the CVE-fixed
+        # gitpython 3.2.1 is used (2.8.6 capped <3.2 and pinned the vulnerable 3.1.x). Version is
+        # x.y.z (metadata.txt); --release-tag is the real vX.Y.Z tag so the tool finds the Release and
+        # the plugins.xml download URLs point at .../releases/download/vX.Y.Z/.
         run: |
-          qgis-plugin-ci release "${VERSION}" \
+          pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci release "${VERSION}" \
             --release-tag "${TAG}" \
             --github-token "${GITHUB_TOKEN}" \
             --create-plugin-repo
