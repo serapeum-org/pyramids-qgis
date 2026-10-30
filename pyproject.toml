@@ -35,7 +35,9 @@ testpaths = ["tests"]
 [tool.commitizen]
 name = "cz_conventional_commits"
 version_provider = "commitizen"
-version = "0.1.0"
+# Baseline is 0.0.0 (pre-first-release): commitizen always *increments*, so the first release is cut
+# with increment=minor, producing 0.1.0 / tag v0.1.0. `version_files` bumps metadata.txt in step.
+version = "0.0.0"
 tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_file = "CHANGELOG.md"
