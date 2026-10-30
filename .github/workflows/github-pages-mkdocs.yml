@@ -1,0 +1,60 @@
+name: Deploy MkDocs
+
+# Docs-site deploy, mirroring pyramids-mesh. It is DORMANT until the plugin gains a docs site
+# (issue #8): every job is guarded on a top-level `mkdocs.yml` existing, so until one is added this
+# workflow runs the detect job, reports "no docs yet", and the deploy jobs are skipped (green).
+#
+# When #8 lands it must also wire the deploy for a non-package plugin: the shared
+# serapeum-org/github-actions/mkdocs-deploy action's pip/uv/pixi setup installs the project
+# (`pip install .`), which this from-source QGIS plugin is not — the same constraint that kept it
+# off the shared release action. So #8 either makes the docs build self-contained (install mkdocs +
+# the docs deps directly, no `pip install .`) or adds minimal packaging for the docs env. The guard
+# below keeps this workflow inert and green in the meantime.
+
+permissions:
+  contents: write
+  pages: write
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_run:
+    workflows: ['github-release']
+    types: [completed]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      has_docs: ${{ steps.check.outputs.has_docs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - id: check
+        run: |
+          if [ -f mkdocs.yml ]; then
+            echo "has_docs=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_docs=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No mkdocs.yml yet — the docs site is issue #8; skipping deploy."
+          fi
+
+  deploy:
+    needs: detect
+    if: needs.detect.outputs.has_docs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+      # TODO(#8): wire the MkDocs deploy for a from-source plugin (no `pip install .`). Until #8
+      # adds mkdocs.yml this job never runs, so the placeholder below cannot fail a real build.
+      - run: |
+          echo "::error::mkdocs.yml exists but the deploy step is not wired yet — finish issue #8."
+          exit 1
