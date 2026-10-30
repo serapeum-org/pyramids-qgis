@@ -32,14 +32,24 @@ jobs:
       # forbids building from sdist, so no package setup script runs during install (sonar S8541).
       - run: "python -m pip install --only-binary=:all: qgis-plugin-ci==2.8.6"
 
-      - name: Build and publish the plugin to the GitHub Release
+      # qgis-plugin-ci's `release` only UPLOADS to an already-existing GitHub Release (with a token it
+      # looks the release up and exits 1 if it is absent); pushing a tag does not create one. So create
+      # the Release for the tag first, then let qgis-plugin-ci attach the assets to it.
+      - name: Create the GitHub Release for the tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes --title "${GITHUB_REF_NAME}"
+
+      - name: Build and upload the plugin to the GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # `release` builds the zip for the pushed tag and uploads it to that tag's GitHub Release;
-        # --create-plugin-repo also attaches a plugins.xml so the build is installable as a custom
-        # QGIS plugin repository. The leading `v` is stripped so the plugin version is X.Y.Z.
+        # Strip the leading `v` for the plugin version written into metadata.txt (X.Y.Z), but pass the
+        # real tag via --release-tag so the tool finds the vX.Y.Z Release and the --create-plugin-repo
+        # plugins.xml download URLs point at .../releases/download/vX.Y.Z/. Without --release-tag the
+        # tool reuses the stripped version as the tag and looks up a non-existent `X.Y.Z` release.
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           qgis-plugin-ci release "${VERSION}" \
+            --release-tag "${GITHUB_REF_NAME}" \
             --github-token "${GITHUB_TOKEN}" \
             --create-plugin-repo
