@@ -51,7 +51,8 @@ jobs:
     # not-yet-wired placeholder below once a mkdocs.yml exists (review L5).
     if: >-
       needs.detect.outputs.has_docs == 'true' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_run')
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
