@@ -62,27 +62,6 @@ jobs:
       - name: Byte-compile all modules
         run: python -m compileall -q pyramids_qgis scripts
 
-  # The QGIS-free unit tests. They cover the surface that does not need PyQGIS — the CLI
-  # runner and helpers (via the conftest qgis stub), the dependency probes, the provider's
-  # forced output extension and registry, and the deploy helper — so they run on a bare
-  # runner with no QGIS installed. The PyQGIS-dependent behaviour (initAlgorithm /
-  # processAlgorithm) is out of scope and verified by review + the compile job.
-  tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-        with:
-          python-version: "3.12"
-
-      # --only-binary=:all: forbids building from sdist, so no package setup script runs (S8541).
-      - run: "python -m pip install --only-binary=:all: pytest==8.3.4"
-
-      - name: Run the QGIS-free test suite
-        run: python -m pytest tests/ -q
-
   # Secret gate, mirroring pyramids / pyramids-mesh. The pinned gitleaks binary (with a
   # SHA256 check) scans the whole working tree against the .github/gitleaks.toml allowlist;
   # `gitleaks dir` exits non-zero on a leak, failing the job.

@@ -1,0 +1,152 @@
+name: github-release
+
+# Cut a release the same way the rest of the serapeum stack does — admin-only, manual, driven by
+# commitizen (`cz bump`): bump the version, regenerate the CHANGELOG from Conventional Commits, tag,
+# and publish a GitHub Release. The downstream `publish.yml` (triggered when this completes) builds
+# the QGIS plugin zip and attaches it to that Release.
+#
+# Why this does NOT use the shared serapeum-org/github-actions release/github action (which
+# pyramids-mesh uses): that action's package-manager step runs `pip install .`, which needs a
+# pip-installable package. pyramids-qgis is a from-source QGIS plugin with no [project] table, so
+# the action cannot run here. This workflow reproduces its behaviour but installs commitizen
+# directly and reads the version from `metadata.txt` via commitizen's version_files (see pyproject).
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-branch:
+        description: "Branch to create the release from"
+        required: false
+        default: "main"
+      increment:
+        description: "Version increment type (use 'minor' for the first release: 0.0.0 baseline -> 0.1.0)"
+        required: false
+        type: choice
+        options: [patch, minor, major]
+        default: "patch"
+      draft:
+        description: "Create as draft release"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # push the version-bump commit + tag and create the Release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.release-branch }}
+
+      - name: Check actor is a repository admin
+        # Only admins may cut releases, matching pyramids-mesh's github-release.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          PERMISSION=$(gh api "repos/${REPO}/collaborators/${ACTOR}/permission" --jq '.permission')
+          echo "Permission level for ${ACTOR}: ${PERMISSION}"
+          if [ "${PERMISSION}" != "admin" ]; then
+            echo "::error::${ACTOR} is not a repository admin. Only admins can trigger releases."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      # --only-binary=:all: forbids building from sdist, so no package setup script runs (sonar S8541).
+      - run: "python -m pip install --only-binary=:all: commitizen==4.8.4"
+
+      - name: Configure Git
+        env:
+          GIT_ACTOR: ${{ github.actor }}
+        run: |
+          git config user.name "${GIT_ACTOR}"
+          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
+
+      - name: Bump version and generate the changelog with commitizen
+        id: bump
+        env:
+          INCREMENT: ${{ inputs.increment }}
+        run: |
+          set -euo pipefail
+
+          # First release from the 0.0.0 baseline must be a minor bump (-> 0.1.0); patch/major would
+          # cut 0.0.1 / 1.0.0 and silently diverge from the documented first version (review L2).
+          CURRENT=$(cz version --project)
+          if [ "${CURRENT}" = "0.0.0" ] && [ "${INCREMENT}" != "minor" ]; then
+            echo "::error::first release from the 0.0.0 baseline must use increment=minor (to cut 0.1.0); got '${INCREMENT}'."
+            exit 1
+          fi
+
+          # Compute the next tag first, failing loudly if commitizen's wording ever changes instead of
+          # letting `pipefail` kill the step with an empty NEXT (review L4).
+          DRY=$(cz bump --dry-run --yes --increment "${INCREMENT}")
+          NEXT=$(printf '%s\n' "${DRY}" | awk '/tag to create/ {print $NF}')
+          if [ -z "${NEXT}" ]; then
+            echo "::error::could not parse the next tag from 'cz bump --dry-run':"
+            printf '%s\n' "${DRY}"
+            exit 1
+          fi
+          echo "Next version/tag: ${NEXT}"
+
+          # commitizen owns the changelog (update_changelog_on_bump=true), so one `cz bump` bumps the
+          # version (and metadata.txt via version_files), regenerates CHANGELOG.md, commits, and tags.
+          # No first-release special-casing: cz 4.8.4 handles a tagless repo directly — the old
+          # "exits 16" premise was false (review M2), so the toggle/amend/tag -f dance is gone.
+          cz bump --yes --increment "${INCREMENT}"
+
+          echo "new_version=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "changelog_file=CHANGELOG.md" >> "$GITHUB_OUTPUT"
+
+      - name: Push the version-bump commit and tag
+        # Requires push access to the release branch. If `main` has branch protection that blocks the
+        # github-actions token (required PRs/reviews with no bypass), this push is rejected AFTER
+        # `cz bump` already created the local commit + tag, and the run fails — so grant the release a
+        # bypass (as pyramids-mesh does for its bump to main). Not idempotent: a re-run bumps again
+        # (0.1.0 -> 0.1.1), so fix a failed release forward rather than re-running the same dispatch.
+        run: |
+          set -euo pipefail
+          git push
+          git push --tags
+
+      - name: Extract release notes for this version from the changelog
+        id: notes
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+          CHANGELOG_FILE: ${{ steps.bump.outputs.changelog_file }}
+        run: |
+          set -euo pipefail
+          ESCAPED=$(printf '%s' "${NEW_VERSION}" | sed 's/[.[\*^$]/\\&/g')
+          # Anchor on the version followed by a non-version char so v0.1.1 does not also match the
+          # v0.1.11 / v0.1.1rc0 headings (review N4). commitizen always emits "## v<ver> (<date>)".
+          BODY=$(awk "/^##[[:space:]]+${ESCAPED}[^0-9.]/ {found=1; next} found && /^##[[:space:]]/ {exit} found {print}" "${CHANGELOG_FILE}")
+          [ -z "${BODY}" ] && BODY="Release ${NEW_VERSION}"
+          {
+            echo "body<<RELEASE_NOTES_EOF"
+            echo "${BODY}"
+            echo "RELEASE_NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish the GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ steps.bump.outputs.new_version }}
+          tag_name: ${{ steps.bump.outputs.new_version }}
+          body: ${{ steps.notes.outputs.body }}
+          draft: ${{ inputs.draft }}
+          # No prereleases: QGIS plugin versions must be x.y.z, and a PEP440 prerelease like 0.1.0rc0
+          # would be written to metadata.txt and likely break qgis-plugin-ci (review M1/L5). The
+          # experimental=True flag in metadata.txt is the pre-release signal instead.
+          prerelease: false

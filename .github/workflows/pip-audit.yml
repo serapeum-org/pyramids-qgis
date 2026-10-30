@@ -1,0 +1,49 @@
+name: pip-audit
+
+# Weekly (and per-PR) vulnerability scan, mirroring pyramids-mesh's pip-audit. The shape differs
+# because pyramids-qgis is a from-source QGIS plugin: it vendors no third-party Python and declares
+# no runtime dependencies of its own (its runtime deps — pyramids-core, pyramids-eo, pyramids-mesh —
+# live in QGIS's own Python and are audited in THEIR repos, not here). The only pinned third-party
+# Python this repo actually controls is its CI/release toolchain, so that is what we audit for known
+# advisories. Keep the pins here in step with the versions used across the other workflows.
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Audit the pinned CI/release toolchain
+        run: |
+          cat > "${RUNNER_TEMP}/ci-tools.txt" <<'EOF'
+          ruff==0.17.3
+          pytest==9.0.3
+          commitizen==4.8.4
+          qgis-plugin-ci==2.11.0
+          pre-commit==4.5.1
+          pip-audit==2.10.1
+          gitpython==3.2.1
+          EOF
+          echo "Auditing the pinned CI/release tools against the advisory DB:"
+          cat "${RUNNER_TEMP}/ci-tools.txt"
+          # Pin the auditor itself (the repo pins everything, else results aren't reproducible); it is
+          # in the list above so it audits itself too.
+          pipx run --spec "pip-audit==2.10.1" pip-audit --requirement "${RUNNER_TEMP}/ci-tools.txt" --desc

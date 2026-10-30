@@ -1,8 +1,9 @@
 [general]
 name=Pyramids
 qgisMinimumVersion=3.22
+qgisMaximumVersion=4.99
 description=GDAL-powered raster and vector processing from the pyramids library, as QGIS Processing algorithms.
-version=0.1.0
+version=0.0.0
 author=Mostafa Farrag
 email=moah.farag@gmail.com
 about=Exposes the pyramids GIS toolkit (the pyramids-core Python package) as a QGIS
@@ -18,8 +19,8 @@ about=Exposes the pyramids GIS toolkit (the pyramids-core Python package) as a Q
 tracker=https://github.com/serapeum-org/pyramids-qgis/issues
 repository=https://github.com/serapeum-org/pyramids-qgis
 homepage=https://serapeum-org.github.io/
-category=Analysis
-icon=resources/icon.svg
+category=Raster
+icon=resources/icon.png
 
 experimental=True
 deprecated=False

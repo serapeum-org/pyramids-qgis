@@ -103,6 +103,18 @@ Default plugin directories:
 - Linux: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins`
 - macOS: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins`
 
+## Releases
+
+Releases follow the same commitizen-driven flow as the rest of the serapeum stack, in two workflows. A maintainer
+runs **`github-release`** (manual, admin-only): [commitizen](https://commitizen-tools.github.io/commitizen/) bumps
+the version (in `metadata.txt`, via `pyproject.toml`'s `version_files`), regenerates
+[`CHANGELOG.md`](CHANGELOG.md) from the Conventional Commits, tags `vX.Y.Z`, and publishes the GitHub Release. Its
+completion triggers **`publish`**, which builds the plugin zip with
+[`qgis-plugin-ci`](https://qgis.github.io/qgis-plugin-ci/) and attaches it — plus a custom-repository `plugins.xml`
+— to that Release. To install a build without cloning, add the `plugins.xml` URL as a plugin repository in
+*Plugins → Manage and Install Plugins → Settings*. Publishing to the official
+[plugins.qgis.org](https://plugins.qgis.org/) repository is not automated yet (it needs an OSGeo account).
+
 ## Repository layout
 
 ```
@@ -119,7 +131,8 @@ pyramids_qgis/              the plugin package (this is what gets deployed)
     conversion/             convert, rasterize, polygonize, cog
     mesh/                   pyramids-mesh: convert, to_vector
     eo/                     pyramids-eo: stretch, tasseled_cap
-  resources/icon.svg
+  resources/icon.png        Plugin Manager / plugins.qgis.org listing icon (metadata.txt)
+  resources/icon.svg        in-QGIS Processing provider icon (provider.py)
 scripts/deploy.py           copy/symlink the plugin into a QGIS profile
 ```
 
