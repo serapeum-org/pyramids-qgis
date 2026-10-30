@@ -114,6 +114,11 @@ jobs:
           echo "changelog_file=CHANGELOG.md" >> "$GITHUB_OUTPUT"
 
       - name: Push the version-bump commit and tag
+        # Requires push access to the release branch. If `main` has branch protection that blocks the
+        # github-actions token (required PRs/reviews with no bypass), this push is rejected AFTER
+        # `cz bump` already created the local commit + tag, and the run fails — so grant the release a
+        # bypass (as pyramids-mesh does for its bump to main). Not idempotent: a re-run bumps again
+        # (0.1.0 -> 0.1.1), so fix a failed release forward rather than re-running the same dispatch.
         run: |
           set -euo pipefail
           git push
