@@ -22,7 +22,7 @@ on:
         required: false
         default: "main"
       increment:
-        description: "Version increment type"
+        description: "Version increment type (use 'minor' for the first release: 0.0.0 baseline -> 0.1.0)"
         required: false
         type: choice
         options: [patch, minor, major]
@@ -80,57 +80,38 @@ jobs:
           git config user.name "${GIT_ACTOR}"
           git config user.email "${GIT_ACTOR}@users.noreply.github.com"
 
-      - name: Bump version and regenerate the changelog with commitizen
+      - name: Bump version and generate the changelog with commitizen
         id: bump
         env:
           INCREMENT: ${{ inputs.increment }}
           PRERELEASE_TYPE: ${{ inputs.prerelease_type }}
         run: |
           set -euo pipefail
-          CHANGELOG_FILE="CHANGELOG.md"
 
           PRE_ARGS=()
           if [ "${PRERELEASE_TYPE}" != "none" ]; then
             PRE_ARGS=(--prerelease "${PRERELEASE_TYPE}")
           fi
 
-          CURRENT=$(cz version --project)
-          echo "Current version: ${CURRENT}"
-
-          # First release (no tags): `cz bump` with update_changelog_on_bump=true exits 16 with
-          # "No tag found to do an incremental changelog". Toggle it off, generate the full
-          # changelog manually, then restore the setting — mirrors the shared release action.
-          FIRST_RELEASE=false
-          TOGGLED=false
-          if [ -z "$(git tag -l)" ]; then
-            FIRST_RELEASE=true
-            echo "::notice::First release detected (no existing tags)"
-            if grep -qE '^update_changelog_on_bump\s*=\s*true' pyproject.toml; then
-              sed -i -E 's/^update_changelog_on_bump\s*=\s*true/update_changelog_on_bump = false/' pyproject.toml
-              TOGGLED=true
-            fi
+          # Compute the next tag first, failing loudly if commitizen's wording ever changes instead of
+          # letting `pipefail` kill the step with an empty NEXT (review L4).
+          DRY=$(cz bump --dry-run --yes --increment "${INCREMENT}" "${PRE_ARGS[@]}")
+          NEXT=$(printf '%s\n' "${DRY}" | awk '/tag to create/ {print $NF}')
+          if [ -z "${NEXT}" ]; then
+            echo "::error::could not parse the next tag from 'cz bump --dry-run':"
+            printf '%s\n' "${DRY}"
+            exit 1
           fi
-
-          NEXT=$(cz bump --dry-run --yes --increment "${INCREMENT}" "${PRE_ARGS[@]}" \
-            | grep "tag to create" | awk '{print $NF}')
           echo "Next version/tag: ${NEXT}"
 
-          if [ "${FIRST_RELEASE}" = "true" ]; then
-            cz changelog --unreleased-version="${NEXT}"
-            git add "${CHANGELOG_FILE}"
-          fi
-
+          # commitizen owns the changelog (update_changelog_on_bump=true), so one `cz bump` bumps the
+          # version (and metadata.txt via version_files), regenerates CHANGELOG.md, commits, and tags.
+          # No first-release special-casing: cz 4.8.4 handles a tagless repo directly — the old
+          # "exits 16" premise was false (review M2), so the toggle/amend/tag -f dance is gone.
           cz bump --yes --increment "${INCREMENT}" "${PRE_ARGS[@]}"
 
-          if [ "${TOGGLED}" = "true" ]; then
-            sed -i -E 's/^update_changelog_on_bump\s*=\s*false/update_changelog_on_bump = true/' pyproject.toml
-            git add pyproject.toml
-            git commit --amend --no-edit --no-gpg-sign --no-verify
-            git tag -f "${NEXT}"
-          fi
-
           echo "new_version=${NEXT}" >> "$GITHUB_OUTPUT"
-          echo "changelog_file=${CHANGELOG_FILE}" >> "$GITHUB_OUTPUT"
+          echo "changelog_file=CHANGELOG.md" >> "$GITHUB_OUTPUT"
 
       - name: Push the version-bump commit and tag
         run: |
@@ -146,7 +127,9 @@ jobs:
         run: |
           set -euo pipefail
           ESCAPED=$(printf '%s' "${NEW_VERSION}" | sed 's/[.[\*^$]/\\&/g')
-          BODY=$(awk "/^##[[:space:]].*${ESCAPED}/ {found=1; next} found && /^##[[:space:]]/ {exit} found {print}" "${CHANGELOG_FILE}")
+          # Anchor on the version followed by a non-version char so v0.1.1 does not also match the
+          # v0.1.11 / v0.1.1rc0 headings (review N4). commitizen always emits "## v<ver> (<date>)".
+          BODY=$(awk "/^##[[:space:]]+${ESCAPED}[^0-9.]/ {found=1; next} found && /^##[[:space:]]/ {exit} found {print}" "${CHANGELOG_FILE}")
           [ -z "${BODY}" ] && BODY="Release ${NEW_VERSION}"
           {
             echo "body<<RELEASE_NOTES_EOF"
@@ -162,4 +145,6 @@ jobs:
           tag_name: ${{ steps.bump.outputs.new_version }}
           body: ${{ steps.notes.outputs.body }}
           draft: ${{ inputs.draft }}
-          prerelease: ${{ contains(steps.bump.outputs.new_version, 'alpha') || contains(steps.bump.outputs.new_version, 'beta') || contains(steps.bump.outputs.new_version, 'rc') }}
+          # Derive from the input, not the version string: commitizen emits PEP440 markers (a0/b0/rc0),
+          # so matching the words 'alpha'/'beta' missed alpha/beta prereleases (review M1).
+          prerelease: ${{ inputs.prerelease_type != 'none' }}
