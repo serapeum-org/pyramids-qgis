@@ -39,7 +39,10 @@ jobs:
           commitizen==4.8.4
           qgis-plugin-ci==2.8.6
           pre-commit==4.5.1
+          pip-audit==2.10.1
           EOF
           echo "Auditing the pinned CI/release tools against the advisory DB:"
           cat "${RUNNER_TEMP}/ci-tools.txt"
-          pipx run pip-audit --requirement "${RUNNER_TEMP}/ci-tools.txt" --desc
+          # Pin the auditor itself (the repo pins everything, else results aren't reproducible); it is
+          # in the list above so it audits itself too.
+          pipx run --spec "pip-audit==2.10.1" pip-audit --requirement "${RUNNER_TEMP}/ci-tools.txt" --desc
