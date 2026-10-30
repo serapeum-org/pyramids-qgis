@@ -12,8 +12,7 @@ name: Deploy MkDocs
 # below keeps this workflow inert and green in the meantime.
 
 permissions:
-  contents: write
-  pages: write
+  contents: read  # write is granted only to the deploy job (below), not the read-only detect job
 
 on:
   push:
@@ -31,6 +30,8 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       has_docs: ${{ steps.check.outputs.has_docs }}
     steps:
@@ -46,9 +47,16 @@ jobs:
 
   deploy:
     needs: detect
-    if: needs.detect.outputs.has_docs == 'true'
+    # Deploy only on main pushes / post-release (never on pull_request) so a PR is not failed by the
+    # not-yet-wired placeholder below once a mkdocs.yml exists (review L5).
+    if: >-
+      needs.detect.outputs.has_docs == 'true' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_run')
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
+      pages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
