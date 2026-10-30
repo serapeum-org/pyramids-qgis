@@ -1,4 +1,4 @@
-# Configuration for qgis-plugin-ci (https://opengisch.github.io/qgis-plugin-ci/).
+# Configuration for qgis-plugin-ci (https://qgis.github.io/qgis-plugin-ci/).
 # Drives the tag-triggered release workflow in .github/workflows/release.yml: it builds the
 # plugin zip from pyramids_qgis/ and, with --github-token, uploads it as a GitHub Release asset.
 plugin_path: pyramids_qgis

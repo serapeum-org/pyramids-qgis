@@ -105,7 +105,7 @@ Default plugin directories:
 
 ## Releases
 
-Tagging a `v*` release builds the plugin zip with [`qgis-plugin-ci`](https://opengisch.github.io/qgis-plugin-ci/)
+Tagging a `v*` release builds the plugin zip with [`qgis-plugin-ci`](https://qgis.github.io/qgis-plugin-ci/)
 and attaches it, together with a custom-repository `plugins.xml`, to the GitHub Release (see
 `.github/workflows/release.yml`). To install a tagged build without cloning, add that `plugins.xml` URL as a plugin
 repository in *Plugins → Manage and Install Plugins → Settings*. The version history lives in
@@ -128,7 +128,8 @@ pyramids_qgis/              the plugin package (this is what gets deployed)
     conversion/             convert, rasterize, polygonize, cog
     mesh/                   pyramids-mesh: convert, to_vector
     eo/                     pyramids-eo: stretch, tasseled_cap
-  resources/icon.svg
+  resources/icon.png        Plugin Manager / plugins.qgis.org listing icon (metadata.txt)
+  resources/icon.svg        in-QGIS Processing provider icon (provider.py)
 scripts/deploy.py           copy/symlink the plugin into a QGIS profile
 ```
 
