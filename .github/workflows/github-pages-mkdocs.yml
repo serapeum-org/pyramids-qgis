@@ -62,8 +62,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
-      # TODO(#8): wire the MkDocs deploy for a from-source plugin (no `pip install .`). Until #8
-      # adds mkdocs.yml this job never runs, so the placeholder below cannot fail a real build.
+      # Deferred to issue #8: wire the MkDocs deploy for a from-source plugin (no `pip install .`).
+      # Until #8 adds mkdocs.yml this job never runs, so the placeholder below cannot fail a real build.
       - run: |
           echo "::error::mkdocs.yml exists but the deploy step is not wired yet — finish issue #8."
           exit 1
