@@ -1,10 +1,12 @@
 # Configuration for qgis-plugin-ci (https://qgis.github.io/qgis-plugin-ci/).
-# Drives the tag-triggered release workflow in .github/workflows/release.yml: it builds the
-# plugin zip from pyramids_qgis/ and, with --github-token, uploads it as a GitHub Release asset.
+# Drives .github/workflows/publish.yml: it builds the plugin zip from pyramids_qgis/ and, with
+# --github-token, uploads it as a GitHub Release asset.
 plugin_path: pyramids_qgis
 github_organization_slug: serapeum-org
 project_slug: pyramids-qgis
-# Inject the latest CHANGELOG.md entry into metadata.txt at package time, so the Plugin Manager
-# shows it and the changelog is not duplicated in metadata.txt.
-changelog_include: true
-changelog_number_of_entries: 3
+# changelog injection is OFF: commitizen owns CHANGELOG.md and emits its native "## vX.Y.Z (date)"
+# format, which qgis-plugin-ci's CHANGELOG_REGEXP (requiring a "## [x.y.z] - YYYY-MM-DD" style with a
+# " - <date>") does not match — leaving it on would silently inject an EMPTY changelog into
+# metadata.txt. To populate the Plugin Manager changelog later, emit a Keep-a-Changelog-format file
+# (e.g. a commitizen template with "## [x.y.z] - <date>" headings) and flip this back to true.
+changelog_include: false
