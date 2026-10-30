@@ -27,12 +27,6 @@ on:
         type: choice
         options: [patch, minor, major]
         default: "patch"
-      prerelease_type:
-        description: "Prerelease type"
-        required: false
-        type: choice
-        options: [none, alpha, beta, rc]
-        default: "none"
       draft:
         description: "Create as draft release"
         required: false
@@ -84,18 +78,20 @@ jobs:
         id: bump
         env:
           INCREMENT: ${{ inputs.increment }}
-          PRERELEASE_TYPE: ${{ inputs.prerelease_type }}
         run: |
           set -euo pipefail
 
-          PRE_ARGS=()
-          if [ "${PRERELEASE_TYPE}" != "none" ]; then
-            PRE_ARGS=(--prerelease "${PRERELEASE_TYPE}")
+          # First release from the 0.0.0 baseline must be a minor bump (-> 0.1.0); patch/major would
+          # cut 0.0.1 / 1.0.0 and silently diverge from the documented first version (review L2).
+          CURRENT=$(cz version --project)
+          if [ "${CURRENT}" = "0.0.0" ] && [ "${INCREMENT}" != "minor" ]; then
+            echo "::error::first release from the 0.0.0 baseline must use increment=minor (to cut 0.1.0); got '${INCREMENT}'."
+            exit 1
           fi
 
           # Compute the next tag first, failing loudly if commitizen's wording ever changes instead of
           # letting `pipefail` kill the step with an empty NEXT (review L4).
-          DRY=$(cz bump --dry-run --yes --increment "${INCREMENT}" "${PRE_ARGS[@]}")
+          DRY=$(cz bump --dry-run --yes --increment "${INCREMENT}")
           NEXT=$(printf '%s\n' "${DRY}" | awk '/tag to create/ {print $NF}')
           if [ -z "${NEXT}" ]; then
             echo "::error::could not parse the next tag from 'cz bump --dry-run':"
@@ -108,7 +104,7 @@ jobs:
           # version (and metadata.txt via version_files), regenerates CHANGELOG.md, commits, and tags.
           # No first-release special-casing: cz 4.8.4 handles a tagless repo directly — the old
           # "exits 16" premise was false (review M2), so the toggle/amend/tag -f dance is gone.
-          cz bump --yes --increment "${INCREMENT}" "${PRE_ARGS[@]}"
+          cz bump --yes --increment "${INCREMENT}"
 
           echo "new_version=${NEXT}" >> "$GITHUB_OUTPUT"
           echo "changelog_file=CHANGELOG.md" >> "$GITHUB_OUTPUT"
@@ -150,6 +146,7 @@ jobs:
           tag_name: ${{ steps.bump.outputs.new_version }}
           body: ${{ steps.notes.outputs.body }}
           draft: ${{ inputs.draft }}
-          # Derive from the input, not the version string: commitizen emits PEP440 markers (a0/b0/rc0),
-          # so matching the words 'alpha'/'beta' missed alpha/beta prereleases (review M1).
-          prerelease: ${{ inputs.prerelease_type != 'none' }}
+          # No prereleases: QGIS plugin versions must be x.y.z, and a PEP440 prerelease like 0.1.0rc0
+          # would be written to metadata.txt and likely break qgis-plugin-ci (review M1/L5). The
+          # experimental=True flag in metadata.txt is the pre-release signal instead.
+          prerelease: false
