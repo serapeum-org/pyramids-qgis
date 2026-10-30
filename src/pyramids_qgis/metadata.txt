@@ -13,8 +13,8 @@ about=Exposes the pyramids GIS toolkit (the pyramids-core Python package) as a Q
     format conversion. The plugin calls the pyramids CLI in-process, so it stays a thin
     adapter over the library's stable contract. It requires the pyramids-core package to be
     importable from the QGIS Python environment — install it so it binds to QGIS's own GDAL
-    (conda-forge, or `pip install pyramids-core` into the QGIS interpreter); do NOT use a
-    platform wheel that vendors its own GDAL inside the QGIS process.
+    (`conda install -c conda-forge pyramids`, or `pip install pyramids-core` into the QGIS
+    interpreter); do NOT use a platform wheel that vendors its own GDAL inside the QGIS process.
 
 tracker=https://github.com/serapeum-org/pyramids-qgis/issues
 repository=https://github.com/serapeum-org/pyramids-qgis

@@ -71,7 +71,7 @@ GDAL in-process). The plugin detects a vendored build and warns.
 python -m pip install pyramids-core
 
 # conda-based QGIS:
-conda install -c conda-forge pyramids-core
+conda install -c conda-forge pyramids
 
 # Linux / macOS:
 <qgis-python> -m pip install pyramids-core
