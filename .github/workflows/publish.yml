@@ -1,0 +1,109 @@
+name: publish
+
+# Build the QGIS plugin and attach it to the GitHub Release that `github-release` just created —
+# the plugin-equivalent of pyramids-mesh's `pypi-release`, which publishes the package after
+# `github-release`. qgis-plugin-ci packages pyramids_qgis/ into the uploadable zip (injecting the
+# CHANGELOG entry into metadata.txt), uploads it to the Release for the tag, and attaches a
+# custom-repository plugins.xml so the build is installable by URL.
+#
+# A GITHUB_TOKEN-created release event cannot trigger another workflow, so — like pypi-release —
+# this listens on `workflow_run` (which fires when github-release *completes*), not `release`.
+# Publishing to the official plugins.qgis.org repository is intentionally left out (needs an OSGeo
+# account — issue #9); add `--osgeo-user`/`--osgeo-password` from secrets to the release step then.
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['github-release']
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # workflow_run fires regardless of outcome: only publish when github-release succeeded and ran
+    # from this repo (a manual dispatch is always allowed). Matches pypi-release's guard.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    permissions:
+      contents: write  # upload the zip / plugins.xml assets to the Release
+    steps:
+      - name: Check actor is a repository admin
+        # Gate the MANUAL path only; the workflow_run path is tied to the admin-gated github-release.
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          PERMISSION=$(gh api "repos/${REPO}/collaborators/${ACTOR}/permission" --jq '.permission')
+          echo "Permission level for ${ACTOR}: ${PERMISSION}"
+          if [ "${PERMISSION}" != "admin" ]; then
+            echo "::error::${ACTOR} is not a repository admin. Only admins can publish."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          # head_branch (not head_sha): github-release pushes the version-bump commit AFTER the
+          # workflow_run head_sha is captured, so the branch tip carries the released version.
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Resolve the released version and ensure its Release is published
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^version=' pyramids_qgis/metadata.txt | cut -d= -f2 | tr -d '[:space:]')
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch — proceeding for ${TAG}."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # workflow_run: only publish once github-release has created a PUBLISHED (non-draft)
+          # release for the tag. The /releases/tags endpoint returns published releases only.
+          ERR="${RUNNER_TEMP}/gh-release-check.err"
+          if gh api "repos/${REPO}/releases/tags/${TAG}" >/dev/null 2>"${ERR}"; then
+            echo "Published release ${TAG} found — proceeding."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          elif grep -q 'HTTP 404' "${ERR}"; then
+            echo "No published release for ${TAG} (draft or not yet published) — skipping."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::could not verify release ${TAG} (GitHub API error, not a 404)"; cat "${ERR}"; exit 1
+          fi
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        if: steps.gate.outputs.publish == 'true'
+        with:
+          python-version: "3.12"
+
+      # --only-binary=:all: forbids building from sdist, so no package setup script runs (sonar S8541).
+      - run: "python -m pip install --only-binary=:all: qgis-plugin-ci==2.8.6"
+        if: steps.gate.outputs.publish == 'true'
+
+      - name: Build and upload the plugin to the GitHub Release
+        if: steps.gate.outputs.publish == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.gate.outputs.version }}
+          TAG: ${{ steps.gate.outputs.tag }}
+        # Version is x.y.z (metadata.txt); --release-tag is the real vX.Y.Z tag so the tool finds
+        # the Release and the plugins.xml download URLs point at .../releases/download/vX.Y.Z/.
+        run: |
+          qgis-plugin-ci release "${VERSION}" \
+            --release-tag "${TAG}" \
+            --github-token "${GITHUB_TOKEN}" \
+            --create-plugin-repo

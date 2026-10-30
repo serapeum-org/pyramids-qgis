@@ -18,8 +18,10 @@ This file is the single source of the plugin's changelog: `qgis-plugin-ci` injec
   rasterize, polygonize, Cloud Optimized GeoTIFF), plus mesh (pyramids-mesh) and Earth-observation (pyramids-eo)
   algorithms. The raster/conversion algorithms call the `pyramids` CLI in-process; the mesh/EO algorithms call the
   library directly.
-- Packaging and release automation with `qgis-plugin-ci`: a tag-triggered workflow builds the plugin zip and
-  publishes it (plus a custom-repository `plugins.xml`) as a GitHub Release asset.
+- Release automation matching the serapeum stack: an admin-only `github-release` workflow (commitizen bumps the
+  version in `metadata.txt` and regenerates this changelog, then tags and publishes a GitHub Release) and a
+  downstream `publish` workflow that builds the plugin zip with `qgis-plugin-ci` and attaches it, plus a
+  custom-repository `plugins.xml`, to that Release.
 
 ### Changed
 

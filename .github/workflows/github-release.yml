@@ -1,0 +1,165 @@
+name: github-release
+
+# Cut a release the same way the rest of the serapeum stack does — admin-only, manual, driven by
+# commitizen (`cz bump`): bump the version, regenerate the CHANGELOG from Conventional Commits, tag,
+# and publish a GitHub Release. The downstream `publish.yml` (triggered when this completes) builds
+# the QGIS plugin zip and attaches it to that Release.
+#
+# Why this does NOT use the shared serapeum-org/github-actions release/github action (which
+# pyramids-mesh uses): that action's package-manager step runs `pip install .`, which needs a
+# pip-installable package. pyramids-qgis is a from-source QGIS plugin with no [project] table, so
+# the action cannot run here. This workflow reproduces its behaviour but installs commitizen
+# directly and reads the version from `metadata.txt` via commitizen's version_files (see pyproject).
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-branch:
+        description: "Branch to create the release from"
+        required: false
+        default: "main"
+      increment:
+        description: "Version increment type"
+        required: false
+        type: choice
+        options: [patch, minor, major]
+        default: "patch"
+      prerelease_type:
+        description: "Prerelease type"
+        required: false
+        type: choice
+        options: [none, alpha, beta, rc]
+        default: "none"
+      draft:
+        description: "Create as draft release"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # push the version-bump commit + tag and create the Release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.release-branch }}
+
+      - name: Check actor is a repository admin
+        # Only admins may cut releases, matching pyramids-mesh's github-release.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          PERMISSION=$(gh api "repos/${REPO}/collaborators/${ACTOR}/permission" --jq '.permission')
+          echo "Permission level for ${ACTOR}: ${PERMISSION}"
+          if [ "${PERMISSION}" != "admin" ]; then
+            echo "::error::${ACTOR} is not a repository admin. Only admins can trigger releases."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      # --only-binary=:all: forbids building from sdist, so no package setup script runs (sonar S8541).
+      - run: "python -m pip install --only-binary=:all: commitizen==4.8.4"
+
+      - name: Configure Git
+        env:
+          GIT_ACTOR: ${{ github.actor }}
+        run: |
+          git config user.name "${GIT_ACTOR}"
+          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
+
+      - name: Bump version and regenerate the changelog with commitizen
+        id: bump
+        env:
+          INCREMENT: ${{ inputs.increment }}
+          PRERELEASE_TYPE: ${{ inputs.prerelease_type }}
+        run: |
+          set -euo pipefail
+          CHANGELOG_FILE="CHANGELOG.md"
+
+          PRE_ARGS=()
+          if [ "${PRERELEASE_TYPE}" != "none" ]; then
+            PRE_ARGS=(--prerelease "${PRERELEASE_TYPE}")
+          fi
+
+          CURRENT=$(cz version --project)
+          echo "Current version: ${CURRENT}"
+
+          # First release (no tags): `cz bump` with update_changelog_on_bump=true exits 16 with
+          # "No tag found to do an incremental changelog". Toggle it off, generate the full
+          # changelog manually, then restore the setting — mirrors the shared release action.
+          FIRST_RELEASE=false
+          TOGGLED=false
+          if [ -z "$(git tag -l)" ]; then
+            FIRST_RELEASE=true
+            echo "::notice::First release detected (no existing tags)"
+            if grep -qE '^update_changelog_on_bump\s*=\s*true' pyproject.toml; then
+              sed -i -E 's/^update_changelog_on_bump\s*=\s*true/update_changelog_on_bump = false/' pyproject.toml
+              TOGGLED=true
+            fi
+          fi
+
+          NEXT=$(cz bump --dry-run --yes --increment "${INCREMENT}" "${PRE_ARGS[@]}" \
+            | grep "tag to create" | awk '{print $NF}')
+          echo "Next version/tag: ${NEXT}"
+
+          if [ "${FIRST_RELEASE}" = "true" ]; then
+            cz changelog --unreleased-version="${NEXT}"
+            git add "${CHANGELOG_FILE}"
+          fi
+
+          cz bump --yes --increment "${INCREMENT}" "${PRE_ARGS[@]}"
+
+          if [ "${TOGGLED}" = "true" ]; then
+            sed -i -E 's/^update_changelog_on_bump\s*=\s*false/update_changelog_on_bump = true/' pyproject.toml
+            git add pyproject.toml
+            git commit --amend --no-edit --no-gpg-sign --no-verify
+            git tag -f "${NEXT}"
+          fi
+
+          echo "new_version=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "changelog_file=${CHANGELOG_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Push the version-bump commit and tag
+        run: |
+          set -euo pipefail
+          git push
+          git push --tags
+
+      - name: Extract release notes for this version from the changelog
+        id: notes
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+          CHANGELOG_FILE: ${{ steps.bump.outputs.changelog_file }}
+        run: |
+          set -euo pipefail
+          ESCAPED=$(printf '%s' "${NEW_VERSION}" | sed 's/[.[\*^$]/\\&/g')
+          BODY=$(awk "/^##[[:space:]].*${ESCAPED}/ {found=1; next} found && /^##[[:space:]]/ {exit} found {print}" "${CHANGELOG_FILE}")
+          [ -z "${BODY}" ] && BODY="Release ${NEW_VERSION}"
+          {
+            echo "body<<RELEASE_NOTES_EOF"
+            echo "${BODY}"
+            echo "RELEASE_NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish the GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ steps.bump.outputs.new_version }}
+          tag_name: ${{ steps.bump.outputs.new_version }}
+          body: ${{ steps.notes.outputs.body }}
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ contains(steps.bump.outputs.new_version, 'alpha') || contains(steps.bump.outputs.new_version, 'beta') || contains(steps.bump.outputs.new_version, 'rc') }}

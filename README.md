@@ -105,11 +105,14 @@ Default plugin directories:
 
 ## Releases
 
-Tagging a `v*` release builds the plugin zip with [`qgis-plugin-ci`](https://qgis.github.io/qgis-plugin-ci/)
-and attaches it, together with a custom-repository `plugins.xml`, to the GitHub Release (see
-`.github/workflows/release.yml`). To install a tagged build without cloning, add that `plugins.xml` URL as a plugin
-repository in *Plugins → Manage and Install Plugins → Settings*. The version history lives in
-[`CHANGELOG.md`](CHANGELOG.md), which is injected into `metadata.txt` at package time. Publishing to the official
+Releases follow the same commitizen-driven flow as the rest of the serapeum stack, in two workflows. A maintainer
+runs **`github-release`** (manual, admin-only): [commitizen](https://commitizen-tools.github.io/commitizen/) bumps
+the version (in `metadata.txt`, via `pyproject.toml`'s `version_files`), regenerates
+[`CHANGELOG.md`](CHANGELOG.md) from the Conventional Commits, tags `vX.Y.Z`, and publishes the GitHub Release. Its
+completion triggers **`publish`**, which builds the plugin zip with
+[`qgis-plugin-ci`](https://qgis.github.io/qgis-plugin-ci/) and attaches it — plus a custom-repository `plugins.xml`
+— to that Release. To install a build without cloning, add the `plugins.xml` URL as a plugin repository in
+*Plugins → Manage and Install Plugins → Settings*. Publishing to the official
 [plugins.qgis.org](https://plugins.qgis.org/) repository is not automated yet (it needs an OSGeo account).
 
 ## Repository layout
