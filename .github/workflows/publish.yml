@@ -2,9 +2,10 @@ name: publish
 
 # Build the QGIS plugin and attach it to the GitHub Release that `github-release` just created —
 # the plugin-equivalent of pyramids-mesh's `pypi-release`, which publishes the package after
-# `github-release`. qgis-plugin-ci packages pyramids_qgis/ into the uploadable zip (injecting the
-# CHANGELOG entry into metadata.txt), uploads it to the Release for the tag, and attaches a
-# custom-repository plugins.xml so the build is installable by URL.
+# `github-release`. qgis-plugin-ci packages pyramids_qgis/ into the uploadable zip, uploads it to the
+# Release for the tag, and attaches a custom-repository plugins.xml so the build is installable by
+# URL. The changelog is NOT injected into metadata.txt: commitizen owns CHANGELOG.md and .qgis-plugin-ci
+# sets changelog_include: false (commitizen's format does not match qgis-plugin-ci's parser).
 #
 # A GITHUB_TOKEN-created release event cannot trigger another workflow, so — like pypi-release —
 # this listens on `workflow_run` (which fires when github-release *completes*), not `release`.
