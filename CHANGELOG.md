@@ -11,8 +11,9 @@ This file is the single source of the plugin's changelog: `qgis-plugin-ci` injec
 
 ### Changed
 
-- `metadata.txt`: set `category=Raster` (was the invalid `Analysis`), switched the plugin icon to a web-friendly
-  PNG, and declared `supportsQt6=True` so QGIS 4 (Qt6) offers the plugin.
+- `metadata.txt`: set `category=Raster` (was the invalid `Analysis`); set the Plugin Manager listing `icon` to a
+  web-friendly PNG (the in-QGIS Processing provider icon still uses the SVG); and added `qgisMaximumVersion=4.99` so
+  the plugin is offered in QGIS 4. The retired `supportsQt6` flag is not set — QGIS 4 no longer recognises it.
 
 ### Added
 

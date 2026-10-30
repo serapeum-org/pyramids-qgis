@@ -1,6 +1,7 @@
 [general]
 name=Pyramids
 qgisMinimumVersion=3.22
+qgisMaximumVersion=4.99
 description=GDAL-powered raster and vector processing from the pyramids library, as QGIS Processing algorithms.
 version=0.1.0
 author=Mostafa Farrag
@@ -23,7 +24,6 @@ icon=resources/icon.png
 
 experimental=True
 deprecated=False
-supportsQt6=True
 
 tags=raster,vector,gdal,cog,reproject,rasterize,polygonize,processing,pyramids
 
