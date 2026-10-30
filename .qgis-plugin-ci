@@ -1,0 +1,10 @@
+# Configuration for qgis-plugin-ci (https://opengisch.github.io/qgis-plugin-ci/).
+# Drives the tag-triggered release workflow in .github/workflows/release.yml: it builds the
+# plugin zip from pyramids_qgis/ and, with --github-token, uploads it as a GitHub Release asset.
+plugin_path: pyramids_qgis
+github_organization_slug: serapeum-org
+project_slug: pyramids-qgis
+# Inject the latest CHANGELOG.md entry into metadata.txt at package time, so the Plugin Manager
+# shows it and the changelog is not duplicated in metadata.txt.
+changelog_include: true
+changelog_number_of_entries: 3

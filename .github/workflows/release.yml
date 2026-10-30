@@ -1,0 +1,45 @@
+name: Release
+
+# Build and publish the plugin on a version tag. qgis-plugin-ci packages pyramids_qgis/ into the
+# uploadable zip, injects the CHANGELOG entry into metadata.txt, and attaches the zip plus a
+# custom-repository plugins.xml to the GitHub Release for the tag. Publishing to the official
+# repository (plugins.qgis.org) is deliberately NOT done here — that needs an OSGeo account and is
+# tracked separately (#9); add `--osgeo-username`/`--osgeo-password` from secrets when ready.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write  # create the GitHub Release and upload the zip / plugins.xml assets
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # qgis-plugin-ci reads the changelog and tags from full history.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      # Pin for reproducible releases; bump deliberately or via dependabot. --only-binary=:all:
+      # forbids building from sdist, so no package setup script runs during install (sonar S8541).
+      - run: "python -m pip install --only-binary=:all: qgis-plugin-ci==2.8.6"
+
+      - name: Build and publish the plugin to the GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # `release` builds the zip for the pushed tag and uploads it to that tag's GitHub Release;
+        # --create-plugin-repo also attaches a plugins.xml so the build is installable as a custom
+        # QGIS plugin repository. The leading `v` is stripped so the plugin version is X.Y.Z.
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          qgis-plugin-ci release "${VERSION}" \
+            --github-token "${GITHUB_TOKEN}" \
+            --create-plugin-repo

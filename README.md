@@ -103,6 +103,15 @@ Default plugin directories:
 - Linux: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins`
 - macOS: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins`
 
+## Releases
+
+Tagging a `v*` release builds the plugin zip with [`qgis-plugin-ci`](https://opengisch.github.io/qgis-plugin-ci/)
+and attaches it, together with a custom-repository `plugins.xml`, to the GitHub Release (see
+`.github/workflows/release.yml`). To install a tagged build without cloning, add that `plugins.xml` URL as a plugin
+repository in *Plugins → Manage and Install Plugins → Settings*. The version history lives in
+[`CHANGELOG.md`](CHANGELOG.md), which is injected into `metadata.txt` at package time. Publishing to the official
+[plugins.qgis.org](https://plugins.qgis.org/) repository is not automated yet (it needs an OSGeo account).
+
 ## Repository layout
 
 ```
