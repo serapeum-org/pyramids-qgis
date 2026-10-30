@@ -9,18 +9,7 @@ This file is the single source of the plugin's changelog: `qgis-plugin-ci` injec
 
 ## [Unreleased]
 
-### Changed
-
-- `metadata.txt`: set `category=Raster` (was the invalid `Analysis`); set the Plugin Manager listing `icon` to a
-  web-friendly PNG (the in-QGIS Processing provider icon still uses the SVG); and added `qgisMaximumVersion=4.99` so
-  the plugin is offered in QGIS 4. The retired `supportsQt6` flag is not set — QGIS 4 no longer recognises it.
-
-### Added
-
-- Packaging and release automation with `qgis-plugin-ci`: a tag-triggered workflow builds the plugin zip and
-  publishes it (plus a custom-repository `plugins.xml`) as a GitHub Release asset.
-
-## [0.1.0]
+## [0.1.0] - 2026-10-30
 
 ### Added
 
@@ -29,6 +18,14 @@ This file is the single source of the plugin's changelog: `qgis-plugin-ci` injec
   rasterize, polygonize, Cloud Optimized GeoTIFF), plus mesh (pyramids-mesh) and Earth-observation (pyramids-eo)
   algorithms. The raster/conversion algorithms call the `pyramids` CLI in-process; the mesh/EO algorithms call the
   library directly.
+- Packaging and release automation with `qgis-plugin-ci`: a tag-triggered workflow builds the plugin zip and
+  publishes it (plus a custom-repository `plugins.xml`) as a GitHub Release asset.
+
+### Changed
+
+- `metadata.txt`: set `category=Raster` (was the invalid `Analysis`); set the Plugin Manager listing `icon` to a
+  web-friendly PNG (the in-QGIS Processing provider icon still uses the SVG); and added `qgisMaximumVersion=4.99` so
+  the plugin is offered in QGIS 4. The retired `supportsQt6` flag is not set — QGIS 4 no longer recognises it.
 
 [Unreleased]: https://github.com/serapeum-org/pyramids-qgis/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/serapeum-org/pyramids-qgis/releases/tag/v0.1.0
