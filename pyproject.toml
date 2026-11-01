@@ -135,8 +135,7 @@ qgis = "*"
 pyramids = ">=0.70.0"
 
 [tool.pixi.tasks]
-test = { cmd = "pytest -q -m integration", description = "Run the real-QGIS integration tests (this env has conda qgis)" }
-test-unit = { cmd = "pytest -q -m 'not integration'", description = "Run the QGIS-free unit suite (stub)" }
+test = { cmd = "pytest -q", description = "Run the full suite against real QGIS (this env conda-installs qgis)" }
 lint = { cmd = "ruff check .", description = "Lint with ruff" }
 format = { cmd = "ruff format .", description = "Format with ruff" }
 compile = { cmd = "python -m compileall -q src/pyramids_qgis scripts", description = "Byte-compile every module" }
