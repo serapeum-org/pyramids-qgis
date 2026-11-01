@@ -6,13 +6,12 @@ readme = {file = "README.md", content-type = "text/markdown"}
 authors = [
     { name = "Mostafa Farrag", email = "moah.farag@gmail.com" }
 ]
-license = {text = "GNU General Public License v3"}
+license = "GPL-3.0-or-later"
 keywords = ["GIS", "QGIS", "processing", "plugin", "pyramids", "GDAL", "raster", "vector"]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Plugins",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -113,8 +112,9 @@ source = ["src/pyramids_qgis"]
 pythonpath = ["src", "scripts"]
 testpaths = ["tests"]
 markers = [
-    # Real-PyQGIS tests under tests/integration/: they need a live QGIS (the pixi dev env or the
-    # wheel-test job). The QGIS-free unit run deselects them with `-m "not integration"`.
+    # Real-PyQGIS instantiation tests under tests/integration/ (the pixi dev env or the wheel-test
+    # job). `-m "not integration"` skips these heavier tests but is NOT QGIS-free: every test module
+    # imports qgis.core, so the whole suite requires a real QGIS env.
     "integration: exercises the plugin against a real QGIS install",
 ]
 
