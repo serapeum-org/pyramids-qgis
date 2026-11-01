@@ -55,6 +55,7 @@ def test_icon_returns_an_icon_when_the_svg_is_present():
 
 
 def test_icon_falls_back_when_the_svg_is_missing(monkeypatch, tmp_path):
-    """icon() falls back to the base provider icon when the SVG is absent."""
+    """icon() falls back to the base provider icon (a valid QIcon) when the SVG is absent."""
     monkeypatch.setattr(provider_module, "_ICON", tmp_path / "missing.svg")
-    assert PyramidsProvider().icon() is None
+    # Real QgsProcessingProvider.icon() returns the default provider QIcon, not None.
+    assert PyramidsProvider().icon() is not None
