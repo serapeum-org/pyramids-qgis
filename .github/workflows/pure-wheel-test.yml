@@ -84,7 +84,9 @@ jobs:
         run: conda install -y -n wheel-test qgis pyramids-core
 
       - name: Install the plugin wheel (no deps — conda provides qgis + pyramids-core)
-        run: pip install dist/*.whl --no-deps
+        # --only-binary=:all: (the plugin is a wheel) + --no-deps (conda already provides qgis and
+        # pyramids) means no sdist setup script runs and nothing unpinned is resolved.
+        run: pip install dist/*.whl --only-binary=:all: --no-deps
 
       - name: Import the plugin against real PyQGIS
         # QT_QPA_PLATFORM=offscreen so importing qgis.core needs no display on the Linux runner.
