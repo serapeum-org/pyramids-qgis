@@ -4,13 +4,13 @@ name: Wheel - Build & Test
 # build the wheel, then install it on top of a conda-forge (Miniforge) environment that provides the
 # non-PyPI native dependency. For pyramids-core that dependency is GDAL; for this plugin it is
 # **QGIS** — conda-forge ships `qgis` (PyQGIS), which is what lets the plugin's modules import at all.
-# This is the ONE workflow that exercises the plugin against REAL PyQGIS (the unit suite in tests.yml
-# is QGIS-free via the conftest stub).
+# This validates the packaged WHEEL against real PyQGIS; tests.yml separately runs the source suite
+# against real PyQGIS in the pixi dev env (both run against real QGIS — there is no stub).
 #
-# pyramids-core is installed from CONDA-FORGE, not the PyPI wheel: the PyPI wheel vendors its own GDAL,
-# which conflicts with QGIS's (the exact case dependencies.py warns about). From conda-forge it binds
-# to QGIS's GDAL — the plugin's documented supported setup. Hence `pip install ... --no-deps`: conda
-# already provides qgis and pyramids-core, so pip must not pull the vendored-GDAL wheel on top.
+# pyramids is installed from CONDA-FORGE (its conda name; PyPI is pyramids-core), not the PyPI wheel:
+# the PyPI wheel vendors its own GDAL, which conflicts with QGIS's (the case dependencies.py warns
+# about). From conda-forge it binds to QGIS's GDAL. Hence `pip install ... --no-deps`: conda already
+# provides qgis and pyramids, so pip must not pull the vendored-GDAL wheel on top.
 
 permissions:
   contents: read

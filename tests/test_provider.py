@@ -1,7 +1,7 @@
 """Tests for the provider identity, the forced GeoJSON output extension, and the registry.
 
-These import the full plugin under the conftest ``qgis`` stub, so they also prove the algorithm
-registry resolves (every module imports cleanly and the classes instantiate) without QGIS.
+These import the full plugin against real PyQGIS (via the session ``qgis_app`` fixture), proving the
+algorithm registry resolves — every module imports cleanly and the classes instantiate.
 """
 
 from __future__ import annotations
