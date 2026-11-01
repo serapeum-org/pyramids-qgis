@@ -89,7 +89,7 @@ clear message when it is absent.
 ## Install the plugin
 
 Copy (or symlink) the `src/pyramids_qgis/` package into your QGIS profile's plugin directory (as
-`pyramids_qgis`), then enable **Pyramids** in *Plugins → Manage and Install Plugins*. The deploy
+`pyramids_qgis`), then enable **Pyramids QGIS** in *Plugins → Manage and Install Plugins*. The deploy
 helper does this:
 
 ```bash
