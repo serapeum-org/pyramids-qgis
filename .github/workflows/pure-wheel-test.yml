@@ -78,10 +78,11 @@ jobs:
           channel-priority: strict
           activate-environment: wheel-test
 
-      - name: Install QGIS and pyramids-core from conda-forge
-        # QGIS is the non-PyPI native dependency (as GDAL is for pyramids-core). pyramids-core comes
-        # from conda-forge too so it binds to QGIS's GDAL rather than vendoring its own.
-        run: conda install -y -n wheel-test qgis pyramids-core
+      - name: Install QGIS and pyramids from conda-forge
+        # QGIS is the non-PyPI native dependency (as GDAL is for pyramids). conda-forge ships the
+        # library as `pyramids` (PyPI name is pyramids-core); from conda it binds to QGIS's GDAL
+        # rather than vendoring its own.
+        run: conda install -y -n wheel-test qgis pyramids
 
       - name: Install the plugin wheel (no deps — conda provides qgis + pyramids-core)
         # --only-binary=:all: (the plugin is a wheel) + --no-deps (conda already provides qgis and
