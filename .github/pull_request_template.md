@@ -28,7 +28,7 @@ Check relevant points.
 
 # Checklist:
 
-- [ ] bumped the plugin version in `pyramids_qgis/metadata.txt`.
+- [ ] bumped the plugin version in `src/pyramids_qgis/metadata.txt` (or let `cz bump` update it via `version_files`).
 - [ ] verified the plugin loads and the affected algorithm runs inside QGIS.
 - [ ] updated the README where relevant.
 - [ ] I have added tests that prove my fix is effective or that my feature works.

@@ -21,7 +21,7 @@ _INSTALL_HINT = (
     "The 'pyramids-core' package is not importable from the QGIS Python environment.\n"
     "Install it into the interpreter QGIS runs so it binds to QGIS's own GDAL:\n"
     "  - OSGeo4W / Windows:  open the OSGeo4W shell and run  python -m pip install pyramids-core\n"
-    "  - conda-based QGIS:   conda install -c conda-forge pyramids-core\n"
+    "  - conda-based QGIS:   conda install -c conda-forge pyramids\n"
     "  - Linux/macOS:        <qgis-python> -m pip install pyramids-core\n"
     "Do NOT install a platform wheel that vendors its own GDAL inside the QGIS process."
 )

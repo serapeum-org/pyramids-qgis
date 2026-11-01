@@ -1,0 +1,114 @@
+name: Wheel - Build & Test
+
+# Validates the plugin's real supported install path, following pyramids-core's pure-wheel-test:
+# build the wheel, then install it on top of a conda-forge (Miniforge) environment that provides the
+# non-PyPI native dependency. For pyramids-core that dependency is GDAL; for this plugin it is
+# **QGIS** — conda-forge ships `qgis` (PyQGIS), which is what lets the plugin's modules import at all.
+# This validates the packaged WHEEL against real PyQGIS; tests.yml separately runs the source suite
+# against real PyQGIS in the pixi dev env. Both pin Python 3.13 so conda resolves the same QGIS 4.x
+# major (there is no stub).
+#
+# pyramids is installed from CONDA-FORGE (its conda name; PyPI is pyramids-core), not the PyPI wheel:
+# the PyPI wheel vendors its own GDAL, which conflicts with QGIS's (the case dependencies.py warns
+# about). From conda-forge it binds to QGIS's GDAL. Hence `pip install ... --no-deps`: conda already
+# provides qgis and pyramids, so pip must not pull the vendored-GDAL wheel on top.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-wheel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          # 3.13 to match the supported runtime; the wheel is py3-none-any, so the build Python only
+          # needs to be one the toolchain supports.
+          python-version: "3.13"
+
+      - run: "python -m pip install --only-binary=:all: build==1.2.2"
+
+      - name: Build the wheel
+        run: python -m build --wheel --outdir dist/
+
+      - name: Verify the wheel bundles the plugin metadata and resources
+        run: |
+          python -m zipfile -l dist/*.whl | grep "pyramids_qgis/metadata.txt"
+          python -m zipfile -l dist/*.whl | grep "pyramids_qgis/resources/icon.png"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: wheel
+          path: dist/*.whl
+
+  test-wheel:
+    needs: build-wheel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    # bash -el so the conda environment is activated for every run step (pyramids-core's pattern).
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: wheel
+          path: dist/
+
+      - name: Install Conda (Miniforge)
+        uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb  # v4.1.0
+        with:
+          miniforge-version: latest
+          # 3.13 so the conda-forge solver picks QGIS 4.x — the same major tests.yml exercises. On
+          # 3.12 it would silently resolve an older QGIS 3.x build (qgis 4.x requires Python >= 3.13).
+          python-version: "3.13"
+          channels: conda-forge
+          channel-priority: strict
+          activate-environment: wheel-test
+
+      - name: Install QGIS and pyramids from conda-forge
+        # QGIS is the non-PyPI native dependency (as GDAL is for pyramids). conda-forge ships the
+        # library as `pyramids` (PyPI name is pyramids-core); from conda it binds to QGIS's GDAL
+        # rather than vendoring its own.
+        run: |
+          conda install -y -n wheel-test qgis pyramids
+          # Surface the resolved QGIS build so a future solver downgrade (e.g. a Python-version skew
+          # pulling QGIS 3.x) is visible in the log rather than silent.
+          conda list -n wheel-test qgis
+
+      - name: Install the plugin wheel (no deps — conda provides qgis + pyramids-core)
+        # --only-binary=:all: (the plugin is a wheel) + --no-deps (conda already provides qgis and
+        # pyramids) means no sdist setup script runs and nothing unpinned is resolved.
+        run: "pip install dist/*.whl --only-binary=:all: --no-deps"
+
+      - name: Import the plugin against real PyQGIS
+        # `conda run` (not the bare activated python) so conda-forge QGIS's activate.d scripts run —
+        # on Windows those set the PyQGIS path, and `bash -el` alone does not, so a plain `python`
+        # there raises "No module named 'qgis'". QT_QPA_PLATFORM=offscreen needs no display on Linux.
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          conda run -n wheel-test --no-capture-output python - <<'PY'
+          import pyramids_qgis                     # import-light top package
+          import pyramids_qgis.provider            # imports qgis.core — fails on a bare pip env
+          from pyramids_qgis.algorithms import ALGORITHMS  # imports every algorithm module
+          print(f"imported against real PyQGIS; {len(ALGORITHMS)} algorithms registered")
+          assert len(ALGORITHMS) >= 10, "expected the full algorithm registry"
+          PY

@@ -45,7 +45,7 @@ repos:
     hooks:
       - id: compileall
         name: "[py   -  check] byte-compile"
-        entry: python -m compileall -q pyramids_qgis scripts
+        entry: python -m compileall -q src/pyramids_qgis scripts
         language: system
         pass_filenames: false
         always_run: true

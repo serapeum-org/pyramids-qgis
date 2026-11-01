@@ -1,11 +1,9 @@
 name: Tests
 
-# The QGIS-free unit suite, split into its own workflow to mirror pyramids-mesh's layout. It covers
-# the surface that does not need PyQGIS — the CLI runner and helpers (via the conftest qgis stub),
-# the dependency probes, the provider's forced output extension and registry, and the deploy helper
-# — so it runs on a bare runner with no QGIS installed. The PyQGIS-dependent behaviour
-# (initAlgorithm / processAlgorithm) is out of scope here and verified inside QGIS (issue #3). Unlike
-# mesh's pixi matrix, there is no package to install: the suite runs on a plain interpreter.
+# Mesh-style: the suite runs INSIDE the pixi `dev` environment, which conda-installs QGIS, so the
+# tests exercise REAL PyQGIS — there is no import stub. The env is py313 only (conda-forge `qgis` 4.x
+# has no older build). Starts on ubuntu (headless via QT_QPA_PLATFORM=offscreen); the windows/macos
+# matrix can be added once this is green.
 
 permissions:
   contents: read
@@ -22,16 +20,21 @@ concurrency:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    env:
+      QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+      - name: Set up the pixi dev env (conda qgis + pyramids)
+        # serapeum-org/github-actions is a monorepo; this SHA is the pixi/v1.2.1 action. v0.73.0 pins
+        # the pixi that wrote pixi.lock (format v7), so CI reads the lock the repo ships.
+        uses: serapeum-org/github-actions/actions/python-setup/pixi@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # pixi/v1.2.1
         with:
-          python-version: "3.12"
+          environments: dev
+          activate-environment: dev
+          cache: true
+          version: v0.73.0
 
-      # --only-binary=:all: forbids building from sdist, so no package setup script runs (sonar S8541).
-      - run: "python -m pip install --only-binary=:all: pytest==9.0.3"
-
-      - name: Run the QGIS-free test suite
-        run: python -m pytest tests/ -q
+      - name: Run the test suite against real QGIS
+        run: pixi run -e dev test
