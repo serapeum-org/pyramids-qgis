@@ -90,11 +90,13 @@ jobs:
         run: "pip install dist/*.whl --only-binary=:all: --no-deps"
 
       - name: Import the plugin against real PyQGIS
-        # QT_QPA_PLATFORM=offscreen so importing qgis.core needs no display on the Linux runner.
+        # `conda run` (not the bare activated python) so conda-forge QGIS's activate.d scripts run —
+        # on Windows those set the PyQGIS path, and `bash -el` alone does not, so a plain `python`
+        # there raises "No module named 'qgis'". QT_QPA_PLATFORM=offscreen needs no display on Linux.
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python - <<'PY'
+          conda run -n wheel-test --no-capture-output python - <<'PY'
           import pyramids_qgis                     # import-light top package
           import pyramids_qgis.provider            # imports qgis.core — fails on a bare pip env
           from pyramids_qgis.algorithms import ALGORITHMS  # imports every algorithm module
