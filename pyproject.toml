@@ -52,6 +52,9 @@ dev = [
     "commitizen >=4.8.4",
     "build >=1.0.0",
     "twine >=5.0.0",
+    # qgis-plugin-ci's own dependency; the packaging guard reproduces its folder-naming rule
+    # (slugify(name, separator="_")) without pulling the whole release tool into the test env.
+    "python-slugify >=8.0.0",
     "pip",
 ]
 docs = [
