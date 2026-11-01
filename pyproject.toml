@@ -51,7 +51,6 @@ dev = [
     "ruff ==0.17.3",
     "commitizen >=4.8.4",
     "build >=1.0.0",
-    "twine >=5.0.0",
     # qgis-plugin-ci's own dependency; the packaging guard reproduces its folder-naming rule
     # (slugify(name, separator="_")) without pulling the whole release tool into the test env.
     "python-slugify >=8.0.0",
@@ -138,7 +137,7 @@ qgis = "*"
 pyramids = ">=0.70.0"
 
 [tool.pixi.tasks]
-test = { cmd = "pytest -q", description = "Run the full suite against real QGIS (this env conda-installs qgis)" }
+test = { cmd = "pytest -q --cov=pyramids_qgis --cov-report=term-missing", description = "Run the full suite against real QGIS (this env conda-installs qgis) with coverage" }
 lint = { cmd = "ruff check .", description = "Lint with ruff" }
 format = { cmd = "ruff format .", description = "Format with ruff" }
 compile = { cmd = "python -m compileall -q src/pyramids_qgis scripts", description = "Byte-compile every module" }
