@@ -14,8 +14,11 @@ read at import. Behaviour that needs a real ``QgsProcessingContext`` / live QGIS
 
 from __future__ import annotations
 
+import os
 import sys
 import types
+
+import pytest
 
 _PARAMETER_CLASSES = (
     "QgsProcessingParameterBoolean",
@@ -100,5 +103,34 @@ def _install_qgis_stub() -> None:
 
 try:  # pragma: no cover - exercised only where real PyQGIS is installed
     import qgis.core  # noqa: F401
+
+    USING_REAL_QGIS = True
 except Exception:  # noqa: BLE001 - any import failure means PyQGIS is unavailable
     _install_qgis_stub()
+    USING_REAL_QGIS = False
+
+
+@pytest.fixture(scope="session", autouse=True)
+def qgis_app():
+    """Initialise a headless QgsApplication for the session when real PyQGIS is present.
+
+    The ``@pytest.mark.integration`` tests instantiate the provider and algorithms against REAL
+    PyQGIS, which needs a live ``QgsApplication`` (creating ``QgsProcessingAlgorithm`` objects and
+    building their parameters touches the QGIS runtime). Under the import stub — a bare interpreter
+    with no QGIS, the unit-test path — this is a no-op: there is no app to create and the stubbed
+    classes are inert. ``QT_QPA_PLATFORM=offscreen`` keeps the Linux CI runner from needing a
+    display.
+    """
+    if not USING_REAL_QGIS:
+        yield None
+        return
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from qgis.core import QgsApplication
+
+    app = QgsApplication([], False)
+    app.initQgis()
+    try:
+        yield app
+    finally:
+        app.exitQgis()

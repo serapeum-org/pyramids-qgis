@@ -112,6 +112,11 @@ source = ["src/pyramids_qgis"]
 # src layout: the package is importable from src/ without an install; scripts/ carries deploy.py.
 pythonpath = ["src", "scripts"]
 testpaths = ["tests"]
+markers = [
+    # Real-PyQGIS tests under tests/integration/: they need a live QGIS (the pixi dev env or the
+    # wheel-test job). The QGIS-free unit run deselects them with `-m "not integration"`.
+    "integration: exercises the plugin against a real QGIS install",
+]
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -130,7 +135,8 @@ qgis = "*"
 pyramids = ">=0.70.0"
 
 [tool.pixi.tasks]
-test = { cmd = "pytest -q", description = "Run the QGIS-free unit suite" }
+test = { cmd = "pytest -q -m integration", description = "Run the real-QGIS integration tests (this env has conda qgis)" }
+test-unit = { cmd = "pytest -q -m 'not integration'", description = "Run the QGIS-free unit suite (stub)" }
 lint = { cmd = "ruff check .", description = "Lint with ruff" }
 format = { cmd = "ruff format .", description = "Format with ruff" }
 compile = { cmd = "python -m compileall -q src/pyramids_qgis scripts", description = "Byte-compile every module" }
