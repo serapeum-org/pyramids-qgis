@@ -34,6 +34,8 @@ _PROFILE_RE = re.compile(r"[A-Za-z0-9._-]+")
 #: QGIS writes its per-user config under a generation-named directory: QGIS 3.x uses "QGIS3",
 #: QGIS 4.x uses "QGIS4". A machine can carry both (parallel installs), so the deploy target is
 #: chosen per generation. Ordered newest-first — auto-detection prefers the newest one present.
+#: When QGIS 5 ships, prepend "QGIS5": an unrecognised newest generation is not matched and the
+#: fallback picks `_QGIS_DIRS[0]`, so a QGIS5-only machine would otherwise misroute to QGIS4.
 _QGIS_DIRS = ("QGIS4", "QGIS3")
 
 
@@ -152,7 +154,8 @@ def main(argv: list[str] | None = None) -> int:
         "--qgis-version",
         choices=["3", "4"],
         help="QGIS major version to target (3 -> QGIS3, 4 -> QGIS4); default: auto-detect the "
-        "newest profile tree present on disk. Ignored when --plugins-dir is given.",
+        "newest profile tree present (QGIS4 if none exists yet — pass 3 for a QGIS 3-only install "
+        "so the deploy is not created under an unused QGIS4 tree). Ignored with --plugins-dir.",
     )
     parser.add_argument(
         "--symlink", action="store_true", help="symlink instead of copying (dev workflow)"
