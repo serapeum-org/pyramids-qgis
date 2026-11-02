@@ -11,8 +11,7 @@ name: Deploy MkDocs
 # ACTIONS_DEPLOY_TOKEN secret (a token with Pages/contents write), same as pyramids-mesh.
 
 permissions:
-  contents: write
-  pages: write
+  contents: read  # top-level stays read-only; each deploy job grants its own contents: write (S8233).
 
 on:
   push:
@@ -32,6 +31,8 @@ jobs:
   deploy-pr:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # mike pushes the built docs to the gh-pages branch.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -46,6 +47,8 @@ jobs:
   deploy-main:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -66,14 +69,18 @@ jobs:
        && github.event.workflow_run.conclusion == 'success'
        && github.event.workflow_run.head_repository.fork == false)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
-          # head_branch (not head_sha): github-release pushes the version-bump commit AFTER the
-          # workflow_run head_sha is captured, so the branch tip carries the released version while
-          # head_sha would check out the pre-bump tree. The fork guard in `if:` keeps this safe.
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+          # Check out `main` — a trusted, static ref — not the event-derived
+          # workflow_run.head_branch. github-release pushes the version-bump commit to main before
+          # this job runs, so main's tip already carries the released version (the reason mesh reaches
+          # for head_branch over the pre-bump head_sha). A literal ref, not a fork-controllable event
+          # input, also clears SonarCloud githubactions:S7631; the job stays fork-guarded in `if:`.
+          ref: main
 
       - name: Extract version from pyproject.toml
         id: version
