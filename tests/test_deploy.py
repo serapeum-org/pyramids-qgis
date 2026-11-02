@@ -188,3 +188,19 @@ def test_main_deploy_error_returns_1(tmp_path, fake_plugin_src, monkeypatch, cap
     rc = deploy.main(["--plugins-dir", str(tmp_path / "plugins")])
     assert rc == 1
     assert "error: disk on fire" in capsys.readouterr().err
+
+
+def test_main_no_flags_autodetects_generation(tmp_path, fake_plugin_src, monkeypatch, capsys):
+    """`main([])` (bare `python scripts/deploy.py`) auto-detects the newest present generation.
+
+    This drives the ``qgis_dir = ... if args.qgis_version else None`` else-branch — the no-flag
+    auto-detect path that is the exact regression this PR fixes — which coverage.py does not
+    arc-split out of the ternary.
+    """
+    (tmp_path / "QGIS4").mkdir()
+    monkeypatch.setattr(deploy, "_qgis_config_base", lambda: tmp_path)
+    rc = deploy.main([])
+    assert rc == 0
+    target = tmp_path / "QGIS4" / "profiles" / "default" / "python" / "plugins" / "pyramids_qgis"
+    assert (target / "metadata.txt").is_file()
+    assert "copied pyramids_qgis" in capsys.readouterr().out
