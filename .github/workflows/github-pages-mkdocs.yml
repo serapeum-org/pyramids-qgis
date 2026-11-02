@@ -5,6 +5,11 @@ name: Deploy MkDocs
 # itself (`pip install .`) and never QGIS. This is deliberate: importing `pyramids_qgis` pulls in
 # `qgis.core`, which the docs runner does not provide. The pull_request job builds with `--strict` to
 # prove the site stays QGIS-free; main pushes and releases deploy versioned docs with `mike`.
+#
+# Pages source requirement: `mike` publishes by committing the built site to the `gh-pages` branch, so
+# the repo's Settings -> Pages -> Build and deployment -> Source must be "Deploy from a branch -> gh-pages".
+# If Pages is set to the "GitHub Actions" source instead, the push to `gh-pages` still succeeds and this
+# workflow stays green, but nothing is served — a silent no-publish.
 
 permissions:
   contents: read  # write is granted per-job to the deploy jobs only, not to the PR build.
