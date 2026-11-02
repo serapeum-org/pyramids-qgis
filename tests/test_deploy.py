@@ -165,8 +165,11 @@ def test_main_qgis_version_routes_to_generation(tmp_path, fake_plugin_src, monke
     monkeypatch.setattr(deploy, "_qgis_config_base", lambda: tmp_path)
     rc = deploy.main(["--qgis-version", "4"])
     assert rc == 0
+    captured = capsys.readouterr()
+    assert "copied pyramids_qgis" in captured.out
+    assert "--qgis-version is ignored" not in captured.err
+    assert "no QGIS profile directory found" not in captured.err
     expected = tmp_path / "QGIS4" / "profiles" / "default" / "python" / "plugins"
-    assert "copied pyramids_qgis" in capsys.readouterr().out
     assert (expected / "pyramids_qgis" / "metadata.txt").is_file()
 
 
@@ -204,6 +207,18 @@ def test_main_no_flags_autodetects_generation(tmp_path, fake_plugin_src, monkeyp
     target = tmp_path / "QGIS4" / "profiles" / "default" / "python" / "plugins" / "pyramids_qgis"
     assert (target / "metadata.txt").is_file()
     assert "copied pyramids_qgis" in capsys.readouterr().out
+
+
+def test_main_fresh_machine_warns_and_defaults_to_qgis4(
+    tmp_path, fake_plugin_src, monkeypatch, capsys
+):
+    """With no profile tree yet, main([]) warns it is defaulting to QGIS4 and deploys there."""
+    monkeypatch.setattr(deploy, "_qgis_config_base", lambda: tmp_path)
+    rc = deploy.main([])
+    assert rc == 0
+    assert "no QGIS profile directory found; defaulting to QGIS4" in capsys.readouterr().err
+    target = tmp_path / "QGIS4" / "profiles" / "default" / "python" / "plugins" / "pyramids_qgis"
+    assert (target / "metadata.txt").is_file()
 
 
 def test_config_base_windows_missing_appdata_raises(monkeypatch):
