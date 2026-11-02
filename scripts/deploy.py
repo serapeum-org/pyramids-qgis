@@ -168,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.plugins_dir and args.qgis_version:
+        print(
+            "warning: --qgis-version is ignored because --plugins-dir was given",
+            file=sys.stderr,
+        )
+
     if not _PLUGIN_SRC.is_dir():
         print(f"error: plugin source not found at {_PLUGIN_SRC}", file=sys.stderr)
         return 1

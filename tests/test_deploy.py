@@ -229,3 +229,11 @@ def test_main_missing_appdata_returns_1(tmp_path, fake_plugin_src, monkeypatch, 
     rc = deploy.main([])
     assert rc == 1
     assert "APPDATA is not set" in capsys.readouterr().err
+
+
+def test_main_warns_when_qgis_version_ignored(tmp_path, fake_plugin_src, capsys):
+    """Passing both --plugins-dir and --qgis-version deploys but warns the latter is ignored."""
+    rc = deploy.main(["--plugins-dir", str(tmp_path / "plugins"), "--qgis-version", "3"])
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert "--qgis-version is ignored" in err
