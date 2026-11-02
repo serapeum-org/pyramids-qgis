@@ -1,129 +1,91 @@
 name: Deploy MkDocs
 
-# Self-contained docs build & deploy. The site is hand-written (no mkdocstrings auto-API reference),
-# so the build installs ONLY the `docs` dependency group (mkdocs + material + mike) — never the plugin
-# itself (`pip install .`) and never QGIS. This is deliberate: importing `pyramids_qgis` pulls in
-# `qgis.core`, which the docs runner does not provide. The pull_request job builds with `--strict` to
-# prove the site stays QGIS-free; main pushes and releases deploy versioned docs with `mike`.
+# Mirrors pyramids-mesh: all the build/deploy logic lives in the shared
+# serapeum-org/github-actions `mkdocs-deploy` composite action. The action sets up the pixi `docs`
+# environment (install-groups: docs -> the `docs` pixi env, which has no QGIS and does not install
+# this plugin, see pyproject.toml), builds the hand-written site, and publishes versioned docs with
+# mike. Pins the same monorepo SHA tests.yml already uses (38c1110 == pixi/v1.2.1 == mkdocs/v1.3.1).
 #
-# Pages source requirement: `mike` publishes by committing the built site to the `gh-pages` branch, so
-# the repo's Settings -> Pages -> Build and deployment -> Source must be "Deploy from a branch -> gh-pages".
-# If Pages is set to the "GitHub Actions" source instead, the push to `gh-pages` still succeeds and this
-# workflow stays green, but nothing is served — a silent no-publish.
+# Pages source requirement: mike publishes by committing the built site to the `gh-pages` branch, so
+# the repo's Settings -> Pages -> Source must be "Deploy from a branch -> gh-pages". Needs the
+# ACTIONS_DEPLOY_TOKEN secret (a token with Pages/contents write), same as pyramids-mesh.
 
 permissions:
-  contents: read  # write is granted per-job to the deploy jobs only, not to the PR build.
+  contents: write
+  pages: write
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
+    branches:
+      - '**'
+  release:
+    types:
+      - published
   workflow_run:
     workflows: ['github-release']
     types: [completed]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
-  # Pull requests: build the site and fail on any warning (broken link, missing nav page, …) but never
-  # deploy. This is the guard that keeps the docs build self-contained — it installs no QGIS.
-  build:
+  deploy-pr:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          python-version: '3.12'
-      # PEP 735 dependency groups need pip >= 25.1; `--group docs` installs the docs tooling WITHOUT
-      # installing this project (no `pip install .`), so the plugin / QGIS never enter the build env.
-      # --only-binary=:all: installs wheels only, so no sdist setup script runs during the docs build
-      # (the mkdocs/material/mike stack is wheels-only on PyPI). PEP 735 --group needs pip >= 25.1.
-      - run: 'python -m pip install --only-binary=:all: --upgrade "pip>=25.1"'
-      - run: 'python -m pip install --only-binary=:all: --group docs'
-      - run: mkdocs build --strict
+          fetch-depth: 0
+      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # mkdocs/v1.3.1
+        with:
+          trigger: 'pull_request'
+          package-manager: 'pixi'
+          install-groups: 'docs'
+          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
 
-  # Main branch: deploy the `main` version and make it the default the site opens on.
   deploy-main:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write  # mike pushes the built site to the gh-pages branch.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          fetch-depth: 0  # mike needs full history + the gh-pages branch to update it.
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+          fetch-depth: 0
+      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # mkdocs/v1.3.1
         with:
-          python-version: '3.12'
-      # --only-binary=:all: installs wheels only, so no sdist setup script runs during the docs build
-      # (the mkdocs/material/mike stack is wheels-only on PyPI). PEP 735 --group needs pip >= 25.1.
-      - run: 'python -m pip install --only-binary=:all: --upgrade "pip>=25.1"'
-      - run: 'python -m pip install --only-binary=:all: --group docs'
-      - name: Build site (strict)
-        # Gate direct pushes to main too: only the pull_request job runs --strict, so without this a
-        # commit that reached main outside a PR could deploy a broken link / nav mismatch non-strict.
-        run: mkdocs build --strict
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Deploy (mike) — main
-        run: |
-          mike deploy --push --update-aliases main
-          mike set-default --push main
+          trigger: 'main'
+          package-manager: 'pixi'
+          install-groups: 'docs'
+          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
 
-  # Release: triggered after the github-release workflow completes successfully. Deploy the released
-  # version under its tag and move the `latest` alias to it. The site default is left untouched —
-  # `main` stays the landing page until the first stable release (see the deploy step's comment).
   deploy-release:
-    # Security: when triggered via workflow_run, require the upstream run came from the base repo
-    # (not a fork) so untrusted code never runs in a context holding the write token.
+    # Security: when triggered via workflow_run, require the upstream run came from the base repo (not
+    # a fork) so untrusted code never runs in a context holding the deploy token.
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.fork == false
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_run'
+       && github.event.workflow_run.conclusion == 'success'
+       && github.event.workflow_run.head_repository.fork == false)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           # head_branch (not head_sha): github-release pushes the version-bump commit AFTER the
           # workflow_run head_sha is captured, so the branch tip carries the released version while
-          # head_sha would check out the pre-bump tree. The fork guard above keeps this safe.
+          # head_sha would check out the pre-bump tree. The fork guard in `if:` keeps this safe.
           ref: ${{ github.event.workflow_run.head_branch || github.ref }}
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-        with:
-          python-version: '3.12'
-      # --only-binary=:all: installs wheels only, so no sdist setup script runs during the docs build
-      # (the mkdocs/material/mike stack is wheels-only on PyPI). PEP 735 --group needs pip >= 25.1.
-      - run: 'python -m pip install --only-binary=:all: --upgrade "pip>=25.1"'
-      - run: 'python -m pip install --only-binary=:all: --group docs'
+
       - name: Extract version from pyproject.toml
         id: version
         run: |
           VERSION=$(grep -m1 '^version' pyproject.toml | sed 's/.*"\(.*\)"/\1/')
           echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Build site (strict)
-        run: mkdocs build --strict
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Deploy (mike) — release
-        # Publish the released version under its tag and move the `latest` alias to it, but do NOT set
-        # the site default here. While the plugin is pre-1.0/experimental, `main` (the dev docs) stays
-        # the landing page — only `deploy-main` sets the default. Releases are reachable via the
-        # version selector and the `latest` alias. Flip the front door to `latest` at the first stable
-        # release by adding `mike set-default --push latest` here (and dropping it from deploy-main).
-        run: |
-          mike deploy --push --update-aliases "${{ steps.version.outputs.tag }}" latest
+
+      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # mkdocs/v1.3.1
+        with:
+          trigger: 'release'
+          package-manager: 'pixi'
+          install-groups: 'docs'
+          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
+          release-tag: ${{ github.event.release.tag_name || steps.version.outputs.tag }}
+          mike-alias: 'latest'

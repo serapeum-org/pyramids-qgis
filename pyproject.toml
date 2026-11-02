@@ -153,10 +153,13 @@ cz-bump = { cmd = "cz bump", description = "Bump the version with commitizen" }
 # is only the conda dev/test env that carries real QGIS.
 default = { features = ["py313"], solve-group = "default" }
 dev = { features = ["py313", "dev"], solve-group = "default" }
-# No `docs` pixi environment by design: the docs site is hand-written (no mkdocstrings), so its build
-# needs neither QGIS nor this project installed. The Deploy MkDocs workflow builds it on plain pip
-# (`pip install --group docs`, no `pip install .`), which keeps the mkdocs stack out of the conda
-# `qgis` solve entirely — so [dependency-groups].docs is consumed by pip in CI, not solved by pixi.
+# Docs environment for the shared mkdocs-deploy action (package-manager: pixi, install-groups: docs),
+# mirroring pyramids-mesh. `no-default-feature = true` drops the top-level [tool.pixi.dependencies]
+# (QGIS + pyramids), so this env carries ONLY python + the [dependency-groups].docs tooling (mkdocs,
+# material, mike) — no QGIS, no conda `qgis` in its solve, and the plugin itself is not installed. The
+# site is hand-written (no mkdocstrings), so nothing here imports `qgis.core`. Its own solve-group
+# keeps it independent of the QGIS dev/test solve.
+docs = { features = ["py313", "docs"], solve-group = "docs", no-default-feature = true }
 
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"
