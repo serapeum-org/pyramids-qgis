@@ -54,7 +54,7 @@ def _detect_qgis_dir(base: Path) -> str:
         base: The per-user QGIS config base (parent of the ``QGIS3`` / ``QGIS4`` directories).
 
     Returns:
-        str: The newest generation in `_QGIS_DIRS` whose directory exists under `base`, or the
+        str: The newest generation in ``_QGIS_DIRS`` whose directory exists under ``base``, or the
             newest known generation when none exists yet.
     """
     for name in _QGIS_DIRS:
