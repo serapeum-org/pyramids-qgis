@@ -76,7 +76,8 @@ jobs:
           mike set-default --push main
 
   # Release: triggered after the github-release workflow completes successfully. Deploy the released
-  # version under its tag and move the `latest` alias to it, then default the site to `latest`.
+  # version under its tag and move the `latest` alias to it. The site default is left untouched —
+  # `main` stays the landing page until the first stable release (see the deploy step's comment).
   deploy-release:
     # Security: when triggered via workflow_run, require the upstream run came from the base repo
     # (not a fork) so untrusted code never runs in a context holding the write token.
