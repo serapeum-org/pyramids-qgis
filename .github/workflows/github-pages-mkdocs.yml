@@ -113,6 +113,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Deploy (mike) — release
+        # Publish the released version under its tag and move the `latest` alias to it, but do NOT set
+        # the site default here. While the plugin is pre-1.0/experimental, `main` (the dev docs) stays
+        # the landing page — only `deploy-main` sets the default. Releases are reachable via the
+        # version selector and the `latest` alias. Flip the front door to `latest` at the first stable
+        # release by adding `mike set-default --push latest` here (and dropping it from deploy-main).
         run: |
           mike deploy --push --update-aliases "${{ steps.version.outputs.tag }}" latest
-          mike set-default --push latest
