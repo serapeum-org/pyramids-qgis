@@ -1,0 +1,96 @@
+site_name: Pyramids QGIS
+site_description: "A QGIS Processing provider exposing the pyramids GIS toolkit (pyramids-core)"
+site_url: https://serapeum-org.github.io/pyramids-qgis/
+repo_url: https://github.com/serapeum-org/pyramids-qgis
+repo_name: serapeum-org/pyramids-qgis
+
+# Hand-written pages only — deliberately NO mkdocstrings auto-API reference. Generating one would
+# import `pyramids_qgis`, which imports `qgis.core`; QGIS's Python is not (and should not be) on the
+# docs runner. So the docs build installs only the `docs` dependency group (mkdocs + material + mike)
+# and never the plugin itself — it is QGIS-free, which the `Deploy MkDocs` workflow's PR job proves.
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - navigation.footer
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - content.tooltips
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: lime
+      toggle:
+        icon: material/weather-night
+        name: Switch to system preference
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - footnotes
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: "#"
+      toc_depth: 1-4
+      anchorlink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: installation.md
+      - End-to-end testing: testing.md
+  - Reference:
+      - Algorithms: algorithms.md
+  - About:
+      - Change-log: about/change-log.md
+      - License: about/license.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/serapeum-org/pyramids-qgis
+  # Versioned docs are published with `mike` (see the Deploy MkDocs workflow); this turns on
+  # Material's version selector so released versions are reachable from the published site.
+  version:
+    provider: mike
