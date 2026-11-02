@@ -66,10 +66,16 @@ def test_default_plugins_dir_rejects_unknown_generation(tmp_path, monkeypatch):
         deploy.default_plugins_dir("default", "QGIS9")
 
 
-def test_default_plugins_dir_rejects_unsafe_profile():
-    """Path-traversal profile names are still rejected (unchanged behaviour)."""
+@pytest.mark.parametrize("bad", [".", "..", "", "a/b", "a\\b", "../../etc"])
+def test_default_plugins_dir_rejects_unsafe_profile(bad):
+    """Unsafe profile names are rejected with ValueError.
+
+    `.` and `..` pass the ``_PROFILE_RE`` regex (``.`` is in the class), so the explicit
+    ``profile in {".", ".."}`` membership check is the only guard against them — this keeps that
+    branch covered. ``""`` and names with ``/`` or ``\\`` separators are rejected by the regex.
+    """
     with pytest.raises(ValueError, match="invalid QGIS profile name"):
-        deploy.default_plugins_dir("../../etc")
+        deploy.default_plugins_dir(bad)
 
 
 def test_config_base_windows(tmp_path, monkeypatch):
