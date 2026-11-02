@@ -6,8 +6,10 @@ under **Pyramids**, so they work in the toolbox, the graphical modeler, batch mo
 `processing.run(...)` API — the same as any native QGIS algorithm.
 
 !!! warning "Status: experimental"
-    First release ships file-in / file-out raster & vector algorithms that mirror the `pyramids`
-    command-line interface. The plugin is marked `experimental=True` in its metadata.
+    First release ships file-in / file-out raster, conversion, mesh, and Earth-observation
+    algorithms. The raster and conversion algorithms mirror the `pyramids` command-line interface;
+    the mesh and EO algorithms call their backing libraries directly (see *How it works* below). The
+    plugin is marked `experimental=True` in its metadata.
 
 ## How it works
 
