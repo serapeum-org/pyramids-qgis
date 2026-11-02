@@ -87,6 +87,7 @@ def default_plugins_dir(profile: str, qgis_dir: str | None = None) -> Path:
     Raises:
         ValueError: ``profile`` is not a single safe path component, or ``qgis_dir`` is not one
             of ``"QGIS3"`` / ``"QGIS4"``.
+        RuntimeError: on Windows when ``APPDATA`` is unset (propagated from ``_qgis_config_base``).
     """
     if profile in {".", ".."} or not _PROFILE_RE.fullmatch(profile):
         raise ValueError(
@@ -181,15 +182,27 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.plugins_dir:
             plugins_dir = Path(args.plugins_dir)
+        elif args.qgis_version:
+            plugins_dir = default_plugins_dir(args.profile, f"QGIS{args.qgis_version}")
         else:
-            qgis_dir = f"QGIS{args.qgis_version}" if args.qgis_version else None
+            base = _qgis_config_base()
+            qgis_dir = _detect_qgis_dir(base)
+            if not (base / qgis_dir).is_dir():
+                # No profile tree exists yet, so detection fell back to the newest generation.
+                # Announce it (the printed target only implies it) so a QGIS 3 user can override.
+                print(
+                    f"warning: no QGIS profile directory found; defaulting to {qgis_dir} — "
+                    "pass --qgis-version to target a specific generation",
+                    file=sys.stderr,
+                )
             plugins_dir = default_plugins_dir(args.profile, qgis_dir)
         target = deploy(plugins_dir, symlink=args.symlink)
     except (RuntimeError, OSError, ValueError) as exc:
         # Surface every config/deploy failure as one clean line, not a raw traceback:
-        # ValueError — invalid --profile or --qgis-version generation; RuntimeError — unset APPDATA
-        # or a wrapped symlink failure; OSError — rmtree / copytree / unlink on a locked or
-        # read-only destination.
+        # ValueError — an invalid --profile (the --qgis-version generation is argparse-validated to
+        # 3/4, so a bad generation is reachable only via a direct default_plugins_dir() call);
+        # RuntimeError — unset APPDATA or a wrapped symlink failure; OSError — rmtree / copytree /
+        # unlink on a locked or read-only destination.
         print(f"error: {exc}", file=sys.stderr)
         return 1
     verb = "symlinked" if args.symlink else "copied"
