@@ -8,6 +8,7 @@ Usage:
     python scripts/deploy.py                 # copy into the 'default' profile
     python scripts/deploy.py --symlink       # symlink instead (developer workflow)
     python scripts/deploy.py --profile foo   # target a non-default profile
+    python scripts/deploy.py --qgis-version 4  # target the QGIS4 profile tree explicitly
     python scripts/deploy.py --plugins-dir "C:/path/to/python/plugins"
 """
 
@@ -30,33 +31,68 @@ _PLUGIN_SRC = _REPO_ROOT / "src" / PLUGIN_NAME
 #: directory, so the deploy target cannot escape the QGIS profiles tree (sonar S8707).
 _PROFILE_RE = re.compile(r"[A-Za-z0-9._-]+")
 
+#: QGIS writes its per-user config under a generation-named directory: QGIS 3.x uses "QGIS3",
+#: QGIS 4.x uses "QGIS4". A machine can carry both (parallel installs), so the deploy target is
+#: chosen per generation. Ordered newest-first — auto-detection prefers the newest one present.
+_QGIS_DIRS = ("QGIS4", "QGIS3")
 
-def default_plugins_dir(profile: str) -> Path:
+
+def _qgis_config_base() -> Path:
+    """Return this OS's per-user QGIS config base (the parent of the ``QGIS3`` / ``QGIS4`` dirs)."""
+    system = platform.system()
+    if system == "Windows":
+        return Path(os.environ["APPDATA"]) / "QGIS"
+    if system == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "QGIS"
+    return Path.home() / ".local" / "share" / "QGIS"
+
+
+def _detect_qgis_dir(base: Path) -> str:
+    """Pick the QGIS generation directory to deploy into.
+
+    Args:
+        base: The per-user QGIS config base (parent of the ``QGIS3`` / ``QGIS4`` directories).
+
+    Returns:
+        str: The newest generation in `_QGIS_DIRS` whose directory exists under `base`, or the
+            newest known generation when none exists yet.
+    """
+    for name in _QGIS_DIRS:
+        if (base / name).is_dir():
+            return name
+    return _QGIS_DIRS[0]
+
+
+def default_plugins_dir(profile: str, qgis_dir: str | None = None) -> Path:
     """Return the QGIS plugins directory for ``profile`` on this OS.
 
     Args:
         profile: The QGIS profile name (usually ``"default"``). Must be a single safe path
             component; a name containing a path separator or ``..`` is rejected.
+        qgis_dir: The QGIS generation directory, ``"QGIS3"`` or ``"QGIS4"``. When ``None`` it is
+            auto-detected, preferring the newest generation present on disk (so an installed
+            QGIS 4 wins over a leftover QGIS 3 tree).
 
     Returns:
-        Path: ``.../QGIS3/profiles/<profile>/python/plugins``.
+        Path: ``.../<qgis_dir>/profiles/<profile>/python/plugins``.
 
     Raises:
-        ValueError: ``profile`` is not a single safe path component.
+        ValueError: ``profile`` is not a single safe path component, or ``qgis_dir`` is not one
+            of ``"QGIS3"`` / ``"QGIS4"``.
     """
     if profile in {".", ".."} or not _PROFILE_RE.fullmatch(profile):
         raise ValueError(
             f"invalid QGIS profile name {profile!r}: expected a single path component of "
             "letters, digits, '.', '_' or '-' (no path separators or '..')"
         )
-    system = platform.system()
-    if system == "Windows":
-        base = Path(os.environ["APPDATA"]) / "QGIS" / "QGIS3"
-    elif system == "Darwin":
-        base = Path.home() / "Library" / "Application Support" / "QGIS" / "QGIS3"
-    else:
-        base = Path.home() / ".local" / "share" / "QGIS" / "QGIS3"
-    return base / "profiles" / profile / "python" / "plugins"
+    base = _qgis_config_base()
+    if qgis_dir is None:
+        qgis_dir = _detect_qgis_dir(base)
+    elif qgis_dir not in _QGIS_DIRS:
+        raise ValueError(
+            f"invalid QGIS generation {qgis_dir!r}: expected one of {', '.join(_QGIS_DIRS)}"
+        )
+    return base / qgis_dir / "profiles" / profile / "python" / "plugins"
 
 
 def deploy(plugins_dir: Path, *, symlink: bool) -> Path:
@@ -113,6 +149,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profile", default="default", help="QGIS profile name")
     parser.add_argument("--plugins-dir", help="explicit plugins directory (overrides --profile)")
     parser.add_argument(
+        "--qgis-version",
+        choices=["3", "4"],
+        help="QGIS major version to target (3 -> QGIS3, 4 -> QGIS4); default: auto-detect the "
+        "newest profile tree present on disk. Ignored when --plugins-dir is given.",
+    )
+    parser.add_argument(
         "--symlink", action="store_true", help="symlink instead of copying (dev workflow)"
     )
     args = parser.parse_args(argv)
@@ -121,7 +163,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: plugin source not found at {_PLUGIN_SRC}", file=sys.stderr)
         return 1
 
-    plugins_dir = Path(args.plugins_dir) if args.plugins_dir else default_plugins_dir(args.profile)
+    if args.plugins_dir:
+        plugins_dir = Path(args.plugins_dir)
+    else:
+        qgis_dir = f"QGIS{args.qgis_version}" if args.qgis_version else None
+        plugins_dir = default_plugins_dir(args.profile, qgis_dir)
     try:
         target = deploy(plugins_dir, symlink=args.symlink)
     except (RuntimeError, OSError) as exc:
