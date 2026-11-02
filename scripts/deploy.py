@@ -43,7 +43,13 @@ def _qgis_config_base() -> Path:
     """Return this OS's per-user QGIS config base (the parent of the ``QGIS3`` / ``QGIS4`` dirs)."""
     system = platform.system()
     if system == "Windows":
-        return Path(os.environ["APPDATA"]) / "QGIS"
+        appdata = os.environ.get("APPDATA")
+        if not appdata:
+            raise RuntimeError(
+                "APPDATA is not set, so the QGIS profile directory cannot be located; "
+                "pass --plugins-dir explicitly."
+            )
+        return Path(appdata) / "QGIS"
     if system == "Darwin":
         return Path.home() / "Library" / "Application Support" / "QGIS"
     return Path.home() / ".local" / "share" / "QGIS"
@@ -166,17 +172,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: plugin source not found at {_PLUGIN_SRC}", file=sys.stderr)
         return 1
 
-    if args.plugins_dir:
-        plugins_dir = Path(args.plugins_dir)
-    else:
-        qgis_dir = f"QGIS{args.qgis_version}" if args.qgis_version else None
-        plugins_dir = default_plugins_dir(args.profile, qgis_dir)
     try:
+        if args.plugins_dir:
+            plugins_dir = Path(args.plugins_dir)
+        else:
+            qgis_dir = f"QGIS{args.qgis_version}" if args.qgis_version else None
+            plugins_dir = default_plugins_dir(args.profile, qgis_dir)
         target = deploy(plugins_dir, symlink=args.symlink)
-    except (RuntimeError, OSError) as exc:
-        # RuntimeError: the wrapped symlink failure. OSError: an unwrapped failure on the copy
-        # path (rmtree / copytree / unlink on a locked or read-only destination). Both get a
-        # one-line message and a non-zero exit instead of a raw traceback (review R2-L3).
+    except (RuntimeError, OSError, ValueError) as exc:
+        # Surface every config/deploy failure as one clean line, not a raw traceback:
+        # ValueError — invalid --profile or --qgis-version generation; RuntimeError — unset APPDATA
+        # or a wrapped symlink failure; OSError — rmtree / copytree / unlink on a locked or
+        # read-only destination.
         print(f"error: {exc}", file=sys.stderr)
         return 1
     verb = "symlinked" if args.symlink else "copied"

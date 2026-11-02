@@ -204,3 +204,28 @@ def test_main_no_flags_autodetects_generation(tmp_path, fake_plugin_src, monkeyp
     target = tmp_path / "QGIS4" / "profiles" / "default" / "python" / "plugins" / "pyramids_qgis"
     assert (target / "metadata.txt").is_file()
     assert "copied pyramids_qgis" in capsys.readouterr().out
+
+
+def test_config_base_windows_missing_appdata_raises(monkeypatch):
+    """On Windows a missing APPDATA raises a clear RuntimeError, not a bare KeyError."""
+    monkeypatch.setattr("platform.system", lambda: "Windows")
+    monkeypatch.delenv("APPDATA", raising=False)
+    with pytest.raises(RuntimeError, match="APPDATA is not set"):
+        deploy._qgis_config_base()
+
+
+def test_main_invalid_profile_returns_1(tmp_path, fake_plugin_src, monkeypatch, capsys):
+    """main() surfaces an invalid --profile as a clean error line, not a traceback."""
+    monkeypatch.setattr(deploy, "_qgis_config_base", lambda: tmp_path)
+    rc = deploy.main(["--profile", ".."])
+    assert rc == 1
+    assert "invalid QGIS profile name" in capsys.readouterr().err
+
+
+def test_main_missing_appdata_returns_1(tmp_path, fake_plugin_src, monkeypatch, capsys):
+    """main() surfaces a missing APPDATA as a clean error line, not a traceback."""
+    monkeypatch.setattr("platform.system", lambda: "Windows")
+    monkeypatch.delenv("APPDATA", raising=False)
+    rc = deploy.main([])
+    assert rc == 1
+    assert "APPDATA is not set" in capsys.readouterr().err
