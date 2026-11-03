@@ -113,8 +113,27 @@ the version (in `metadata.txt`, via `pyproject.toml`'s `version_files`), regener
 completion triggers **`publish`**, which builds the plugin zip with
 [`qgis-plugin-ci`](https://qgis.github.io/qgis-plugin-ci/) and attaches it — plus a custom-repository `plugins.xml`
 — to that Release. To install a build without cloning, add the `plugins.xml` URL as a plugin repository in
-*Plugins → Manage and Install Plugins → Settings*. Publishing to the official
-[plugins.qgis.org](https://plugins.qgis.org/) repository is not automated yet (it needs an OSGeo account).
+*Plugins → Manage and Install Plugins → Settings*.
+
+### Publishing to plugins.qgis.org
+
+The `publish` workflow can also push each release to the official
+[plugins.qgis.org](https://plugins.qgis.org/) repository, so users can install the plugin straight from the in-app
+Plugin Manager. This is **off until a maintainer configures it** (one-time):
+
+1. Create an **OSGeo ID** — see the
+   [OSGeo user-ID guide](https://www.osgeo.org/community/getting-started-osgeo/osgeo_userid/).
+2. Do the **first upload by hand** at [plugins.qgis.org/plugins/add/](https://plugins.qgis.org/plugins/add/) — the
+   first submission of a new plugin is staff-approved. Keep `experimental=True` (the current default) so the build
+   is shown only to users who opt into experimental plugins.
+3. Add the OSGeo credentials as repository secrets **`OSGEO_USERNAME`** and **`OSGEO_PASSWORD`**
+   (*Settings → Secrets and variables → Actions*).
+
+Once both secrets exist, every release the `publish` workflow publishes is also uploaded to plugins.qgis.org via
+`qgis-plugin-ci release --osgeo-username/--osgeo-password`; until then that step is skipped and only the GitHub
+Release + `plugins.xml` are produced. Re-running `publish` for an already-released version fails at the GitHub
+Release step — `qgis-plugin-ci` does not overwrite existing release assets (and plugins.qgis.org likewise rejects
+re-uploading an existing version) — so a re-run is not a recovery path; cut a new version instead.
 
 ## Repository layout
 
