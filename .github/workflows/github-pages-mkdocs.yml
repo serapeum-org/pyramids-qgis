@@ -75,11 +75,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
-          # Check out `main` — a trusted, static ref — not the event-derived
-          # workflow_run.head_branch. github-release pushes the version-bump commit to main before
-          # this job runs, so main's tip already carries the released version (the reason mesh reaches
-          # for head_branch over the pre-bump head_sha). A literal ref, not a fork-controllable event
-          # input, also clears SonarCloud githubactions:S7631; the job stays fork-guarded in `if:`.
+          # SonarCloud S7631 (pwn-request) hardening for this workflow_run-triggered, write-token job:
+          #   - repository: an explicit same-org repo (this repo) is trusted and not reported;
+          #   - ref: a literal 'main', NOT the attacker-controllable workflow_run.head_branch, which the
+          #     rule reports regardless of org.
+          # github-release pushes the version-bump commit to main before this job runs, so main's tip
+          # already carries the released version. (Releases are cut from main.) Still fork-guarded in `if:`.
+          repository: ${{ github.repository }}
           ref: main
 
       - name: Extract version from pyproject.toml
