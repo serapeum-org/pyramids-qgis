@@ -129,9 +129,10 @@ Plugin Manager. This is **off until a maintainer configures it** (one-time):
 3. Add the OSGeo credentials as repository secrets **`OSGEO_USERNAME`** and **`OSGEO_PASSWORD`**
    (*Settings → Secrets and variables → Actions*).
 
-Once both secrets exist, every `publish` run also uploads the build to plugins.qgis.org via
+Once both secrets exist, every release the `publish` workflow publishes is also uploaded to plugins.qgis.org via
 `qgis-plugin-ci release --osgeo-username/--osgeo-password`; until then that step is skipped and only the GitHub
-Release + `plugins.xml` are produced.
+Release + `plugins.xml` are produced. Re-running `publish` for an already-uploaded version fails on the duplicate
+upload (plugins.qgis.org rejects re-uploads), so a re-run is not a recovery path — cut a new version instead.
 
 ## Repository layout
 
