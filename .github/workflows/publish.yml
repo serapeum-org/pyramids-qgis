@@ -10,8 +10,11 @@ name: publish
 #
 # A GITHUB_TOKEN-created release event cannot trigger another workflow, so — like pypi-release —
 # this listens on `workflow_run` (which fires when github-release *completes*), not `release`.
-# Publishing to the official plugins.qgis.org repository is intentionally left out (needs an OSGeo
-# account — issue #9); add `--osgeo-user`/`--osgeo-password` from secrets to the release step then.
+# Publishing to the official plugins.qgis.org repository (issue #9) is the last step: it runs
+# `qgis-plugin-ci release --osgeo-username/--osgeo-password` from the OSGEO_USERNAME / OSGEO_PASSWORD
+# repo secrets and is INERT until both are set — the GitHub Release + plugins.xml above always
+# publish regardless. See the README for the one-time OSGeo-account setup and the (staff-approved)
+# first upload.
 
 on:
   workflow_dispatch:
@@ -108,3 +111,27 @@ jobs:
             --release-tag "${TAG}" \
             --github-token "${GITHUB_TOKEN}" \
             --create-plugin-repo
+
+      - name: Publish to the official plugins.qgis.org repository
+        if: steps.gate.outputs.publish == 'true'
+        env:
+          OSGEO_USERNAME: ${{ secrets.OSGEO_USERNAME }}
+          OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
+          VERSION: ${{ steps.gate.outputs.version }}
+          TAG: ${{ steps.gate.outputs.tag }}
+        # Additionally push the build to plugins.qgis.org (issue #9). INERT until both OSGEO_USERNAME
+        # and OSGEO_PASSWORD repo secrets are set — secrets cannot be referenced in a job `if:`, so
+        # the step is skipped from inside the script when either is empty (the GitHub Release +
+        # plugins.xml above is already published, so a release never fails for want of OSGeo creds).
+        # The very FIRST upload of a brand-new plugin is staff-approved via the web form
+        # (plugins.qgis.org/plugins/add/); once the listing exists this automates every later release.
+        run: |
+          set -euo pipefail
+          if [ -z "${OSGEO_USERNAME}" ] || [ -z "${OSGEO_PASSWORD}" ]; then
+            echo "::notice::OSGEO_USERNAME/OSGEO_PASSWORD not set — skipping plugins.qgis.org upload (issue #9); GitHub Release + plugins.xml still published."
+            exit 0
+          fi
+          pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci release "${VERSION}" \
+            --release-tag "${TAG}" \
+            --osgeo-username "${OSGEO_USERNAME}" \
+            --osgeo-password "${OSGEO_PASSWORD}"
