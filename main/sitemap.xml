@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://serapeum-org.github.io/pyramids-qgis/main/</loc>
+         <lastmod>2026-11-03</lastmod>
+    </url>
+    <url>
+         <loc>https://serapeum-org.github.io/pyramids-qgis/main/algorithms/</loc>
+         <lastmod>2026-11-03</lastmod>
+    </url>
+    <url>
+         <loc>https://serapeum-org.github.io/pyramids-qgis/main/installation/</loc>
+         <lastmod>2026-11-03</lastmod>
+    </url>
+    <url>
+         <loc>https://serapeum-org.github.io/pyramids-qgis/main/testing/</loc>
+         <lastmod>2026-11-03</lastmod>
+    </url>
+    <url>
+         <loc>https://serapeum-org.github.io/pyramids-qgis/main/about/change-log/</loc>
+         <lastmod>2026-11-03</lastmod>
+    </url>
+    <url>
+         <loc>https://serapeum-org.github.io/pyramids-qgis/main/about/license/</loc>
+         <lastmod>2026-11-03</lastmod>
+    </url>
+</urlset>
