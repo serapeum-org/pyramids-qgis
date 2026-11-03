@@ -56,11 +56,13 @@ dev = [
     "python-slugify >=8.0.0",
     "pip",
 ]
+# Hand-written docs only: NO mkdocstrings. An auto-API reference would import `pyramids_qgis` ->
+# `qgis.core`, which the docs CI env does not provide. The build installs just this group (no
+# `pip install .`), so the whole site stays QGIS-free — see .github/workflows/github-pages-mkdocs.yml.
+# mkdocs-material pulls pymdown-extensions, which backs the pymdownx.* markdown extensions in mkdocs.yml.
 docs = [
     "mkdocs >=1.5.3",
     "mkdocs-material >=9.5.3",
-    "mkdocstrings >=0.24.0",
-    "mkdocstrings-python >=1.7.5",
     "mike >=2.1.3",
 ]
 
@@ -151,9 +153,13 @@ cz-bump = { cmd = "cz bump", description = "Bump the version with commitizen" }
 # is only the conda dev/test env that carries real QGIS.
 default = { features = ["py313"], solve-group = "default" }
 dev = { features = ["py313", "dev"], solve-group = "default" }
-# No `docs` pixi environment yet: the mkdocs stack (mkdocstrings imports the plugin, so it needs
-# QGIS) conflicts with conda `qgis` in a shared solve on py313, and there is no docs site until #8.
-# The [dependency-groups].docs declaration is kept for pip users / #8; it is simply not solved here.
+# Docs environment for the shared mkdocs-deploy action (package-manager: pixi, install-groups: docs),
+# mirroring pyramids-mesh. `no-default-feature = true` drops the top-level [tool.pixi.dependencies]
+# (QGIS + pyramids), so this env carries ONLY python + the [dependency-groups].docs tooling (mkdocs,
+# material, mike) — no QGIS, no conda `qgis` in its solve, and the plugin itself is not installed. The
+# site is hand-written (no mkdocstrings), so nothing here imports `qgis.core`. Its own solve-group
+# keeps it independent of the QGIS dev/test solve.
+docs = { features = ["py313", "docs"], solve-group = "docs", no-default-feature = true }
 
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"

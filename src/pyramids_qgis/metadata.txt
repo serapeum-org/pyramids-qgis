@@ -18,7 +18,7 @@ about=Exposes the pyramids GIS toolkit (the pyramids-core Python package) as a Q
 
 tracker=https://github.com/serapeum-org/pyramids-qgis/issues
 repository=https://github.com/serapeum-org/pyramids-qgis
-homepage=https://serapeum-org.github.io/
+homepage=https://serapeum-org.github.io/pyramids-qgis/
 category=Raster
 icon=resources/icon.png
 

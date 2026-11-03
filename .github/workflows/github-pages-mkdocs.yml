@@ -1,69 +1,98 @@
 name: Deploy MkDocs
 
-# Docs-site deploy, mirroring pyramids-mesh. It is DORMANT until the plugin gains a docs site
-# (issue #8): every job is guarded on a top-level `mkdocs.yml` existing, so until one is added this
-# workflow runs the detect job, reports "no docs yet", and the deploy jobs are skipped (green).
+# Mirrors pyramids-mesh: all the build/deploy logic lives in the shared
+# serapeum-org/github-actions `mkdocs-deploy` composite action. The action sets up the pixi `docs`
+# environment (install-groups: docs -> the `docs` pixi env, which has no QGIS and does not install
+# this plugin, see pyproject.toml), builds the hand-written site, and publishes versioned docs with
+# mike. Pins the same monorepo SHA tests.yml already uses (38c1110 == pixi/v1.2.1 == mkdocs/v1.3.1).
 #
-# When #8 lands it must also wire the deploy for a non-package plugin: the shared
-# serapeum-org/github-actions/mkdocs-deploy action's pip/uv/pixi setup installs the project
-# (`pip install .`), which this from-source QGIS plugin is not — the same constraint that kept it
-# off the shared release action. So #8 either makes the docs build self-contained (install mkdocs +
-# the docs deps directly, no `pip install .`) or adds minimal packaging for the docs env. The guard
-# below keeps this workflow inert and green in the meantime.
+# Pages source requirement: mike publishes by committing the built site to the `gh-pages` branch, so
+# the repo's Settings -> Pages -> Source must be "Deploy from a branch -> gh-pages". Needs the
+# ACTIONS_DEPLOY_TOKEN secret (a token with Pages/contents write), same as pyramids-mesh.
 
 permissions:
-  contents: read  # write is granted only to the deploy job (below), not the read-only detect job
+  contents: read  # top-level stays read-only; each deploy job grants its own contents: write (S8233).
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
+    branches:
+      - '**'
+  release:
+    types:
+      - published
   workflow_run:
     workflows: ['github-release']
     types: [completed]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
-  detect:
+  deploy-pr:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     permissions:
-      contents: read
-    outputs:
-      has_docs: ${{ steps.check.outputs.has_docs }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - id: check
-        run: |
-          if [ -f mkdocs.yml ]; then
-            echo "has_docs=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_docs=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No mkdocs.yml yet — the docs site is issue #8; skipping deploy."
-          fi
-
-  deploy:
-    needs: detect
-    # Deploy only on main pushes / post-release (never on pull_request) so a PR is not failed by the
-    # not-yet-wired placeholder below once a mkdocs.yml exists (review L5).
-    if: >-
-      needs.detect.outputs.has_docs == 'true' &&
-      (github.event_name == 'push' ||
-       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-      pages: write
+      contents: write  # mike pushes the built docs to the gh-pages branch.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
-      # Deferred to issue #8: wire the MkDocs deploy for a from-source plugin (no `pip install .`).
-      # Until #8 adds mkdocs.yml this job never runs, so the placeholder below cannot fail a real build.
-      - run: |
-          echo "::error::mkdocs.yml exists but the deploy step is not wired yet — finish issue #8."
-          exit 1
+      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # mkdocs/v1.3.1
+        with:
+          trigger: 'pull_request'
+          package-manager: 'pixi'
+          install-groups: 'docs'
+          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
+
+  deploy-main:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # mkdocs/v1.3.1
+        with:
+          trigger: 'main'
+          package-manager: 'pixi'
+          install-groups: 'docs'
+          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
+
+  deploy-release:
+    # Security: when triggered via workflow_run, require the upstream run came from the base repo (not
+    # a fork) so untrusted code never runs in a context holding the deploy token.
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_run'
+       && github.event.workflow_run.conclusion == 'success'
+       && github.event.workflow_run.head_repository.fork == false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          # head_branch (not head_sha): github-release pushes the version-bump commit AFTER the
+          # workflow_run head_sha is captured, so the branch tip carries the released version while
+          # head_sha would check out the pre-bump tree. The fork guard in `if:` keeps this safe.
+          # (SonarCloud flags this as S7631 — a known, accepted pwn-request hotspot, same as
+          # pyramids-mesh's identical deploy-release checkout.)
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Extract version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(grep -m1 '^version' pyproject.toml | sed 's/.*"\(.*\)"/\1/')
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # mkdocs/v1.3.1
+        with:
+          trigger: 'release'
+          package-manager: 'pixi'
+          install-groups: 'docs'
+          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
+          release-tag: ${{ github.event.release.tag_name || steps.version.outputs.tag }}
+          mike-alias: 'latest'
