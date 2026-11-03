@@ -121,8 +121,8 @@ The `publish` workflow can also push each release to the official
 [plugins.qgis.org](https://plugins.qgis.org/) repository, so users can install the plugin straight from the in-app
 Plugin Manager. This is **off until a maintainer configures it** (one-time):
 
-1. Create an **OSGeo ID** at
-   [id.osgeo.org](https://www.osgeo.org/community/getting-started-osgeo/osgeo_userid/).
+1. Create an **OSGeo ID** — see the
+   [OSGeo user-ID guide](https://www.osgeo.org/community/getting-started-osgeo/osgeo_userid/).
 2. Do the **first upload by hand** at [plugins.qgis.org/plugins/add/](https://plugins.qgis.org/plugins/add/) — the
    first submission of a new plugin is staff-approved. Keep `experimental=True` (the current default) so the build
    is shown only to users who opt into experimental plugins.
@@ -131,8 +131,9 @@ Plugin Manager. This is **off until a maintainer configures it** (one-time):
 
 Once both secrets exist, every release the `publish` workflow publishes is also uploaded to plugins.qgis.org via
 `qgis-plugin-ci release --osgeo-username/--osgeo-password`; until then that step is skipped and only the GitHub
-Release + `plugins.xml` are produced. Re-running `publish` for an already-uploaded version fails on the duplicate
-upload (plugins.qgis.org rejects re-uploads), so a re-run is not a recovery path — cut a new version instead.
+Release + `plugins.xml` are produced. Re-running `publish` for an already-released version fails at the GitHub
+Release step — `qgis-plugin-ci` does not overwrite existing release assets (and plugins.qgis.org likewise rejects
+re-uploading an existing version) — so a re-run is not a recovery path; cut a new version instead.
 
 ## Repository layout
 
