@@ -106,6 +106,7 @@ def test_convert_raster_end_to_end(tiny_raster, tmp_path):
     assert results[ConvertRaster.OUTPUT] == str(out)
     assert out.exists()
 
+    import numpy as np
     from osgeo import gdal, osr
 
     gdal.UseExceptions()
@@ -118,7 +119,10 @@ def test_convert_raster_end_to_end(tiny_raster, tmp_path):
         band = output.GetRasterBand(1)
         assert gdal.GetDataTypeName(band.DataType) == "Float32"
         assert osr.SpatialReference(output.GetProjection()).GetAuthorityCode(None) == "4326"
-        assert band.ReadAsArray()[0, 0] == source.GetRasterBand(1).ReadAsArray()[0, 0]
+        # Compare the whole band, not a single pixel: the fixture's [0, 0] is 0.0, the fixed point
+        # of any linear scaling, so a rescaling bug would survive a corner check but not full
+        # equality.
+        assert np.array_equal(band.ReadAsArray(), source.GetRasterBand(1).ReadAsArray())
     finally:
         output = None  # noqa: F841  (release the GDAL handle)
         source = None  # noqa: F841  (release the GDAL handle)
