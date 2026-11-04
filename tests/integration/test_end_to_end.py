@@ -25,21 +25,24 @@ pytestmark = pytest.mark.integration
 
 
 def _run(algorithm, parameters):
-    """``initAlgorithm`` + ``run`` the algorithm; return ``(results, ok, feedback)``.
+    """``run`` the algorithm, returning ``(results, ok, feedback)``.
 
-    Uses ``QgsProcessingAlgorithm.run`` so the full prepare/process/post chain executes exactly as
-    it would in the toolbox, with a plain context and feedback (no project or registry needed for
-    file-in / file-out algorithms).
+    Uses ``QgsProcessingAlgorithm.run``, which clones the algorithm and calls ``initAlgorithm`` on
+    the clone internally, so the full prepare/process/post chain executes exactly as it would in the
+    toolbox — with a plain context and feedback (no project or registry needed for file-in /
+    file-out algorithms). The passed instance therefore needs no explicit ``initAlgorithm`` call.
     """
-    algorithm.initAlgorithm({})
     context = QgsProcessingContext()
     feedback = QgsProcessingFeedback()
     results, ok = algorithm.run(parameters, context, feedback)
     return results, ok, feedback
 
 
-def _assert_raster(path, cols=None, data_type_name=None):
-    """Assert ``path`` is a readable single-band raster, optionally checking size / dtype."""
+def _assert_raster(path, cols=None, data_type_name=None, bands=None):
+    """Assert ``path`` is a readable raster, optionally checking size / dtype / band count.
+
+    Returns the projection WKT so a caller can verify the CRS (e.g. via an authority code).
+    """
     from osgeo import gdal
 
     gdal.UseExceptions()
@@ -48,6 +51,9 @@ def _assert_raster(path, cols=None, data_type_name=None):
     try:
         band = dataset.GetRasterBand(1)
         assert band is not None
+        if bands is not None:
+            actual = dataset.RasterCount
+            assert actual == bands, f"expected {bands} band(s), got {actual}"
         if cols is not None:
             assert dataset.RasterXSize == cols
         if data_type_name is not None:
@@ -71,9 +77,14 @@ def test_warp_raster_end_to_end(tiny_raster, tmp_path):
         },
     )
     assert ok, feedback.textLog()
+    assert results[WarpRaster.OUTPUT] == str(out)
     assert out.exists()
     projection = _assert_raster(out)
-    assert "3857" in projection
+
+    from osgeo import osr
+
+    srs = osr.SpatialReference(projection)
+    assert srs.GetAuthorityCode(None) == "3857", projection
 
 
 def test_convert_raster_end_to_end(tiny_raster, tmp_path):
@@ -87,8 +98,9 @@ def test_convert_raster_end_to_end(tiny_raster, tmp_path):
         },
     )
     assert ok, feedback.textLog()
+    assert results[ConvertRaster.OUTPUT] == str(out)
     assert out.exists()
-    _assert_raster(out, cols=8)
+    _assert_raster(out, cols=8, bands=1)
 
 
 def test_mesh_convert_end_to_end(ugrid_mesh, tmp_path):
@@ -102,6 +114,7 @@ def test_mesh_convert_end_to_end(ugrid_mesh, tmp_path):
         },
     )
     assert ok, feedback.textLog()
+    assert results[MeshConvert.OUTPUT] == str(out)
     assert out.exists() and out.stat().st_size > 0
 
     # The written file is a real UGRID NetCDF that pyramids can read back with the same two faces.
@@ -122,6 +135,7 @@ def test_mesh_to_vector_end_to_end(ugrid_mesh, tmp_path):
         },
     )
     assert ok, feedback.textLog()
+    assert results[MeshToVector.OUTPUT] == str(out)
     assert out.exists()
 
     from osgeo import ogr
@@ -149,5 +163,6 @@ def test_eo_stretch_end_to_end(tiny_raster, tmp_path):
         },
     )
     assert ok, feedback.textLog()
+    assert results[EoStretch.OUTPUT] == str(out)
     assert out.exists()
-    _assert_raster(out, data_type_name="Byte")
+    _assert_raster(out, data_type_name="Byte", bands=1)
