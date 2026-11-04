@@ -140,7 +140,8 @@ def test_mesh_convert_end_to_end(ugrid_mesh, tmp_path):
     )
     assert ok, feedback.textLog()
     assert results[MeshConvert.OUTPUT] == str(out)
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
     # The written file is a real UGRID NetCDF whose topology AND data survive the round-trip: two
     # faces and six nodes come back, and the 'depth' data variable still carries [1.5, 2.5].
@@ -183,7 +184,8 @@ def test_mesh_to_vector_end_to_end(ugrid_mesh, tmp_path):
         # pass for two points, or for an export that silently dropped the CRS.
         assert layer.GetGeomType() == ogr.wkbPolygon, ogr.GeometryTypeToName(layer.GetGeomType())
         spatial_ref = layer.GetSpatialRef()
-        assert spatial_ref is not None and spatial_ref.GetAuthorityCode(None) == "4326"
+        assert spatial_ref is not None
+        assert spatial_ref.GetAuthorityCode(None) == "4326"
     finally:
         source = None  # noqa: F841  (release the OGR handle)
 
