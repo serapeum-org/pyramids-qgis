@@ -3,7 +3,10 @@
 These tiny fixtures are committed to the repo so the docs/algorithm help and the integration
 tests (``tests/integration/test_example_dataset.py``) share one source of truth. Run this only
 to recreate them; it needs GDAL/OGR (the pixi ``dev`` environment, which conda-installs ``qgis``
-and so provides ``osgeo``). It is deterministic — rerunning it produces byte-identical files.
+and so provides ``osgeo``). Rerunning it is deterministic: it reproduces byte-identical files on a
+fixed GDAL/libtiff/zlib build, and semantically identical fixtures on any build (a toolchain upgrade
+may re-encode the DEFLATE stream or OGR precision without changing meaning — which is what the
+tests' drift guard checks).
 
     pixi run -e dev python examples/data/make_example_data.py
 
@@ -75,7 +78,7 @@ def make_aoi(path: Path) -> None:
     layer.CreateField(ogr.FieldDefn("value", ogr.OFTInteger))
 
     ring = ogr.Geometry(ogr.wkbLinearRing)
-    # A non-square rectangle (0.20deg wide x 0.12deg tall) centred on the raster, so the X and Y
+    # A non-square rectangle (0.20deg wide x 0.12deg tall) near the raster centre, so the X and Y
     # extents differ — that keeps the geometry's envelope-order and clip-asymmetry tests meaningful.
     for lon, lat in [
         (30.06, 30.09),
