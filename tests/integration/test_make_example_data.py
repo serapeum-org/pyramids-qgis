@@ -8,7 +8,6 @@ QGIS/GDAL is installed (the pixi ``dev`` env / wheel-test job).
 
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 from pathlib import Path
 
@@ -26,11 +25,6 @@ def generator():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
-
-def _sha256(path: Path) -> str:
-    """Return the hex SHA-256 of a file's bytes."""
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def test_make_dem_writes_a_32x32_epsg4326_int16_dem(generator, tmp_path):
@@ -91,11 +85,40 @@ def test_main_writes_both_fixtures_next_to_the_module(generator, tmp_path, monke
     assert "wrote" in capsys.readouterr().out
 
 
-def test_regeneration_is_byte_identical_to_the_committed_fixtures(generator, tmp_path):
-    """Regenerating both fixtures reproduces the committed bytes exactly (no drift)."""
+def test_regeneration_reproduces_the_committed_fixtures(generator, tmp_path):
+    """Regenerating reproduces the committed fixtures' content (array/georef/CRS, feature/geometry).
+
+    Compares decoded content rather than raw bytes so the check is toolchain-independent: a GDAL /
+    libtiff / zlib upgrade may re-encode the DEFLATE stream or change OGR's coordinate precision
+    without changing what the fixtures mean, and that must not fail this test.
+    """
+    import numpy as np
+    from osgeo import gdal, ogr, osr
+
     committed = GENERATOR.parent
     generator.make_dem(tmp_path / "dem.tif")
     generator.make_aoi(tmp_path / "aoi.geojson")
-    for name in ("dem.tif", "aoi.geojson"):
-        regenerated, original = _sha256(tmp_path / name), _sha256(committed / name)
-        assert regenerated == original, f"{name} drifted from the committed fixture"
+
+    fresh_dem = gdal.Open(str(tmp_path / "dem.tif"))
+    committed_dem = gdal.Open(str(committed / "dem.tif"))
+    assert np.array_equal(fresh_dem.ReadAsArray(), committed_dem.ReadAsArray()), "pixels drifted"
+    assert fresh_dem.GetGeoTransform() == committed_dem.GetGeoTransform(), "geotransform drifted"
+    fresh_nodata = fresh_dem.GetRasterBand(1).GetNoDataValue()
+    committed_nodata = committed_dem.GetRasterBand(1).GetNoDataValue()
+    assert fresh_nodata == committed_nodata, "NoData drifted"
+    fresh_srs = osr.SpatialReference(fresh_dem.GetProjection())
+    committed_srs = osr.SpatialReference(committed_dem.GetProjection())
+    assert fresh_srs.IsSame(committed_srs), "CRS drifted"
+
+    # Keep the DataSource refs alive — ogr.Open(...).GetLayer(0) alone lets the source be
+    # garbage-collected, which invalidates the layer.
+    fresh_ds = ogr.Open(str(tmp_path / "aoi.geojson"))
+    committed_ds = ogr.Open(str(committed / "aoi.geojson"))
+    fresh_aoi, committed_aoi = fresh_ds.GetLayer(0), committed_ds.GetLayer(0)
+    assert fresh_aoi.GetFeatureCount() == committed_aoi.GetFeatureCount() == 1
+    fresh_feature = fresh_aoi.GetNextFeature()
+    committed_feature = committed_aoi.GetNextFeature()
+    assert fresh_feature.GetField("value") == committed_feature.GetField("value"), "value drifted"
+    fresh_geom = fresh_feature.GetGeometryRef()
+    committed_geom = committed_feature.GetGeometryRef()
+    assert fresh_geom.Equals(committed_geom), "geometry drifted"
