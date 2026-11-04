@@ -22,19 +22,25 @@ repo — use absolute paths in your own session):
 import processing
 
 # Reproject the DEM to Web Mercator
-processing.run("pyramids:warp", {
-    "INPUT": "examples/data/dem.tif",
-    "CRS": "EPSG:3857",
-    "RESAMPLING": 0,
-    "OUTPUT": "dem_3857.tif",
-})
+processing.run(
+    "pyramids:warp",
+    {
+        "INPUT": "examples/data/dem.tif",
+        "CRS": "EPSG:3857",
+        "RESAMPLING": 0,
+        "OUTPUT": "dem_3857.tif",
+    },
+)
 
 # Clip the DEM to the AOI polygon
-processing.run("pyramids:clip", {
-    "INPUT": "examples/data/dem.tif",
-    "MASK": "examples/data/aoi.geojson",
-    "OUTPUT": "dem_clipped.tif",
-})
+processing.run(
+    "pyramids:clip",
+    {
+        "INPUT": "examples/data/dem.tif",
+        "MASK": "examples/data/aoi.geojson",
+        "OUTPUT": "dem_clipped.tif",
+    },
+)
 ```
 
 The same two files back the end-to-end tests in `tests/integration/test_example_dataset.py`, which
