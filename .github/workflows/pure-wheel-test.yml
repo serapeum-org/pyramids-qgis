@@ -88,10 +88,23 @@ jobs:
         # library as `pyramids` (PyPI name is pyramids-core); from conda it binds to QGIS's GDAL
         # rather than vendoring its own.
         run: |
-          conda install -y -n wheel-test qgis pyramids
-          # Surface the resolved QGIS build so a future solver downgrade (e.g. a Python-version skew
-          # pulling QGIS 3.x) is visible in the log rather than silent.
-          conda list -n wheel-test qgis
+          # Windows workaround for an in-progress conda-forge ABI migration. libabseil bumped
+          # 20260526 -> 20260817, which rebuilt libprotobuf (7.35.1 _3 -> _4), libgrpc, libarrow,
+          # re2, orc, tiledb, ... against the new Abseil. QGIS's win-64 build is unchanged and still
+          # links the OLD protobuf/abseil ABI, so with the new builds `import qgis.core` fails on
+          # Windows with "DLL load failed ... The specified procedure could not be found". Pinning
+          # libabseil to the pre-migration 20260526 drags libprotobuf (and the rest of the cluster)
+          # back to the builds QGIS was compiled against — i.e. the exact package set of the last
+          # green run. Linux/macOS are unaffected and keep the current solve. REVERT once conda-forge
+          # rebuilds QGIS win-64 against the new Abseil (track: a plain `conda install qgis` imports
+          # cleanly on win-64).
+          ABSEIL_PIN=""
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            ABSEIL_PIN="libabseil<20260817"
+          fi
+          conda install -y -n wheel-test qgis pyramids $ABSEIL_PIN
+          # Surface the resolved QGIS + libprotobuf/libabseil builds so any further drift is visible.
+          conda list -n wheel-test "qgis|libabseil|libprotobuf"
 
       - name: Install the plugin wheel (no deps — conda provides qgis + pyramids-core)
         # --only-binary=:all: (the plugin is a wheel) + --no-deps (conda already provides qgis and
