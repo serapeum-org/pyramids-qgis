@@ -179,6 +179,11 @@ def test_mesh_to_vector_end_to_end(ugrid_mesh, tmp_path):
     try:
         layer = source.GetLayer(0)
         assert layer.GetFeatureCount() == 2
+        # The two faces must export as polygons in the fixture CRS; a count-only check would also
+        # pass for two points, or for an export that silently dropped the CRS.
+        assert layer.GetGeomType() == ogr.wkbPolygon, ogr.GeometryTypeToName(layer.GetGeomType())
+        spatial_ref = layer.GetSpatialRef()
+        assert spatial_ref is not None and spatial_ref.GetAuthorityCode(None) == "4326"
     finally:
         source = None  # noqa: F841  (release the OGR handle)
 
