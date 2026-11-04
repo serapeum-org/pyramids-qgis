@@ -166,3 +166,17 @@ def test_eo_stretch_end_to_end(tiny_raster, tmp_path):
     assert results[EoStretch.OUTPUT] == str(out)
     assert out.exists()
     _assert_raster(out, data_type_name="Byte", bands=1)
+
+    # A real contrast stretch maps the input's [0, 1] range across most of [0, 255]; a no-op cast of
+    # the float input to uint8 would instead floor every value into [0, 1]. Assert the output spread
+    # so that degenerate cast — or an all-constant output — would fail.
+    from osgeo import gdal
+
+    gdal.UseExceptions()
+    dataset = gdal.Open(str(out))
+    try:
+        minimum, maximum = dataset.GetRasterBand(1).ComputeRasterMinMax()
+    finally:
+        dataset = None  # noqa: F841  (release the GDAL handle)
+    assert maximum >= 250, f"stretch did not reach the top of the uint8 range: max={maximum}"
+    assert maximum - minimum >= 200, f"stretch span too narrow: [{minimum}, {maximum}]"
