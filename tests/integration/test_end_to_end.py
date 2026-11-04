@@ -138,10 +138,18 @@ def test_mesh_convert_end_to_end(ugrid_mesh, tmp_path):
     assert results[MeshConvert.OUTPUT] == str(out)
     assert out.exists() and out.stat().st_size > 0
 
-    # The written file is a real UGRID NetCDF that pyramids can read back with the same two faces.
+    # The written file is a real UGRID NetCDF whose topology AND data survive the round-trip: two
+    # faces and six nodes come back, and the 'depth' data variable still carries [1.5, 2.5].
+    # Checking the data — not just the face count — rules out a passthrough copy that drops or
+    # scrambles the data variables while leaving the mesh topology intact.
     from pyramids.netcdf.ugrid import UgridDataset
 
-    assert UgridDataset.read_file(str(out)).n_face == 2
+    mesh = UgridDataset.read_file(str(out))
+    assert mesh.n_face == 2
+    assert mesh.n_node == 6
+    assert "depth" in mesh.data_variable_names
+    depth = mesh.to_geodataframe(variable_name="depth", location="face")["depth"]
+    assert sorted(round(float(value), 3) for value in depth) == [1.5, 2.5]
 
 
 def test_mesh_to_vector_end_to_end(ugrid_mesh, tmp_path):
