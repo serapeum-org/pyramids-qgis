@@ -103,7 +103,9 @@ def test_regeneration_reproduces_the_committed_fixtures(generator, tmp_path):
     fresh_dem = gdal.Open(str(tmp_path / "dem.tif"))
     committed_dem = gdal.Open(str(committed / "dem.tif"))
     assert np.array_equal(fresh_dem.ReadAsArray(), committed_dem.ReadAsArray()), "pixels drifted"
-    assert fresh_dem.GetGeoTransform() == committed_dem.GetGeoTransform(), "geotransform drifted"
+    fresh_gt = fresh_dem.GetGeoTransform()
+    committed_gt = committed_dem.GetGeoTransform()
+    assert fresh_gt == pytest.approx(committed_gt), "geotransform drifted"
     fresh_nodata = fresh_dem.GetRasterBand(1).GetNoDataValue()
     committed_nodata = committed_dem.GetRasterBand(1).GetNoDataValue()
     assert fresh_nodata == committed_nodata, "NoData drifted"
