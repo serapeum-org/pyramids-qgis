@@ -93,9 +93,9 @@ def test_clip_by_mask_crops_the_dem(example_dem: Path, example_aoi: Path, tmp_pa
     out = tmp_path / "dem_clipped.tif"
     _run(ClipRaster, {"INPUT": str(example_dem), "MASK": str(example_aoi), "OUTPUT": str(out)})
     layer = _valid_raster(out)
-    # The AOI covers only the centre of the raster, so the clip is strictly smaller than 32x32.
-    assert layer.width() < 32
-    assert layer.height() < 32
+    # The AOI is a 0.20x0.12 deg rectangle (20x12 px) inside the 0.32 deg / 32-px grid, so the clip
+    # is a strict, non-square sub-window.
+    assert (layer.width(), layer.height()) == (20, 12)
 
 
 def test_rasterize_burns_the_aoi_onto_the_dem_grid(

@@ -63,7 +63,8 @@ def test_make_aoi_writes_a_single_epsg4326_polygon_with_value(generator, tmp_pat
     feature = layer.GetNextFeature()
     assert feature.GetField("value") == 7
     minx, maxx, miny, maxy = feature.GetGeometryRef().GetEnvelope()
-    assert (minx, maxx, miny, maxy) == pytest.approx((30.08, 30.24, 30.08, 30.24))
+    # Non-square (X-extent != Y-extent), so the (minX, maxX, minY, maxY) unpack order is checked.
+    assert (minx, maxx, miny, maxy) == pytest.approx((30.06, 30.26, 30.09, 30.21))
 
 
 def test_make_aoi_overwrites_an_existing_file(generator, tmp_path):

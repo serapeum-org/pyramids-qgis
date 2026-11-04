@@ -75,12 +75,14 @@ def make_aoi(path: Path) -> None:
     layer.CreateField(ogr.FieldDefn("value", ogr.OFTInteger))
 
     ring = ogr.Geometry(ogr.wkbLinearRing)
+    # A non-square rectangle (0.20deg wide x 0.12deg tall) centred on the raster, so the X and Y
+    # extents differ — that keeps the geometry's envelope-order and clip-asymmetry tests meaningful.
     for lon, lat in [
-        (30.08, 30.08),
-        (30.24, 30.08),
-        (30.24, 30.24),
-        (30.08, 30.24),
-        (30.08, 30.08),
+        (30.06, 30.09),
+        (30.26, 30.09),
+        (30.26, 30.21),
+        (30.06, 30.21),
+        (30.06, 30.09),
     ]:
         ring.AddPoint_2D(lon, lat)  # 2D so the GeoJSON carries no spurious z=0 coordinate
     polygon = ogr.Geometry(ogr.wkbPolygon)
