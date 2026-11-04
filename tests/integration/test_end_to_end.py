@@ -88,8 +88,13 @@ def test_warp_raster_end_to_end(tiny_raster, tmp_path):
 
 
 def test_convert_raster_end_to_end(tiny_raster, tmp_path):
-    """``convert`` (conversion group, CLI-backed) re-saves the fixture, preserving its grid."""
-    out = tmp_path / "converted.tif"
+    """``convert`` (conversion group, CLI-backed) re-encodes the fixture into a different driver.
+
+    Writing to a ``.img`` output exercises the driver-from-extension inference that is the point of
+    ``convert``: the GeoTIFF fixture comes back as an Erdas HFA raster, with its dtype, CRS, band
+    count and pixel values preserved — so a byte-for-byte copy of the input would not satisfy it.
+    """
+    out = tmp_path / "converted.img"
     results, ok, feedback = _run(
         ConvertRaster(),
         {
@@ -100,7 +105,23 @@ def test_convert_raster_end_to_end(tiny_raster, tmp_path):
     assert ok, feedback.textLog()
     assert results[ConvertRaster.OUTPUT] == str(out)
     assert out.exists()
-    _assert_raster(out, cols=8, bands=1)
+
+    from osgeo import gdal, osr
+
+    gdal.UseExceptions()
+    output = gdal.Open(str(out))
+    source = gdal.Open(str(tiny_raster))
+    try:
+        assert output.GetDriver().ShortName == "HFA", output.GetDriver().ShortName
+        assert output.RasterCount == 1
+        assert output.RasterXSize == 8
+        band = output.GetRasterBand(1)
+        assert gdal.GetDataTypeName(band.DataType) == "Float32"
+        assert osr.SpatialReference(output.GetProjection()).GetAuthorityCode(None) == "4326"
+        assert band.ReadAsArray()[0, 0] == source.GetRasterBand(1).ReadAsArray()[0, 0]
+    finally:
+        output = None  # noqa: F841  (release the GDAL handle)
+        source = None  # noqa: F841  (release the GDAL handle)
 
 
 def test_mesh_convert_end_to_end(ugrid_mesh, tmp_path):
