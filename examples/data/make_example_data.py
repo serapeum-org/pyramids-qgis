@@ -35,7 +35,11 @@ NODATA = -9999
 
 
 def make_dem(path: Path) -> None:
-    """Write the 32x32 Int16 EPSG:4326 DEM with a gradient and a NoData corner."""
+    """Write the 32x32 Int16 EPSG:4326 DEM with a gradient and a NoData corner.
+
+    Args:
+        path: Destination ``.tif`` path; an existing file at ``path`` is overwritten.
+    """
     driver = gdal.GetDriverByName("GTiff")
     dataset = driver.Create(str(path), NX, NY, 1, gdal.GDT_Int16, options=["COMPRESS=DEFLATE"])
     dataset.SetGeoTransform([ORIGIN_X, PIXEL, 0.0, ORIGIN_Y, 0.0, -PIXEL])
@@ -55,7 +59,12 @@ def make_dem(path: Path) -> None:
 
 
 def make_aoi(path: Path) -> None:
-    """Write a single-polygon EPSG:4326 GeoJSON over the DEM centre, with a ``value`` attribute."""
+    """Write a single-polygon EPSG:4326 GeoJSON over the DEM centre, with a ``value`` attribute.
+
+    Args:
+        path: Destination ``.geojson`` path; an existing file is removed first, since OGR's
+            GeoJSON driver will not overwrite one in place.
+    """
     if path.exists():
         path.unlink()  # OGR GeoJSON will not overwrite an existing file
     driver = ogr.GetDriverByName("GeoJSON")
