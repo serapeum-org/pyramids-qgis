@@ -117,3 +117,9 @@ def test_rasterize_burns_the_aoi_onto_the_dem_grid(
     layer = _valid_raster(out)
     # The template is the DEM, so the output adopts its 32x32 grid.
     assert (layer.width(), layer.height()) == (32, 32)
+    # The burn actually landed: a point inside the AOI polygon carries the column value 7.
+    from qgis.core import QgsPointXY
+
+    value, sampled = layer.dataProvider().sample(QgsPointXY(30.16, 30.15), 1)
+    assert sampled, "could not sample the rasterized output at an interior point"
+    assert value == 7, f"expected the burned value 7 inside the AOI, got {value}"
