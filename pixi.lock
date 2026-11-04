@@ -1549,6 +1549,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.21.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.3.3-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyramids-0.73.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pyramids-eo-0.9.0-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-dateutil-3.0.0-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-gil-3.13.18-h4df99d1_100.conda
@@ -1635,6 +1636,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.21.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.3.3-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyramids-0.73.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pyramids-eo-0.9.0-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-dateutil-3.0.0-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-tzdata-2026.6-pyh5ded981_0.conda
@@ -2026,6 +2028,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.21.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.3.3-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyramids-0.73.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pyramids-eo-0.9.0-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyh09c184e_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-dateutil-3.0.0-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-gil-3.13.18-h4df99d1_100.conda
@@ -9946,7 +9949,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/httplib2?source=compressed-mapping
+  - pkg:pypi/httplib2?source=hash-mapping
   run_exports: {}
   size: 93370
   timestamp: 1793192842901
@@ -10232,6 +10235,24 @@ packages:
   run_exports: {}
   size: 1522126
   timestamp: 1793312586801
+- conda: https://conda.anaconda.org/conda-forge/noarch/pyramids-eo-0.9.0-pyhc364b38_0.conda
+  sha256: 391b7e215542ed582d5ba87a4658577dbe1f78a94f6b16dce68ff6151632a81e
+  md5: dc8be61301bc868dcd9a5bad2921fd95
+  depends:
+  - python >=3.11
+  - pyramids >=0.64.0
+  - numpy >=2.0.0
+  - pyyaml >=6.0
+  - gdal >=3.10.0,<4
+  - libgdal-netcdf >=3.10.0,<4
+  - python
+  license: GPL-3.0-only
+  license_family: GPL
+  purls:
+  - pkg:pypi/pyramids-eo?source=hash-mapping
+  run_exports: {}
+  size: 152456
+  timestamp: 1792270564889
 - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyh09c184e_7.conda
   sha256: d016e04b0e12063fbee4a2d5fbb9b39a8d191b5a0042f0b8459188aedeabb0ca
   md5: e2fd202833c4a981ce8a65974fe4abd1
@@ -20783,8 +20804,7 @@ packages:
   - yaml
   license: GPL-2.0-only
   license_family: GPL
-  purls:
-  - pkg:pypi/future?source=compressed-mapping
+  purls: []
   run_exports: {}
   size: 77532754
   timestamp: 1792376448969
