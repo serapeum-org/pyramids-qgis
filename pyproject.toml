@@ -116,9 +116,11 @@ source = ["src/pyramids_qgis"]
 pythonpath = ["src", "scripts"]
 testpaths = ["tests"]
 markers = [
-    # Real-PyQGIS instantiation tests under tests/integration/ (the pixi dev env or the wheel-test
-    # job). `-m "not integration"` skips these heavier tests but is NOT QGIS-free: every test module
-    # imports qgis.core, so the whole suite requires a real QGIS env.
+    # Real-PyQGIS tests under tests/integration/ (the pixi dev env or the wheel-test job): both the
+    # instantiation tests (test_real_qgis.py) and the end-to-end tests (test_end_to_end.py), which
+    # run one algorithm per group through `run()` to an actual output. `-m "not integration"` skips
+    # these heavier tests but is NOT QGIS-free: every test module imports qgis.core, so the whole
+    # suite requires a real QGIS env.
     "integration: exercises the plugin against a real QGIS install",
 ]
 
@@ -152,7 +154,7 @@ cz-bump = { cmd = "cz bump", description = "Bump the version with commitizen" }
 # The package itself still targets 3.11+ (requires-python / classifiers) for QGIS 3.x source; this pin
 # is only the conda dev/test env that carries real QGIS.
 default = { features = ["py313"], solve-group = "default" }
-dev = { features = ["py313", "dev"], solve-group = "default" }
+dev = { features = ["py313", "dev", "eo"], solve-group = "default" }
 # Docs environment for the shared mkdocs-deploy action (package-manager: pixi, install-groups: docs),
 # mirroring pyramids-mesh. `no-default-feature = true` drops the top-level [tool.pixi.dependencies]
 # (QGIS + pyramids), so this env carries ONLY python + the [dependency-groups].docs tooling (mkdocs,
@@ -163,3 +165,13 @@ docs = { features = ["py313", "docs"], solve-group = "docs", no-default-feature 
 
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"
+
+[tool.pixi.feature.eo.dependencies]
+# pyramids-eo (conda-forge) so the EO algorithms' end-to-end tests run in the dev env — the EO
+# family calls the library directly (no CLI), so the real package must be importable, bound to the
+# same conda GDAL as QGIS and pyramids-core. Kept out of `default` (the build env) so only dev pulls
+# it. pyramids-mesh has NO conda-forge build, so it is deliberately NOT added here; the mesh
+# end-to-end tests exercise the built-in UGRID NetCDF path, which pyramids-core reads and writes
+# without pyramids-mesh. Other mesh-format drivers (2DM, Selafin, ...) still need pyramids-mesh and
+# so remain uncovered in CI until it ships on conda-forge.
+pyramids-eo = "*"
