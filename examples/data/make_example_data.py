@@ -92,5 +92,5 @@ def main() -> None:
     print(f"wrote {HERE / 'dem.tif'} and {HERE / 'aoi.geojson'}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
