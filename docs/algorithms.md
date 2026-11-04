@@ -49,6 +49,15 @@ directly, since it has no CLI. They need `pyramids-eo` installed.
 | Contrast stretch (EO) | `enhance.stretch` | linear / crude / cira / histogram + gamma, to dtype |
 | Tasseled cap transform | `spectral.tasseled_cap` | Landsat 5/7/8 reflectance → brightness / greenness / wetness |
 
+## Example data
+
+The repo ships a tiny, self-contained dataset under
+[`examples/data/`](https://github.com/serapeum-org/pyramids-qgis/tree/main/examples/data) to try the
+algorithms on: a 32×32 EPSG:4326 DEM (`dem.tif`) and a polygon AOI (`aoi.geojson`). The same two files
+back the end-to-end tests in `tests/integration/test_example_dataset.py`. See
+[`examples/README.md`](https://github.com/serapeum-org/pyramids-qgis/blob/main/examples/README.md) for
+copy-paste `processing.run(...)` snippets.
+
 ## Roadmap
 
 More of the pyramids surface is planned:
