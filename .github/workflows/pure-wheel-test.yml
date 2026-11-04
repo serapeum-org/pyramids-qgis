@@ -88,9 +88,21 @@ jobs:
         # library as `pyramids` (PyPI name is pyramids-core); from conda it binds to QGIS's GDAL
         # rather than vendoring its own.
         run: |
-          conda install -y -n wheel-test qgis pyramids
-          # Surface the resolved QGIS build so a future solver downgrade (e.g. a Python-version skew
-          # pulling QGIS 3.x) is visible in the log rather than silent.
+          # Windows workaround: conda-forge's only QGIS 4.x (4.2.3), rebuilt for the Qt 6.11
+          # migration, has a BROKEN win-64 build — every dep resolves to QGIS's exact declared
+          # versions (qt6-main 6.11.2, libgdal 3.13.3, ...), yet `import qgis.core` raises
+          # "DLL load failed ... The specified procedure could not be found" (an ABI break inside
+          # the upstream build, not a solver skew). Constraining qt6-main < 6.11 excludes 4.2.3 so
+          # the solver falls back to the working QGIS 3.44 (Qt5) line on Windows; Linux/macOS keep
+          # testing QGIS 4.x. REVERT this once a plain `conda install qgis` imports cleanly on
+          # win-64 (i.e. conda-forge ships a fixed QGIS 4.x Windows build).
+          QT_CONSTRAINT=""
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            QT_CONSTRAINT="qt6-main<6.11"
+          fi
+          conda install -y -n wheel-test qgis pyramids $QT_CONSTRAINT
+          # Surface the resolved QGIS build so a solver downgrade (e.g. the Windows fallback above,
+          # or a Python-version skew pulling QGIS 3.x) is visible in the log rather than silent.
           conda list -n wheel-test qgis
 
       - name: Install the plugin wheel (no deps — conda provides qgis + pyramids-core)
