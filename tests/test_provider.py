@@ -30,14 +30,25 @@ def test_vector_outputs_forced_to_geojson():
 def test_registry_names_are_unique():
     """Every registered algorithm has a distinct id (QGIS requires unique names per provider)."""
     names = [algorithm().name() for algorithm in ALGORITHMS]
-    assert len(names) == len(set(names))
-    assert len(names) == 13
+    assert len(names) == len(set(names)), f"duplicate algorithm id(s): {sorted(names)}"
+    assert len(names) == len(ALGORITHMS)
 
 
 def test_registry_group_ids():
-    """The algorithms fall into exactly the four expected Processing groups."""
+    """The registered algorithms use exactly the expected Processing group ids."""
     group_ids = {algorithm().groupId() for algorithm in ALGORITHMS}
-    assert group_ids == {"raster", "cog", "mesh", "eo"}
+    assert group_ids == {
+        "raster",
+        "cog",
+        "vector",
+        "collection",
+        "fetch",
+        "nc",
+        "process",
+        "stac",
+        "mesh",
+        "eo",
+    }
 
 
 def test_loadalgorithms_registers_every_algorithm(monkeypatch):
