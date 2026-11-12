@@ -1,4 +1,4 @@
-"""Evaluate a band expression over aligned rasters — wraps ``pyramids calc``.
+"""Evaluate a band expression over aligned rasters — wraps ``pyramids raster calc``.
 
 The inputs are bound to ``A``, ``B``, ``C`` ... in the order they are given, matching the
 pyramids CLI. Every input must already sit on the first input's grid (pyramids ``calc``
@@ -64,7 +64,7 @@ class RasterCalc(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Result raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids calc`` command."""
+        """Build and run the ``pyramids raster calc`` command."""
         layers = self.parameterAsLayerList(parameters, self.INPUT, context)
         if not layers:
             raise QgsProcessingException("Raster calculator needs at least one input raster.")
@@ -81,7 +81,7 @@ class RasterCalc(PyramidsAlgorithm):
             raise QgsProcessingException("An expression is required.")
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        argv = ["calc", expression, *sources, out, "--overwrite"]
+        argv = ["raster", "calc", expression, *sources, out, "--overwrite"]
         dtype = self.parameterAsString(parameters, self.DTYPE, context).strip()
         if dtype:
             argv += ["--dtype", dtype]

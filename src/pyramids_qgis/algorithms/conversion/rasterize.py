@@ -1,4 +1,4 @@
-"""Burn a vector layer into a new raster — wraps ``pyramids rasterize``."""
+"""Burn a vector layer into a new raster — wraps ``pyramids raster rasterize``."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ class Rasterize(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Rasterized output"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids rasterize`` command."""
+        """Build and run the ``pyramids raster rasterize`` command."""
         layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
         if layer is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
@@ -80,7 +80,7 @@ class Rasterize(PyramidsAlgorithm):
         cell_size = self.parameterAsDouble(parameters, self.CELL_SIZE, context)
         has_cell_size = self.CELL_SIZE in parameters and parameters[self.CELL_SIZE] is not None
 
-        argv = ["rasterize", src, out]
+        argv = ["raster", "rasterize", src, out]
         if template_layer is not None:
             template_path = layer_source_path(template_layer)
             validate_input_path(template_path, feedback)

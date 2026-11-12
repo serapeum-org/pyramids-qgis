@@ -1,4 +1,4 @@
-"""Write a raster as a Cloud Optimized GeoTIFF — wraps ``pyramids cog create``."""
+"""Write a raster as a Cloud Optimized GeoTIFF — wraps ``pyramids raster cog create``."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ class CreateCog(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "COG output"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids cog create`` command."""
+        """Build and run the ``pyramids raster cog create`` command."""
         layer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if layer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
@@ -72,7 +72,7 @@ class CreateCog(PyramidsAlgorithm):
         validate_input_path(src, feedback)
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        argv = ["cog", "create", src, out, "--overwrite"]
+        argv = ["raster", "cog", "create", src, out, "--overwrite"]
         compress = self.parameterAsString(parameters, self.COMPRESS, context).strip()
         if compress:
             argv += ["--compress", compress]

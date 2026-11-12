@@ -1,4 +1,4 @@
-"""Crop a raster by a vector mask or a bounding box — wraps ``pyramids clip``."""
+"""Crop a raster by a vector mask or a bounding box — wraps ``pyramids raster crop``."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ class ClipRaster(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Clipped raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids clip`` command."""
+        """Build and run the ``pyramids raster crop`` command."""
         layer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if layer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
@@ -56,7 +56,7 @@ class ClipRaster(PyramidsAlgorithm):
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         mask_layer = self.parameterAsVectorLayer(parameters, self.MASK, context)
-        argv = ["clip", src, out]
+        argv = ["raster", "crop", src, out]
         if mask_layer is not None:
             mask_path = layer_source_path(mask_layer)
             validate_input_path(mask_path, feedback)

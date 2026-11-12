@@ -1,4 +1,4 @@
-"""Assign a raster's CRS and/or NoData value — wraps ``pyramids convert`` + ``edit-info``.
+"""Assign a raster's CRS and/or NoData value — wraps ``pyramids raster convert`` + ``raster edit-info``.
 
 This is the *assign projection* operation: it stamps the CRS / NoData metadata without
 reprojecting or touching a single pixel — distinct from Reproject (warp), which resamples. A copy
@@ -79,8 +79,8 @@ class EditRasterInfo(PyramidsAlgorithm):
             raise QgsProcessingException("Provide a CRS to assign and/or a NoData value.")
 
         # Copy to the output first, then edit the copy in place — so the source stays untouched.
-        self.run_pyramids(["convert", src, out, "--overwrite"], feedback)
-        edit = ["edit-info", out]
+        self.run_pyramids(["raster", "convert", src, out, "--overwrite"], feedback)
+        edit = ["raster", "edit-info", out]
         if crs_str is not None:
             edit += ["--crs", crs_str]
         if has_nodata:

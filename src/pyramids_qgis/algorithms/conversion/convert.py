@@ -1,4 +1,4 @@
-"""Re-save a raster in another format — wraps ``pyramids convert``."""
+"""Re-save a raster in another format — wraps ``pyramids raster convert``."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ class ConvertRaster(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Converted raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids convert`` command."""
+        """Build and run the ``pyramids raster convert`` command."""
         layer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if layer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
@@ -54,7 +54,7 @@ class ConvertRaster(PyramidsAlgorithm):
         validate_input_path(src, feedback)
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        argv = ["convert", src, out, "--overwrite"]
+        argv = ["raster", "convert", src, out, "--overwrite"]
         driver = self.parameterAsString(parameters, self.DRIVER, context).strip()
         if driver:
             argv += ["--driver", driver]

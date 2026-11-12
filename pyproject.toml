@@ -31,7 +31,7 @@ requires-python = ">= 3.11, <4"
 # QGIS, which provides `qgis.*` and GDAL; nothing here installs or pins qgis/PyQGIS. The one runtime
 # requirement is pyramids-core (imported lazily by the algorithms); the EO/mesh families are extras.
 dependencies = [
-    "pyramids-core >=0.70.0",
+    "pyramids-core >=0.77",
 ]
 
 [project.optional-dependencies]
@@ -138,7 +138,7 @@ platforms = ["win-64", "linux-64", { platform = "osx-arm64", macos = "14.0" }]
 # (PEP 621) for pip/feedstock consumers; dev/docs tooling lives in [dependency-groups] (PEP 735).
 qgis = "*"
 # conda-forge ships this as `pyramids` (PyPI name is `pyramids-core`; both import as `pyramids`).
-pyramids = ">=0.70.0"
+pyramids = ">=0.77"
 
 [tool.pixi.tasks]
 test = { cmd = "pytest -q --cov=pyramids_qgis --cov-report=term-missing", description = "Run the full suite against real QGIS (this env conda-installs qgis) with coverage" }
@@ -197,4 +197,4 @@ qgis = ">=3.40,<4"
 # argv — `pyramids warp ...` — breaks: pyramids >=0.74 regrouped the CLI into `pyramids raster warp`.
 # That is a real, Qt-independent defect affecting the 4.x env too; it is tracked separately, NOT
 # worked around here beyond keeping both legs on the same known-good pyramids.)
-pyramids = "0.73.*"
+pyramids = "0.77.*"
