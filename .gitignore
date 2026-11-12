@@ -27,3 +27,6 @@ coverage.xml
 Thumbs.db
 .idea/
 .vscode/
+
+# GDAL statistics sidecars written next to the example fixtures when a raster is read
+examples/data/*.aux.xml
