@@ -31,7 +31,7 @@ def test_registry_names_are_unique():
     """Every registered algorithm has a distinct id (QGIS requires unique names per provider)."""
     names = [algorithm().name() for algorithm in ALGORITHMS]
     assert len(names) == len(set(names)), f"duplicate algorithm id(s): {sorted(names)}"
-    assert len(names) == len(ALGORITHMS)
+    assert len(names) == 92  # pinned on purpose; bump deliberately when the registry changes
 
 
 def test_registry_group_ids():
