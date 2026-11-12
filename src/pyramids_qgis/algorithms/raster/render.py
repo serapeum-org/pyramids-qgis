@@ -48,10 +48,10 @@ class RasterRender(PyramidsAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.BAND,
-                "Band to render (optional; default: auto)",
+                "Band to render (0-based; optional; default: auto)",
                 type=QgsProcessingParameterNumber.Integer,
                 optional=True,
-                minValue=1,
+                minValue=0,
             )
         )
         self.addParameter(
