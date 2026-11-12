@@ -11,12 +11,12 @@ empty-``--freq`` guard (R2-N1).
 from __future__ import annotations
 
 import pytest
-from pyramids_qgis.algorithms.collection.merge import CollectionMerge
-from pyramids_qgis.algorithms.collection.resample import CollectionResample
-from pyramids_qgis.algorithms.raster.render import RasterRender
 from qgis.core import QgsProcessingContext, QgsProcessingException, QgsProcessingFeedback
 
 from pyramids_qgis.algorithms import base
+from pyramids_qgis.algorithms.collection.merge import CollectionMerge
+from pyramids_qgis.algorithms.collection.resample import CollectionResample
+from pyramids_qgis.algorithms.raster.render import RasterRender
 
 pytestmark = pytest.mark.integration
 
