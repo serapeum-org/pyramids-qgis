@@ -18,7 +18,7 @@ class ProcessApply(PyramidsAlgorithm):
     GROUP_LABEL = "Process"
     GROUP_ID = "process"
 
-    NAME = "NAME"
+    TOOL = "NAME"  # parameter key kept as "NAME"; constant renamed off `name()` (Sonar S1845)
     INPUT = "INPUT"
     PARAMS = "PARAMS"
     OUTPUT = "OUTPUT"
@@ -42,7 +42,7 @@ class ProcessApply(PyramidsAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         """Declare the algorithm's parameters."""
-        self.addParameter(QgsProcessingParameterString(self.NAME, "Tool name"))
+        self.addParameter(QgsProcessingParameterString(self.TOOL, "Tool name"))
         self.addParameter(QgsProcessingParameterFile(self.INPUT, "Input raster or vector"))
         self.addParameter(
             QgsProcessingParameterString(
@@ -55,7 +55,7 @@ class ProcessApply(PyramidsAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids process apply`` command."""
-        tool = self.parameterAsString(parameters, self.NAME, context).strip()
+        tool = self.parameterAsString(parameters, self.TOOL, context).strip()
         if not tool:
             raise QgsProcessingException("A tool name is required.")
 
