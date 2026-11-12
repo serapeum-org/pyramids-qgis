@@ -1,9 +1,12 @@
 name: Tests
 
-# Mesh-style: the suite runs INSIDE the pixi `dev` environment, which conda-installs QGIS, so the
-# tests exercise REAL PyQGIS — there is no import stub. The env is py313 only (conda-forge `qgis` 4.x
-# has no older build). Starts on ubuntu (headless via QT_QPA_PLATFORM=offscreen); the windows/macos
-# matrix can be added once this is green.
+# Mesh-style: the suite runs INSIDE a pixi environment, which conda-installs QGIS, so the tests
+# exercise REAL PyQGIS — there is no import stub. It runs against BOTH Qt majors the plugin targets:
+#   - `dev`  → conda-forge qgis 4.x  (Qt6, python 3.13)
+#   - `qt5`  → conda-forge qgis 3.x  (Qt5, python 3.12) — the QGIS-3.x line metadata.txt advertises
+# conda-forge carries both majors (the 3.x builds pair with python >= 3.12, which clears
+# pyramids-core's >=3.11 floor), so the Qt5 leg needs no Docker image. Runs on ubuntu (headless via
+# QT_QPA_PLATFORM=offscreen); the windows/macos matrix can be added once this is green.
 
 permissions:
   contents: read
@@ -19,22 +22,29 @@ concurrency:
 
 jobs:
   tests:
+    name: tests (${{ matrix.environment }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Same suite, two real-QGIS runtimes: `dev` (QGIS 4.x / Qt6) and `qt5` (QGIS 3.x / Qt5). A
+        # failure on one must not cancel the other, so the Qt-specific break is always visible.
+        environment: [dev, qt5]
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - name: Set up the pixi dev env (conda qgis + pyramids)
+      - name: Set up the pixi ${{ matrix.environment }} env (conda qgis + pyramids)
         # serapeum-org/github-actions is a monorepo; this SHA is the pixi/v1.2.1 action. v0.73.0 pins
         # the pixi that wrote pixi.lock (format v7), so CI reads the lock the repo ships.
         uses: serapeum-org/github-actions/actions/python-setup/pixi@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # pixi/v1.2.1
         with:
-          environments: dev
-          activate-environment: dev
+          environments: ${{ matrix.environment }}
+          activate-environment: ${{ matrix.environment }}
           cache: true
           version: v0.73.0
 
       - name: Run the test suite against real QGIS
-        run: pixi run -e dev test
+        run: pixi run -e ${{ matrix.environment }} test

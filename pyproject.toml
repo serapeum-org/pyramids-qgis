@@ -162,6 +162,11 @@ dev = { features = ["py313", "dev", "eo"], solve-group = "default" }
 # site is hand-written (no mkdocstrings), so nothing here imports `qgis.core`. Its own solve-group
 # keeps it independent of the QGIS dev/test solve.
 docs = { features = ["py313", "docs"], solve-group = "docs", no-default-feature = true }
+# Qt5 counterpart to `dev`: the SAME suite against the QGIS 3.x / Qt5 line (Qt6 is 4.x), so the
+# plugin's advertised QGIS-3.x support is runtime-verified, not just byte-compiled. The `qt5` feature
+# pins qgis <4 (Qt5) + python 3.12; its OWN solve-group keeps that resolve independent of the 4.x/py313
+# `default` group (one solve-group cannot hold both qgis majors). See tests.yml for the matching job.
+qt5 = { features = ["qt5", "dev", "eo"], solve-group = "qt5" }
 
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"
@@ -175,3 +180,21 @@ python = "3.13.*"
 # without pyramids-mesh. Other mesh-format drivers (2DM, Selafin, ...) still need pyramids-mesh and
 # so remain uncovered in CI until it ships on conda-forge.
 pyramids-eo = "*"
+
+[tool.pixi.feature.qt5.dependencies]
+# The QGIS 3.x / Qt5 LTR line — the counterpart to the Qt6 build the `default`/`dev` envs get from an
+# unpinned `qgis` (which resolves 4.x). conda-forge ships qgis 3.x bound to Qt5 (qt-main 5.15 / pyqt
+# 5.15); its recent 3.4x builds pair with python 3.12/3.13, which clears pyramids-core's `>=3.11`
+# floor. (QGIS 3.22-LTR itself ships python 3.9 — below that floor — so 3.22 cannot import
+# pyramids-core and is only byte-compile-checked by the `compile` job, never runtime-tested; the
+# runtime-testable Qt5 target is this newer 3.x build.) Pin python to 3.12 and qgis to <4 so the suite
+# runs against real Qt5 PyQGIS. pyramids-eo comes from the `eo` feature.
+python = "3.12.*"
+qgis = ">=3.40,<4"
+# Pin pyramids to the SAME line the `dev` (Qt6) solve-group resolves, so this leg varies ONLY the Qt
+# major — otherwise its independent solve-group floats pyramids to a newer release and the leg would
+# also be a pyramids-version test. (It is on exactly that newer release that the plugin's flat CLI
+# argv — `pyramids warp ...` — breaks: pyramids >=0.74 regrouped the CLI into `pyramids raster warp`.
+# That is a real, Qt-independent defect affecting the 4.x env too; it is tracked separately, NOT
+# worked around here beyond keeping both legs on the same known-good pyramids.)
+pyramids = "0.73.*"
