@@ -68,7 +68,8 @@ class WarpRaster(PyramidsAlgorithm):
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         self.run_pyramids(
-            ["raster", "warp", src, out, "--crs", target_crs, "--resampling", resampling, "--overwrite"],
+            ["raster", "warp", src, out, "--crs", target_crs,
+             "--resampling", resampling, "--overwrite"],
             feedback,
         )
         return {self.OUTPUT: out}

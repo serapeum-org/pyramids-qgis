@@ -1,4 +1,4 @@
-"""Assign a raster's CRS and/or NoData value — wraps ``pyramids raster convert`` + ``raster edit-info``.
+"""Assign a raster's CRS / NoData — wraps ``pyramids raster convert`` + ``raster edit-info``.
 
 This is the *assign projection* operation: it stamps the CRS / NoData metadata without
 reprojecting or touching a single pixel — distinct from Reproject (warp), which resamples. A copy

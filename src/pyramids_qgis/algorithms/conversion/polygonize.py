@@ -77,7 +77,8 @@ class Polygonize(PyramidsAlgorithm):
         geometry = GEOMETRY[self.parameterAsEnum(parameters, self.GEOMETRY, context)]
         # Force the GeoJSON driver so the output content matches what QGIS loads back,
         # independent of the file extension the destination picks.
-        argv = ["raster", "shapes", src, out, "--geometry", geometry, "--driver", "geojson", "--overwrite"]
+        argv = ["raster", "shapes", src, out, "--geometry", geometry, "--driver", "geojson"]
+        argv.append("--overwrite")
         if self.parameterAsBool(parameters, self.ALLOW_LARGE, context):
             argv.append("--allow-large")
 
