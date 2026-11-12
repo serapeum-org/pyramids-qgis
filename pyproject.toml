@@ -1,6 +1,6 @@
 [project]
 name = "pyramids-qgis"
-version = "0.0.0"
+version = "0.1.0"
 description = "QGIS Processing provider exposing the pyramids GIS toolkit"
 readme = {file = "README.md", content-type = "text/markdown"}
 authors = [
