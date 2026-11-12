@@ -1,4 +1,4 @@
-"""Vectorize a raster to GeoJSON — wraps ``pyramids shapes``.
+"""Vectorize a raster to GeoJSON — wraps ``pyramids raster shapes``.
 
 pyramids ``shapes`` emits **one feature per cell** (a square polygon, or a centre point),
 each carrying the band value. It is not a region-dissolving polygonizer, so it refuses very
@@ -66,7 +66,7 @@ class Polygonize(PyramidsAlgorithm):
         )
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids shapes`` command."""
+        """Build and run the ``pyramids raster shapes`` command."""
         layer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if layer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
@@ -77,7 +77,8 @@ class Polygonize(PyramidsAlgorithm):
         geometry = GEOMETRY[self.parameterAsEnum(parameters, self.GEOMETRY, context)]
         # Force the GeoJSON driver so the output content matches what QGIS loads back,
         # independent of the file extension the destination picks.
-        argv = ["shapes", src, out, "--geometry", geometry, "--driver", "geojson", "--overwrite"]
+        argv = ["raster", "shapes", src, out, "--geometry", geometry, "--driver", "geojson"]
+        argv.append("--overwrite")
         if self.parameterAsBool(parameters, self.ALLOW_LARGE, context):
             argv.append("--allow-large")
 

@@ -1,4 +1,4 @@
-"""Reproject a raster to a target CRS — wraps ``pyramids warp``."""
+"""Reproject a raster to a target CRS — wraps ``pyramids raster warp``."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ class WarpRaster(PyramidsAlgorithm):
         )
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids warp`` command."""
+        """Build and run the ``pyramids raster warp`` command."""
         layer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if layer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
@@ -68,7 +68,17 @@ class WarpRaster(PyramidsAlgorithm):
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         self.run_pyramids(
-            ["warp", src, out, "--crs", target_crs, "--resampling", resampling, "--overwrite"],
+            [
+                "raster",
+                "warp",
+                src,
+                out,
+                "--crs",
+                target_crs,
+                "--resampling",
+                resampling,
+                "--overwrite",
+            ],
             feedback,
         )
         return {self.OUTPUT: out}

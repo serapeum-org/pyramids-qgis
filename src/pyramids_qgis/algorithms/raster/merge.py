@@ -1,4 +1,4 @@
-"""Mosaic several rasters into one — wraps ``pyramids merge``."""
+"""Mosaic several rasters into one — wraps ``pyramids raster merge``."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class MergeRasters(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Merged raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids merge`` command."""
+        """Build and run the ``pyramids raster merge`` command."""
         layers = self.parameterAsLayerList(parameters, self.INPUT, context)
         if not layers or len(layers) < 2:
             raise QgsProcessingException("Merge needs at least two input rasters.")
@@ -51,5 +51,5 @@ class MergeRasters(PyramidsAlgorithm):
             sources.append(path)
 
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
-        self.run_pyramids(["merge", *sources, out, "--overwrite"], feedback)
+        self.run_pyramids(["raster", "merge", *sources, out, "--overwrite"], feedback)
         return {self.OUTPUT: out}
