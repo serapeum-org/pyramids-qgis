@@ -4,8 +4,9 @@ name: CI
 # package and has no pixi env: it runs inside QGIS's own Python, which provides PyQGIS and
 # GDAL. So CI cannot import the plugin (PyQGIS is absent on a bare runner) and instead does
 # what it can without QGIS: lint and format with ruff, and byte-compile every module across
-# the Python versions QGIS ships to catch syntax errors. End-to-end behaviour is verified by
-# running the algorithms inside QGIS, not here.
+# the Python versions the plugin supports (those of its pyramids-core dependency, >= 3.11) to
+# catch syntax errors. End-to-end behaviour is verified by running the algorithms inside QGIS,
+# not here.
 
 permissions:
   contents: read
@@ -47,10 +48,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The Python versions shipped by the QGIS releases this plugin targets
-        # (3.22 LTR through 4.x). compileall parses every module; it does not import
-        # PyQGIS, so it runs on a bare runner.
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        # The Python versions the plugin supports — i.e. those of its hard dependency
+        # pyramids-core, which requires python >= 3.11 (so QGIS 3.22-LTR's python 3.9 is
+        # NOT a target: it cannot import pyramids-core and the plugin cannot run on it).
+        # compileall parses every module; it does not import PyQGIS, so it runs on a bare
+        # runner.
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
