@@ -60,7 +60,5 @@ class RasterDatasetLike(PyramidsAlgorithm):
         validate_input_path(array, feedback)
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        self.run_pyramids(
-            ["raster", "dataset-like", src, array, out, "--overwrite"], feedback
-        )
+        self.run_pyramids(["raster", "dataset-like", src, array, out, "--overwrite"], feedback)
         return {self.OUTPUT: out}

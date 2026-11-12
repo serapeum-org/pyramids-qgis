@@ -50,20 +50,28 @@ class RasterSetColorRamp(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterLayer(self.INPUT, "Input raster"))
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.BAND, "Band to colour (1-based; default 1)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=1,
+                self.BAND,
+                "Band to colour (1-based; default 1)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=1,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.START_VALUE, "Ramp start value (>= 0)",
-                type=QgsProcessingParameterNumber.Double, defaultValue=0.0, minValue=0.0,
+                self.START_VALUE,
+                "Ramp start value (>= 0)",
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=0.0,
+                minValue=0.0,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.END_VALUE, "Ramp end value (must exceed the start value)",
-                type=QgsProcessingParameterNumber.Double, defaultValue=255.0,
+                self.END_VALUE,
+                "Ramp end value (must exceed the start value)",
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=255.0,
             )
         )
         self.addParameter(
@@ -78,7 +86,8 @@ class RasterSetColorRamp(PyramidsAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterString(
-                self.COLORMAP, "Matplotlib colormap (optional; instead of endpoint colours)",
+                self.COLORMAP,
+                "Matplotlib colormap (optional; instead of endpoint colours)",
                 optional=True,
             )
         )
@@ -99,8 +108,14 @@ class RasterSetColorRamp(PyramidsAlgorithm):
             raise QgsProcessingException("The ramp end value must exceed the start value.")
 
         argv = [
-            "raster", "set-color-ramp", src, out,
-            "--start-value", str(start_value), "--end-value", str(end_value),
+            "raster",
+            "set-color-ramp",
+            src,
+            out,
+            "--start-value",
+            str(start_value),
+            "--end-value",
+            str(end_value),
         ]
         if self.BAND in parameters and parameters[self.BAND] is not None:
             argv += ["--band", str(self.parameterAsInt(parameters, self.BAND, context))]

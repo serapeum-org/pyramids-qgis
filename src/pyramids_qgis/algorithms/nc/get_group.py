@@ -39,9 +39,7 @@ class NcGetGroup(PyramidsAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         """Declare the algorithm's parameters."""
-        self.addParameter(
-            QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc")
-        )
+        self.addParameter(QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc"))
         self.addParameter(
             QgsProcessingParameterString(self.GROUP, "Sub-group name (nested 'a/b' accepted)")
         )

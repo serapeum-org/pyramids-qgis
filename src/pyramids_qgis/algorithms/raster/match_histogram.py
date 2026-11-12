@@ -40,9 +40,7 @@ class RasterMatchHistogram(PyramidsAlgorithm):
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         """Declare the algorithm's parameters."""
         self.addParameter(QgsProcessingParameterRasterLayer(self.INPUT, "Input raster"))
-        self.addParameter(
-            QgsProcessingParameterRasterLayer(self.REFERENCE, "Reference raster")
-        )
+        self.addParameter(QgsProcessingParameterRasterLayer(self.REFERENCE, "Reference raster"))
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.BAND,

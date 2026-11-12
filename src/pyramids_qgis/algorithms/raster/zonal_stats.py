@@ -45,9 +45,7 @@ class RasterZonalStats(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(QgsProcessingParameterRasterLayer(self.INPUT, "Input raster"))
         self.addParameter(
-            QgsProcessingParameterVectorLayer(
-                self.ZONES, "Zone polygons (optional)", optional=True
-            )
+            QgsProcessingParameterVectorLayer(self.ZONES, "Zone polygons (optional)", optional=True)
         )
         self.addParameter(
             QgsProcessingParameterRasterLayer(

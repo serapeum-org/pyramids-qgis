@@ -45,14 +45,20 @@ class RasterFootprint(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterLayer(self.INPUT, "Input raster"))
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.BAND, "Band index (0-based; default 0)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=0,
+                self.BAND,
+                "Band index (0-based; default 0)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=0,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.MAX_SAMPLES, "Max samples (optional; approximate footprint)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=1,
+                self.MAX_SAMPLES,
+                "Max samples (optional; approximate footprint)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=1,
             )
         )
         self.addParameter(

@@ -52,14 +52,19 @@ class RasterEmptyLike(PyramidsAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.BANDS, "Bands (optional; default: the template's)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=1,
+                self.BANDS,
+                "Bands (optional; default: the template's)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=1,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.NODATA, "No-data value (optional; default: inherit)",
-                type=QgsProcessingParameterNumber.Double, optional=True,
+                self.NODATA,
+                "No-data value (optional; default: inherit)",
+                type=QgsProcessingParameterNumber.Double,
+                optional=True,
             )
         )
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Output raster"))

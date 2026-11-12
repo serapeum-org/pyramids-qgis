@@ -52,30 +52,43 @@ class RasterCreate(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.ROWS, "Rows", type=QgsProcessingParameterNumber.Integer, defaultValue=1,
+                self.ROWS,
+                "Rows",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=1,
                 minValue=1,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.COLUMNS, "Columns", type=QgsProcessingParameterNumber.Integer, defaultValue=1,
+                self.COLUMNS,
+                "Columns",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=1,
                 minValue=1,
             )
         )
         self.addParameter(
-            QgsProcessingParameterString(self.DTYPE, "Numpy dtype (e.g. float32)",
-                                         defaultValue="float32")
+            QgsProcessingParameterString(
+                self.DTYPE, "Numpy dtype (e.g. float32)", defaultValue="float32"
+            )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.BANDS, "Bands", type=QgsProcessingParameterNumber.Integer, defaultValue=1,
+                self.BANDS,
+                "Bands",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=1,
                 minValue=1,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.CELL_SIZE, "Cell size (square pixel, optional)",
-                type=QgsProcessingParameterNumber.Double, optional=True, minValue=0.0,
+                self.CELL_SIZE,
+                "Cell size (square pixel, optional)",
+                type=QgsProcessingParameterNumber.Double,
+                optional=True,
+                minValue=0.0,
             )
         )
         self.addParameter(
@@ -83,14 +96,19 @@ class RasterCreate(PyramidsAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.EPSG, "EPSG code of the CRS (optional)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=0,
+                self.EPSG,
+                "EPSG code of the CRS (optional)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=0,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.NODATA, "No-data value (optional)",
-                type=QgsProcessingParameterNumber.Double, optional=True,
+                self.NODATA,
+                "No-data value (optional)",
+                type=QgsProcessingParameterNumber.Double,
+                optional=True,
             )
         )
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Output raster"))
@@ -106,9 +124,17 @@ class RasterCreate(PyramidsAlgorithm):
         bands = self.parameterAsInt(parameters, self.BANDS, context)
 
         argv = [
-            "raster", "create", out,
-            "--rows", str(rows), "--columns", str(columns),
-            "--dtype", dtype, "--bands", str(bands),
+            "raster",
+            "create",
+            out,
+            "--rows",
+            str(rows),
+            "--columns",
+            str(columns),
+            "--dtype",
+            dtype,
+            "--bands",
+            str(bands),
         ]
 
         if self.CELL_SIZE in parameters and parameters[self.CELL_SIZE] is not None:

@@ -51,20 +51,29 @@ class RasterCreateEmpty(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.ROWS, "Rows", type=QgsProcessingParameterNumber.Integer, defaultValue=1,
+                self.ROWS,
+                "Rows",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=1,
                 minValue=1,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.COLS, "Columns", type=QgsProcessingParameterNumber.Integer, defaultValue=1,
+                self.COLS,
+                "Columns",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=1,
                 minValue=1,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.BANDS, "Bands (optional; default 1)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=1,
+                self.BANDS,
+                "Bands (optional; default 1)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=1,
             )
         )
         self.addParameter(
@@ -74,8 +83,11 @@ class RasterCreateEmpty(PyramidsAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.CELL_SIZE, "Cell size (square pixel, optional)",
-                type=QgsProcessingParameterNumber.Double, optional=True, minValue=0.0,
+                self.CELL_SIZE,
+                "Cell size (square pixel, optional)",
+                type=QgsProcessingParameterNumber.Double,
+                optional=True,
+                minValue=0.0,
             )
         )
         self.addParameter(
@@ -83,14 +95,19 @@ class RasterCreateEmpty(PyramidsAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.EPSG, "EPSG code of the CRS (optional)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=0,
+                self.EPSG,
+                "EPSG code of the CRS (optional)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=0,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.NODATA, "No-data value (optional; default -9999)",
-                type=QgsProcessingParameterNumber.Double, optional=True,
+                self.NODATA,
+                "No-data value (optional; default -9999)",
+                type=QgsProcessingParameterNumber.Double,
+                optional=True,
             )
         )
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Output raster"))

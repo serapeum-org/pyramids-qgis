@@ -51,9 +51,7 @@ class CollectionReduce(PyramidsAlgorithm):
             )
         )
         self.addParameter(
-            QgsProcessingParameterEnum(
-                self.REDUCE, "Reduction", options=REDUCE_OPS, defaultValue=0
-            )
+            QgsProcessingParameterEnum(self.REDUCE, "Reduction", options=REDUCE_OPS, defaultValue=0)
         )
         self.addParameter(
             QgsProcessingParameterString(

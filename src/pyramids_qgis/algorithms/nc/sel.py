@@ -41,12 +41,8 @@ class NcSel(PyramidsAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         """Declare the algorithm's parameters."""
-        self.addParameter(
-            QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc")
-        )
-        self.addParameter(
-            QgsProcessingParameterString(self.TIME, "Time label (e.g. 2020-06-15)")
-        )
+        self.addParameter(QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc"))
+        self.addParameter(QgsProcessingParameterString(self.TIME, "Time label (e.g. 2020-06-15)"))
         self.addParameter(
             QgsProcessingParameterString(
                 self.VAR, "Variable to narrow to (optional)", optional=True

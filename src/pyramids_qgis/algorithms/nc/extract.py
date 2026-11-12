@@ -40,15 +40,11 @@ class NcExtract(PyramidsAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         """Declare the algorithm's parameters."""
-        self.addParameter(
-            QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc")
-        )
+        self.addParameter(QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc"))
         self.addParameter(
             QgsProcessingParameterString(self.VAR, "Variable name (supports 'group/var')")
         )
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(self.OUTPUT, "Extracted raster")
-        )
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Extracted raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         """Build and run the ``pyramids nc extract`` command."""

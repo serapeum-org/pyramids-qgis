@@ -41,12 +41,8 @@ class RasterSubdataset(PyramidsAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         """Declare the algorithm's parameters."""
-        self.addParameter(
-            QgsProcessingParameterRasterLayer(self.INPUT, "Input container raster")
-        )
-        self.addParameter(
-            QgsProcessingParameterString(self.KEY, "Subdataset index or full name")
-        )
+        self.addParameter(QgsProcessingParameterRasterLayer(self.INPUT, "Input container raster"))
+        self.addParameter(QgsProcessingParameterString(self.KEY, "Subdataset index or full name"))
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Output raster"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802

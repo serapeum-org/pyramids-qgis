@@ -40,9 +40,7 @@ class NcCrop(PyramidsAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         """Declare the algorithm's parameters."""
-        self.addParameter(
-            QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc")
-        )
+        self.addParameter(QgsProcessingParameterFile(self.INPUT, "Input NetCDF", extension="nc"))
         self.addParameter(
             QgsProcessingParameterExtent(self.EXTENT, "Crop window (in the file's CRS)")
         )

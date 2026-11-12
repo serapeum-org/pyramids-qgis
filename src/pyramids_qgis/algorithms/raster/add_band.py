@@ -50,8 +50,11 @@ class RasterAddBand(PyramidsAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.SOURCE_BAND, "Source band index (0-based; default 0)",
-                type=QgsProcessingParameterNumber.Integer, optional=True, minValue=0,
+                self.SOURCE_BAND,
+                "Source band index (0-based; default 0)",
+                type=QgsProcessingParameterNumber.Integer,
+                optional=True,
+                minValue=0,
             )
         )
         self.addParameter(
