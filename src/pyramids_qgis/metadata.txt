@@ -1,6 +1,6 @@
 [general]
 name=Pyramids QGIS
-qgisMinimumVersion=3.22
+qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=GDAL-powered raster and vector processing from the pyramids library, as QGIS Processing algorithms.
 version=0.0.0
