@@ -2,7 +2,8 @@
 
 Algorithms are grouped into subpackages by origin and theme, each mirroring a pyramids 0.77 CLI
 command group (``pyramids <group> <command> ...``): ``raster``, ``conversion``, ``vector``,
-``collection``, ``fetch``, ``nc`` (NetCDF), ``mesh`` (pyramids-mesh), ``eo`` (pyramids-eo).
+``collection``, ``fetch``, ``nc`` (NetCDF), ``process``, ``stac``, ``mesh`` (pyramids-mesh), ``eo``
+(pyramids-eo).
 
 Each algorithm is a thin adapter over the pyramids stack. To add one, implement a
 :class:`~pyramids_qgis.algorithms.base.PyramidsAlgorithm` subclass in the right subpackage; this
@@ -34,6 +35,8 @@ from .nc.crop import NcCrop
 from .nc.extract import NcExtract
 from .nc.get_group import NcGetGroup
 from .nc.sel import NcSel
+from .process.apply import ProcessApply
+from .process.run import ProcessRun
 from .raster.add_band import RasterAddBand
 from .raster.align import RasterAlign
 from .raster.animate import RasterAnimate
@@ -64,6 +67,7 @@ from .raster.subdataset import RasterSubdataset
 from .raster.warp import WarpRaster
 from .raster.where import RasterWhere
 from .raster.zonal_stats import RasterZonalStats
+from .stac.download import StacDownload
 from .vector.clip import ClipVector
 from .vector.convert import ConvertVector
 from .vector.geom_buffer import VectorGeomBuffer
@@ -194,6 +198,11 @@ ALGORITHMS = [
     NcExtract,
     NcGetGroup,
     NcSel,
+    # process
+    ProcessApply,
+    ProcessRun,
+    # stac
+    StacDownload,
     # mesh (pyramids-mesh)
     MeshConvert,
     MeshToVector,
