@@ -107,6 +107,15 @@ class CollectionCrop(PyramidsAlgorithm):
             auth_id = crs.authid() if crs is not None and crs.isValid() else ""
             if auth_id.upper().startswith("EPSG:"):
                 argv += ["--epsg", auth_id.split(":", 1)[1]]
+            elif crs is not None and crs.isValid():
+                # 'collection crop' accepts only an EPSG code (--epsg), so a non-EPSG (e.g. custom
+                # WKT) extent CRS cannot be forwarded; warn instead of silently cropping the wrong
+                # window in the collection's own CRS.
+                feedback.pushWarning(
+                    "The crop extent's CRS is not an EPSG code, which 'collection crop' cannot "
+                    "accept; the bounding box will be interpreted in the collection's own CRS and "
+                    "may crop the wrong area. Reproject the extent to an EPSG CRS to be safe."
+                )
 
         if self.parameterAsBool(parameters, self.NO_TOUCH, context):
             argv.append("--no-touch")
