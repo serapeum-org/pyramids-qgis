@@ -7,6 +7,7 @@ reduced with ``--op``. One raster is written per window, so the output is a *dir
 from __future__ import annotations
 
 from qgis.core import (
+    QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
     QgsProcessingParameterFile,
@@ -123,6 +124,10 @@ class CollectionResample(PyramidsAlgorithm):
         out = self.parameterAsString(parameters, self.OUTPUT, context)
 
         freq = self.parameterAsString(parameters, self.FREQ, context).strip()
+        if not freq:
+            raise QgsProcessingException(
+                "Provide a resampling frequency (a pandas offset alias, e.g. 'YS', 'MS', '7D')."
+            )
         op = RESAMPLE_OPS[self.parameterAsEnum(parameters, self.OP, context)]
         argv = ["collection", "resample", src, out, "--freq", freq, "--op", op]
 
