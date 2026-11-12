@@ -6,8 +6,9 @@ command group (``pyramids <group> <command> ...``): ``raster``, ``conversion``, 
 (pyramids-eo).
 
 Each algorithm is a thin adapter over the pyramids stack. To add one, implement a
-:class:`~pyramids_qgis.algorithms.base.PyramidsAlgorithm` subclass in the right subpackage; this
-registry is generated from the filesystem, so the provider picks it up with no manual wiring here.
+:class:`~pyramids_qgis.algorithms.base.PyramidsAlgorithm` subclass in the right subpackage and add
+its import plus an ``ALGORITHMS`` entry below (this list is maintained explicitly, not
+auto-discovered at runtime).
 """
 
 from __future__ import annotations
