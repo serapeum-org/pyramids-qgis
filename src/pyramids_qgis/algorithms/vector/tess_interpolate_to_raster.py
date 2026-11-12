@@ -141,7 +141,9 @@ class VectorTessInterpolateToRaster(PyramidsAlgorithm):
             n_neighbors = self.parameterAsInt(parameters, self.N_NEIGHBORS, context)
             argv += ["--n-neighbors", str(n_neighbors)]
         if self.NODATA in parameters and parameters[self.NODATA] is not None:
-            argv += ["--nodata", str(self.parameterAsDouble(parameters, self.NODATA, context))]
+            # =-join so a negative scientific-notation NoData (e.g. -3.4e+38) isn't misread by
+            # argparse as an option (which raises an uncaught SystemExit). Matches the siblings.
+            argv.append(f"--nodata={self.parameterAsDouble(parameters, self.NODATA, context)}")
         layer_ref = self.parameterAsString(parameters, self.LAYER, context).strip()
         if layer_ref:
             argv += ["--layer", layer_ref]

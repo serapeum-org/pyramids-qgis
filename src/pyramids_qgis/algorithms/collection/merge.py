@@ -95,7 +95,10 @@ class CollectionMerge(PyramidsAlgorithm):
         argv = ["collection", "merge", src, out, "--method", method]
 
         if parameters.get(self.NODATA) is not None:
-            argv += ["--nodata", str(self.parameterAsDouble(parameters, self.NODATA, context))]
+            # =-join: a negative scientific-notation NoData (e.g. the float32 fill -3.4e+38) would
+            # otherwise be read by argparse as an unknown option and raise SystemExit (not caught
+            # by run_pyramids). Matches the sibling edit_info/pan_sharpen/proximity convention.
+            argv.append(f"--nodata={self.parameterAsDouble(parameters, self.NODATA, context)}")
 
         extent = self.parameterAsExtent(parameters, self.BBOX, context)
         if not extent.isNull():
