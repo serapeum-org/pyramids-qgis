@@ -50,6 +50,7 @@ flowchart TD
 
     CRON([Schedule: Mon 06:00 UTC]) --> AUD
     MANW([Manual dispatch]) --> WHL
+    MANW --> AUD
     MANP([Manual dispatch + branch]) --> PUBd[publish.yml: artifact path]
 
     REL([Manual dispatch: github-release.yml]) --> RELj[cz bump → tag → GitHub Release]
@@ -67,8 +68,9 @@ flowchart TD
 
 ## Everyday CI — pull request and push to `main`
 
-Every PR and every push to `main` runs the same four gates plus a strict docs build. None of them publish; the
-docs build only uploads a preview on PRs.
+Every PR runs four gates — CI, Tests, pip-audit, Wheel — plus a strict docs build. A push to `main` runs the same
+set **except pip-audit**, which is pull-request- and schedule-only. None of them publish; the docs build only
+uploads a preview on PRs.
 
 ```mermaid
 flowchart LR
@@ -119,7 +121,14 @@ flowchart TD
 
 Checking out the **tip of the release branch** (not the triggering commit) is essential: `github-release` pushes the
 version-bump commit *after* the `workflow_run` SHA is captured, so only the branch tip carries the bumped
-`metadata.txt` version.
+`metadata.txt` version. The build then checks out that version's **tag** before packaging, so the Release asset is
+exactly the tagged commit even if another commit lands on the branch meanwhile.
+
+> **Caveat — a draft release gets no plugin assets.** The release path only uploads when a **published** Release
+> exists for the tag (the gate queries `/releases/tags/<tag>`, which does not return drafts). If `github-release`
+> is dispatched with `draft: true`, `publish.yml` finds no published Release, emits a `::warning::`, and the job
+> still goes green with nothing uploaded. Publishing the draft later fires a `release` event, which `publish.yml`
+> does **not** listen for — so publish the Release (non-draft) as part of cutting it, or re-cut the version.
 
 ## `publish.yml` — two paths, chosen by trigger
 
