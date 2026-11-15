@@ -5,6 +5,12 @@ Commit history on each release (`cz bump`, run by the `github-release` workflow)
 manual changes are overwritten on the next release. The first release (`0.1.0`) populates it from the commit
 history to date.
 
+## 0.2.0 (2026-11-15)
+
+### Fix
+
+- **ci**: look up the release by its bare tag in publish.yml (#35)
+
 ## 0.1.1 (2026-11-15)
 
 ### Fix
