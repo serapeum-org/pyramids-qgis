@@ -4,15 +4,16 @@ This repository is driven by seven GitHub Actions workflows. This page explains 
 **where its output goes** — nothing (a pass/fail gate), a run-scoped *workflow artifact*, a *GitHub Release* asset,
 the *`gh-pages`* site, or the official *plugins.qgis.org* repository.
 
-> The plugin is **not** a pip package — `pyramids-qgis` ships as a QGIS plugin zip. "Publishing" therefore means
-> attaching that zip (and a custom-repository `plugins.xml`) to a GitHub Release and uploading it to
-> plugins.qgis.org, **not** pushing a wheel to PyPI.
+> The plugin is **not published to PyPI** — `pyramids-qgis` ships as a QGIS plugin zip. "Publishing" therefore
+> means attaching that zip (and a custom-repository `plugins.xml`) to a GitHub Release and uploading it to
+> plugins.qgis.org, **not** pushing a wheel to PyPI. (The `Wheel - Build & Test` workflow does build a wheel, but
+> only to test the import surface — that wheel is never released.)
 
 ## Workflows at a glance
 
 | Workflow | File | Triggers | Output / uploaded to |
 |---|---|---|---|
-| **CI** | `lint.yml` | push → `main`, pull_request | none — gate only (ruff, byte-compile 3.9/3.11/3.12, gitleaks) |
+| **CI** | `lint.yml` | push → `main`, pull_request | none — gate only (ruff, byte-compile 3.11/3.12/3.13, gitleaks) |
 | **Tests** | `tests.yml` | push → `main`, pull_request | none — gate only (pytest against real QGIS, matrix `dev` + `qt5`) |
 | **Wheel - Build & Test** | `pure-wheel-test.yml` | push → `main`, pull_request, workflow_dispatch | **run-scoped artifact** (the built wheel, passed build → test across ubuntu/macos/windows) |
 | **pip-audit** | `pip-audit.yml` | pull_request, schedule (Mon 06:00 UTC), workflow_dispatch | none — gate only (dependency audit in the run log) |
@@ -72,13 +73,13 @@ docs build only uploads a preview on PRs.
 ```mermaid
 flowchart LR
     subgraph Gates["Gates — pass/fail only"]
-        L["CI (lint.yml)<br/>ruff · byte-compile 3.9/3.11/3.12 · gitleaks"]
+        L["CI (lint.yml)<br/>ruff · byte-compile 3.11/3.12/3.13 · gitleaks"]
         T["Tests (tests.yml)<br/>pytest vs real QGIS · dev + qt5"]
         A["pip-audit.yml<br/>(PRs + weekly)"]
     end
     EV([PR or push to main]) --> L
     EV --> T
-    EV --> A
+    EV -->|PR only| A
     EV --> W["Wheel (pure-wheel-test.yml)"]
     EV --> D["Deploy MkDocs: build-strict<br/>(warnings = errors)"]
 
@@ -174,6 +175,10 @@ flowchart TD
 `mike` publishes by committing the rendered site to the **`gh-pages`** branch, which GitHub Pages serves (Settings →
 Pages → Source = `gh-pages`). PR previews are deliberately **not** published — each one would otherwise commit a full
 site onto the shared `gh-pages` branch.
+
+> `deploy-release`'s `release: published` trigger fires only for a **manually** published Release. A
+> Release created by `github-release.yml` with the built-in `GITHUB_TOKEN` does **not** emit a `release`
+> event, so in the automated release flow `deploy-release` runs via the `workflow_run` path only.
 
 ## Secrets used
 
