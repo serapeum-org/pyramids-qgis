@@ -31,7 +31,7 @@ the *`gh-pages`* site, or the official *plugins.qgis.org* repository.
 - **`gh-pages` site** — the rendered documentation, committed to the `gh-pages` branch by `mike` and served by
   GitHub Pages.
 - **plugins.qgis.org** — the official QGIS plugin repository (the real "publish"). Inert until the
-  `OSGEO_USERNAME` / `OSGEO_PASSWORD` secrets are set.
+  `QGIS_TOKEN` secret is set.
 
 ## How triggers map to workflows
 
@@ -195,4 +195,4 @@ site onto the shared `gh-pages` branch.
 |---|---|---|
 | `GITHUB_TOKEN` (built-in) | all | always present |
 | `ACTIONS_DEPLOY_TOKEN` | Deploy MkDocs (deploy jobs) | docs cannot push to `gh-pages` |
-| `OSGEO_USERNAME` / `OSGEO_PASSWORD` | publish.yml (release path) | plugins.qgis.org upload is skipped; the Release assets still publish |
+| `QGIS_TOKEN` | publish.yml (release path) | plugins.qgis.org upload is skipped; the Release assets still publish |
