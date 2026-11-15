@@ -1,4 +1,4 @@
-"""General spatial overlay of two vectors — wraps ``pyramids vector overlay overlay``."""
+"""General spatial overlay of two vectors — wraps ``pyramids vector overlay apply``."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ class VectorOverlayOverlay(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterVectorDestination(self.OUTPUT, "Overlay"))
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
-        """Build and run the ``pyramids vector overlay overlay`` command."""
+        """Build and run the ``pyramids vector overlay apply`` command."""
         layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
         if layer is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
@@ -75,7 +75,7 @@ class VectorOverlayOverlay(PyramidsAlgorithm):
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         how = HOWS[self.parameterAsEnum(parameters, self.HOW, context)]
-        argv = ["vector", "overlay", "overlay", src, out, "--right", right, "--how", how]
+        argv = ["vector", "overlay", "apply", src, out, "--right", right, "--how", how]
         argv.append("--overwrite")
         layer_ref = self.parameterAsString(parameters, self.LAYER, context).strip()
         if layer_ref:

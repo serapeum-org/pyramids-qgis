@@ -4,7 +4,8 @@ Where ``tests/integration/test_real_qgis.py`` stops at ``initAlgorithm`` (parame
 these drive each algorithm's full ``run()`` against a genuine fixture and validate the output on
 disk with GDAL/OGR — covering both ways an algorithm reaches pyramids:
 
-- the CLI-backed path (``convert`` from the conversion group, ``warp`` from the raster group), and
+- the CLI-backed path (``convert`` from the conversion group, ``warp`` from the raster group,
+  ``vector_overlay_overlay`` from the vector group), and
 - the library-direct path (``mesh_convert`` / ``mesh_to_vector``, and ``eo_stretch``).
 
 This is the automated subset of the manual in-QGIS smoke test tracked in #3.
@@ -20,6 +21,7 @@ from pyramids_qgis.algorithms.eo.stretch import EoStretch
 from pyramids_qgis.algorithms.mesh.convert import MeshConvert
 from pyramids_qgis.algorithms.mesh.to_vector import MeshToVector
 from pyramids_qgis.algorithms.raster.warp import WarpRaster
+from pyramids_qgis.algorithms.vector.overlay_overlay import VectorOverlayOverlay
 
 pytestmark = pytest.mark.integration
 
@@ -147,9 +149,9 @@ def test_mesh_convert_end_to_end(ugrid_mesh, tmp_path):
     # faces and six nodes come back, and the 'depth' data variable still carries [1.5, 2.5].
     # Checking the data — not just the face count — rules out a passthrough copy that drops or
     # scrambles the data variables while leaving the mesh topology intact.
-    from pyramids.netcdf.ugrid import UgridDataset
+    from pyramids.netcdf.ugrid import MeshDataset
 
-    mesh = UgridDataset.read_file(str(out))
+    mesh = MeshDataset.read_file(str(out))
     assert mesh.n_face == 2
     assert mesh.n_node == 6
     assert "depth" in mesh.data_variable_names
@@ -186,6 +188,44 @@ def test_mesh_to_vector_end_to_end(ugrid_mesh, tmp_path):
         spatial_ref = layer.GetSpatialRef()
         assert spatial_ref is not None
         assert spatial_ref.GetAuthorityCode(None) == "4326"
+    finally:
+        source = None  # noqa: F841  (release the OGR handle)
+
+
+def test_vector_overlay_end_to_end(overlapping_vectors, tmp_path):
+    """``vector_overlay_overlay`` (vector group, CLI-backed) intersects the two fixture squares.
+
+    This is the vector group's CLI-contract guard. The verb it emits was renamed upstream
+    (``vector overlay overlay`` → ``vector overlay apply`` in pyramids-core 0.78), and nothing
+    caught it: the group had no end-to-end test, and argparse rejects an unknown subcommand, so the
+    algorithm was simply dead against the new release. Asserting the intersection's exact area
+    (1.0 — ``[0, 2]^2`` ∩ ``[1, 3]^2`` = ``[1, 2]^2``) proves the command was accepted *and* did
+    the right work, so a future rename fails here instead of in the toolbox.
+    """
+    left, right = overlapping_vectors
+    out = tmp_path / "overlay.geojson"
+    results, ok, feedback = _run(
+        VectorOverlayOverlay(),
+        {
+            VectorOverlayOverlay.INPUT: str(left),
+            VectorOverlayOverlay.RIGHT: str(right),
+            VectorOverlayOverlay.HOW: 0,  # intersection
+            VectorOverlayOverlay.OUTPUT: str(out),
+        },
+    )
+    assert ok, feedback.textLog()
+    assert out.exists()
+
+    from osgeo import ogr
+
+    ogr.UseExceptions()
+    source = ogr.Open(str(out))
+    assert source is not None, f"OGR could not open {out}"
+    try:
+        layer = source.GetLayer(0)
+        assert layer.GetFeatureCount() == 1
+        feature = layer.GetNextFeature()
+        assert feature.GetGeometryRef().GetArea() == pytest.approx(1.0)
     finally:
         source = None  # noqa: F841  (release the OGR handle)
 

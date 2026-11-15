@@ -1,9 +1,10 @@
-"""Fixtures for the end-to-end algorithm tests: tiny real raster and mesh inputs.
+"""Fixtures for the end-to-end algorithm tests: tiny real raster, mesh and vector inputs.
 
-These build genuine on-disk inputs — a small GeoTIFF and a UGRID NetCDF — that the algorithms
-read and process through real pyramids, so the end-to-end tests assert against actual outputs
-rather than mocks. Both are generated once per session (cheaper and more portable than checking
-binary fixtures into git, and immune to GDAL-version drift in a stored file).
+These build genuine on-disk inputs — a small GeoTIFF, a UGRID NetCDF and a pair of overlapping
+vector polygons — that the algorithms read and process through real pyramids, so the end-to-end
+tests assert against actual outputs rather than mocks. All are generated once per session (cheaper
+and more portable than checking binary fixtures into git, and immune to GDAL-version drift in a
+stored file).
 """
 
 from __future__ import annotations
@@ -41,16 +42,34 @@ def tiny_raster(tmp_path_factory) -> Path:
 
 
 @pytest.fixture(scope="session")
+def overlapping_vectors(tmp_path_factory) -> tuple[Path, Path]:
+    """Two overlapping unit-square GeoJSON polygons in EPSG:4326: ``(left, right)``.
+
+    ``left`` covers ``[0, 2]^2`` and ``right`` covers ``[1, 3]^2``, so their intersection is the
+    unit square ``[1, 2]^2`` — an area of exactly 1.0. That exact expected area is what lets the
+    vector end-to-end test assert the overlay really ran, rather than only that a file appeared.
+    """
+    import geopandas as gpd
+    from shapely.geometry import box
+
+    directory = tmp_path_factory.mktemp("vectors")
+    left, right = directory / "left.geojson", directory / "right.geojson"
+    gpd.GeoDataFrame({"a": [1]}, geometry=[box(0, 0, 2, 2)], crs="EPSG:4326").to_file(left)
+    gpd.GeoDataFrame({"b": [1]}, geometry=[box(1, 1, 3, 3)], crs="EPSG:4326").to_file(right)
+    return left, right
+
+
+@pytest.fixture(scope="session")
 def ugrid_mesh(tmp_path_factory) -> Path:
     """A minimal two-face UGRID NetCDF mesh carrying one data variable.
 
-    Built from a GeoDataFrame of two adjacent unit squares via ``UgridDataset.from_geodataframe``
+    Built from a GeoDataFrame of two adjacent unit squares via ``MeshDataset.from_geodataframe``
     and written as UGRID NetCDF — the one mesh format pyramids-core reads and writes *without*
     pyramids-mesh, so the mesh end-to-end tests run in the conda dev env (which has no
     pyramids-mesh; it is not on conda-forge).
     """
     import geopandas as gpd
-    from pyramids.netcdf.ugrid import UgridDataset
+    from pyramids.netcdf.ugrid import MeshDataset
     from shapely.geometry import Polygon
 
     path = tmp_path_factory.mktemp("mesh") / "mesh.nc"
@@ -59,5 +78,5 @@ def ugrid_mesh(tmp_path_factory) -> Path:
         Polygon([(1, 0), (2, 0), (2, 1), (1, 1)]),
     ]
     gdf = gpd.GeoDataFrame({"depth": [1.5, 2.5]}, geometry=polygons, crs="EPSG:4326")
-    UgridDataset.from_geodataframe(gdf).to_file(str(path))
+    MeshDataset.from_geodataframe(gdf).to_file(str(path))
     return path
