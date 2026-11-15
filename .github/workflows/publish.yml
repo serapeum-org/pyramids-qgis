@@ -69,7 +69,11 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(grep -m1 '^version=' src/pyramids_qgis/metadata.txt | cut -d= -f2 | tr -d '[:space:]')
-          TAG="v${VERSION}"
+          # Bare tag, no "v" prefix: pyproject.toml's [tool.commitizen] tag_format = "$version"
+          # cuts tags like `0.1.1` (org convention, #27). A "v${VERSION}" lookup 404s here, and the
+          # workflow_run path reads that 404 as "draft" and silently skips the upload (this is
+          # exactly how the 0.1.1 release shipped with no assets while reporting success).
+          TAG="${VERSION}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           # Publish only a version that already has a PUBLISHED (non-draft) Release for its tag — the
@@ -104,8 +108,8 @@ jobs:
         # cannot resolve it — and omitting --only-binary trips a setup-script warning. pipx isolates
         # the build in its own venv and sidesteps both. 2.11.0 allows GitPython<3.3, so the CVE-fixed
         # gitpython 3.2.1 is used (2.8.6 capped <3.2 and pinned the vulnerable 3.1.x). Version is
-        # x.y.z (metadata.txt); --release-tag is the real vX.Y.Z tag so the tool finds the Release and
-        # the plugins.xml download URLs point at .../releases/download/vX.Y.Z/.
+        # x.y.z (metadata.txt); --release-tag is the real X.Y.Z tag so the tool finds the Release and
+        # the plugins.xml download URLs point at .../releases/download/X.Y.Z/.
         run: |
           pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci release "${VERSION}" \
             --release-tag "${TAG}" \
