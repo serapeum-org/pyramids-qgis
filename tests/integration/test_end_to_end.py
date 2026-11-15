@@ -147,9 +147,9 @@ def test_mesh_convert_end_to_end(ugrid_mesh, tmp_path):
     # faces and six nodes come back, and the 'depth' data variable still carries [1.5, 2.5].
     # Checking the data — not just the face count — rules out a passthrough copy that drops or
     # scrambles the data variables while leaving the mesh topology intact.
-    from pyramids.netcdf.ugrid import UgridDataset
+    from pyramids.netcdf.ugrid import MeshDataset
 
-    mesh = UgridDataset.read_file(str(out))
+    mesh = MeshDataset.read_file(str(out))
     assert mesh.n_face == 2
     assert mesh.n_node == 6
     assert "depth" in mesh.data_variable_names

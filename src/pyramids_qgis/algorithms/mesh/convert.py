@@ -1,9 +1,9 @@
-"""Convert a mesh file between formats via pyramids' ``UgridDataset`` + pyramids-mesh drivers.
+"""Convert a mesh file between formats via pyramids' ``MeshDataset`` + pyramids-mesh drivers.
 
 Unlike the raster/vector algorithms, pyramids-mesh has no CLI, so this calls the pyramids
-library directly: ``UgridDataset.read_file`` reads any supported mesh (UGRID NetCDF built in,
+library directly: ``MeshDataset.read_file`` reads any supported mesh (UGRID NetCDF built in,
 every other format — 2DM, Selafin, DFSU, XMDF, PLY, ... — through a pyramids-mesh driver), and
-``UgridDataset.to_file`` writes UGRID NetCDF by default or a named driver format.
+``MeshDataset.to_file`` writes UGRID NetCDF by default or a named driver format.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class MeshConvert(PyramidsAlgorithm):
     def shortHelpString(self) -> str:  # noqa: N802
         """Return the help shown in the algorithm dialog."""
         return (
-            "Read a mesh file and write it in another format, through pyramids' UgridDataset. "
+            "Read a mesh file and write it in another format, through pyramids' MeshDataset. "
             "UGRID NetCDF is built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, ...) need "
             "pyramids-mesh installed. Leave the target driver blank to write UGRID NetCDF; "
             "otherwise give a mesh driver name (not a GDAL driver). The source driver is "
@@ -80,7 +80,7 @@ class MeshConvert(PyramidsAlgorithm):
         if hint:
             feedback.pushInfo(hint)
 
-        from pyramids.netcdf.ugrid import UgridDataset
+        from pyramids.netcdf.ugrid import MeshDataset
 
         inp = self.parameterAsFile(parameters, self.INPUT, context)
         out = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
@@ -91,7 +91,7 @@ class MeshConvert(PyramidsAlgorithm):
             self.parameterAsString(parameters, self.TARGET_DRIVER, context).strip() or None
         )
 
-        # UgridDataset.to_file never infers the format from the suffix, so a target driver written
+        # MeshDataset.to_file never infers the format from the suffix, so a target driver written
         # to a .nc-named output *may* make content and extension disagree (review M1). The driver
         # name alone cannot tell us whether it writes NetCDF (a driver legitimately can), so this is
         # a soft "may" — not an assertion that they disagree (review R2-L1).
@@ -109,7 +109,7 @@ class MeshConvert(PyramidsAlgorithm):
             + (f" with driver {target_driver}" if target_driver else " as UGRID NetCDF")
         )
         try:
-            mesh = UgridDataset.read_file(inp, driver=source_driver)
+            mesh = MeshDataset.read_file(inp, driver=source_driver)
             mesh.to_file(out, driver=target_driver)
         except QgsProcessingException:
             raise

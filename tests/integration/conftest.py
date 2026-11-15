@@ -44,13 +44,13 @@ def tiny_raster(tmp_path_factory) -> Path:
 def ugrid_mesh(tmp_path_factory) -> Path:
     """A minimal two-face UGRID NetCDF mesh carrying one data variable.
 
-    Built from a GeoDataFrame of two adjacent unit squares via ``UgridDataset.from_geodataframe``
+    Built from a GeoDataFrame of two adjacent unit squares via ``MeshDataset.from_geodataframe``
     and written as UGRID NetCDF — the one mesh format pyramids-core reads and writes *without*
     pyramids-mesh, so the mesh end-to-end tests run in the conda dev env (which has no
     pyramids-mesh; it is not on conda-forge).
     """
     import geopandas as gpd
-    from pyramids.netcdf.ugrid import UgridDataset
+    from pyramids.netcdf.ugrid import MeshDataset
     from shapely.geometry import Polygon
 
     path = tmp_path_factory.mktemp("mesh") / "mesh.nc"
@@ -59,5 +59,5 @@ def ugrid_mesh(tmp_path_factory) -> Path:
         Polygon([(1, 0), (2, 0), (2, 1), (1, 1)]),
     ]
     gdf = gpd.GeoDataFrame({"depth": [1.5, 2.5]}, geometry=polygons, crs="EPSG:4326")
-    UgridDataset.from_geodataframe(gdf).to_file(str(path))
+    MeshDataset.from_geodataframe(gdf).to_file(str(path))
     return path

@@ -30,14 +30,14 @@ Also **CLI-backed**.
 
 ## Mesh
 
-These wrap pyramids' `UgridDataset` (with [pyramids-mesh](https://github.com/serapeum-org/pyramids-mesh)
+These wrap pyramids' `MeshDataset` (with [pyramids-mesh](https://github.com/serapeum-org/pyramids-mesh)
 providing the format drivers) rather than the CLI, since pyramids-mesh has no CLI. UGRID NetCDF is
 built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need `pyramids-mesh` installed.
 
 | Algorithm | pyramids API | Notes |
 |---|---|---|
-| Convert mesh format | `UgridDataset.read_file` / `to_file` | any format → UGRID NetCDF or a driver |
-| Mesh to vector | `UgridDataset.to_geodataframe` | faces / nodes / edges → GeoJSON |
+| Convert mesh format | `MeshDataset.read_file` / `to_file` | any format → UGRID NetCDF or a driver |
+| Mesh to vector | `MeshDataset.to_geodataframe` | faces / nodes / edges → GeoJSON |
 
 ## Earth observation
 
