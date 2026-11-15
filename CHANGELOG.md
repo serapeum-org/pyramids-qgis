@@ -5,6 +5,13 @@ Commit history on each release (`cz bump`, run by the `github-release` workflow)
 manual changes are overwritten on the next release. The first release (`0.1.0`) populates it from the commit
 history to date.
 
+## 0.1.1 (2026-11-15)
+
+### Fix
+
+- **packaging**: bundle LICENSE inside the plugin package (#33)
+- **release**: use bare tag_format "$version" to match the org convention (#27)
+
 ## v0.1.0 (2026-11-12)
 
 ### Feat
