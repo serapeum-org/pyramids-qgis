@@ -1,4 +1,4 @@
-"""Export a mesh's geometry to a vector layer via ``UgridDataset.to_geodataframe``.
+"""Export a mesh's geometry to a vector layer via ``MeshDataset.to_geodataframe``.
 
 Reads a mesh in any supported format (pyramids-mesh drivers), builds a GeoDataFrame of the
 chosen mesh location — faces as polygons, nodes as points, edges as lines — optionally carrying
@@ -88,7 +88,7 @@ class MeshToVector(PyramidsAlgorithm):
             feedback.pushInfo(hint)
 
         from pyramids.feature import FeatureCollection
-        from pyramids.netcdf.ugrid import UgridDataset
+        from pyramids.netcdf.ugrid import MeshDataset
 
         inp = self.parameterAsFile(parameters, self.INPUT, context)
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
@@ -100,7 +100,7 @@ class MeshToVector(PyramidsAlgorithm):
 
         feedback.pushInfo(f"reading {inp}; exporting {location} geometry to {out}")
         try:
-            mesh = UgridDataset.read_file(inp, driver=source_driver)
+            mesh = MeshDataset.read_file(inp, driver=source_driver)
             gdf = mesh.to_geodataframe(variable_name=variable, location=location)
             FeatureCollection(gdf).to_file(out, driver="geojson")
         except QgsProcessingException:

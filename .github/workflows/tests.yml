@@ -37,14 +37,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Set up the pixi ${{ matrix.environment }} env (conda qgis + pyramids)
-        # serapeum-org/github-actions is a monorepo; this SHA is the pixi/v1.2.1 action. v0.73.0 pins
-        # the pixi that wrote pixi.lock (format v7), so CI reads the lock the repo ships.
+        # serapeum-org/github-actions is a monorepo; this SHA is the pixi/v1.2.1 action. The version
+        # below pins the pixi that wrote pixi.lock (format v7), so CI reads the lock the repo ships.
+        # Keep it in step with whatever pixi regenerates the lock: `pixi install --locked` rejects a
+        # lock written by a different pixi ("lock file not up-to-date with the workspace"), and
+        # re-locking with an older pixi is not a fix — v0.73.0 resolves a qgis/Qt build combination
+        # that fails to import `qgis._core` on Windows.
         uses: serapeum-org/github-actions/actions/python-setup/pixi@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # pixi/v1.2.1
         with:
           environments: ${{ matrix.environment }}
           activate-environment: ${{ matrix.environment }}
           cache: true
-          version: v0.73.0
+          version: v0.84.2
 
       - name: Run the test suite against real QGIS
         run: pixi run -e ${{ matrix.environment }} test

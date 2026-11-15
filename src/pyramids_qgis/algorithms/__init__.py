@@ -1,6 +1,6 @@
 """Algorithm registry for the Pyramids Processing provider.
 
-Algorithms are grouped into subpackages by origin and theme, each mirroring a pyramids 0.77 CLI
+Algorithms are grouped into subpackages by origin and theme, each mirroring a pyramids 0.79 CLI
 command group (``pyramids <group> <command> ...``): ``raster``, ``conversion``, ``vector``,
 ``collection``, ``fetch``, ``nc`` (NetCDF), ``process``, ``stac``, ``mesh`` (pyramids-mesh), ``eo``
 (pyramids-eo).

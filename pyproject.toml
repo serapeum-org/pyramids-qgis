@@ -31,7 +31,7 @@ requires-python = ">= 3.11, <4"
 # QGIS, which provides `qgis.*` and GDAL; nothing here installs or pins qgis/PyQGIS. The one runtime
 # requirement is pyramids-core (imported lazily by the algorithms); the EO/mesh families are extras.
 dependencies = [
-    "pyramids-core >=0.77,<0.78",
+    "pyramids-core >=0.79,<0.80",
 ]
 
 [project.optional-dependencies]
@@ -126,6 +126,17 @@ markers = [
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
+# Tell pixi that conda-forge's `pyramids` IS the pypi `pyramids-core`, so the conda package satisfies
+# the [project.dependencies] floor and pixi does NOT additionally install the PyPI wheel. Without
+# this, pixi needs a per-artifact conda->pypi mapping from conda-mapping.prefix.dev; that mapping is
+# published some time AFTER a release lands on conda-forge, and until it is, pixi falls back to a
+# name-based guess that resolves `pyramids` to the LEGACY distribution `pyramids-gis`. The
+# `pyramids-core` requirement then looks unsatisfied and pixi pulls `pyramids_core-*.whl` into every
+# environment — the vendored-GDAL wheel that must never enter a QGIS env (see the top of CLAUDE.md
+# and `dependencies.py:vendored_gdal_warning`). Stating the mapping here removes that dependency on a
+# third-party indexer entirely, so every future pyramids bump is immune. The lock records the result
+# as `pkg:pypi/pyramids-core?source=project-defined-mapping`.
+conda-pypi-map = { conda-forge = "conda-pypi-map.json" }
 # osx-arm64 baseline raised to 14.0 so pixi's `__osx` virtual package satisfies conda-forge qgis's
 # `__osx >=13.3` requirement (same fix pyramids-mesh uses). macos-latest runners are >= 14.
 platforms = ["win-64", "linux-64", { platform = "osx-arm64", macos = "14.0" }]
@@ -138,7 +149,15 @@ platforms = ["win-64", "linux-64", { platform = "osx-arm64", macos = "14.0" }]
 # (PEP 621) for pip/feedstock consumers; dev/docs tooling lives in [dependency-groups] (PEP 735).
 qgis = "*"
 # conda-forge ships this as `pyramids` (PyPI name is `pyramids-core`; both import as `pyramids`).
-pyramids = "0.77.*"
+# NOTE: pixi resolves [project.dependencies] as pypi requirements against this conda solve even with
+# no [tool.pixi.pypi-dependencies] and no self-install, so this pin and the `pyramids-core` floor in
+# [project.dependencies] must agree or EVERY environment fails to solve.
+# GATE: conda-forge's newest `pyramids` is 0.77.0; 0.79.0 is still in flight as
+# conda-forge/pyramids-feedstock#92. Until that merges, `pixi install` here cannot resolve. A range
+# admitting 0.77 is NOT a workaround: the plugin now emits `pyramids vector overlay apply`, which
+# only exists from 0.78, so resolving 0.77 would solve green and then fail at runtime. Pinning the
+# real requirement keeps the failure at install time, where it is visible.
+pyramids = "0.79.*"
 
 [tool.pixi.tasks]
 test = { cmd = "pytest -q --cov=pyramids_qgis --cov-report=term-missing", description = "Run the full suite against real QGIS (this env conda-installs qgis) with coverage" }
@@ -207,4 +226,6 @@ qgis = ">=3.40,<4"
 # argv — `pyramids warp ...` — breaks: pyramids >=0.74 regrouped the CLI into `pyramids raster warp`.
 # That is a real, Qt-independent defect affecting the 4.x env too; it is tracked separately, NOT
 # worked around here beyond keeping both legs on the same known-good pyramids.)
-pyramids = "0.77.*"
+# Same pin as [tool.pixi.dependencies] — see the conda-forge gate note there; both legs must carry
+# the identical specifier so this leg stays a Qt-major test only, never a pyramids-version test.
+pyramids = "0.79.*"
