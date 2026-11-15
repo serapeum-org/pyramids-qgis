@@ -1,23 +1,33 @@
 name: publish
 
-# Build the QGIS plugin and attach it to the GitHub Release that `github-release` just created —
-# the plugin-equivalent of pyramids-mesh's `pypi-release`, which publishes the package after
-# `github-release`. qgis-plugin-ci packages src/pyramids_qgis/ into the uploadable zip (whose internal
-# folder is `pyramids_qgis`, the slug of the plugin name), uploads it to the
-# Release for the tag, and attaches a custom-repository plugins.xml so the build is installable by
-# URL. The changelog is NOT injected into metadata.txt: commitizen owns CHANGELOG.md and .qgis-plugin-ci
-# sets changelog_include: false (commitizen's format does not match qgis-plugin-ci's parser).
+# Build the QGIS plugin from a ref and route the output by HOW the workflow was triggered:
 #
-# A GITHUB_TOKEN-created release event cannot trigger another workflow, so — like pypi-release —
-# this listens on `workflow_run` (which fires when github-release *completes*), not `release`.
-# Publishing to the official plugins.qgis.org repository (issue #9) is the last step: it runs
-# `qgis-plugin-ci release --osgeo-username/--osgeo-password` from the OSGEO_USERNAME / OSGEO_PASSWORD
-# repo secrets and is INERT until both are set — the GitHub Release + plugins.xml above always
-# publish regardless. See the README for the one-time OSGeo-account setup and the (staff-approved)
-# first upload.
+#   * workflow_run (after `github-release` completes) -> RELEASE path. Checks out the TIP of the
+#     release branch (github.event.workflow_run.head_branch) so it sees the version commitizen just
+#     bumped in metadata.txt, builds the zip + a custom-repository plugins.xml, and UPLOADS BOTH TO
+#     THE GITHUB RELEASE for that bare version tag (`qgis-plugin-ci release --create-plugin-repo`).
+#     head_branch (not head_sha): github-release pushes the version-bump commit AFTER the workflow_run
+#     head_sha is captured, so only the branch TIP carries the bumped version. A GITHUB_TOKEN-created
+#     release event cannot trigger another workflow, so this listens on workflow_run (fired when
+#     github-release *completes*), not `release`.
+#
+#   * workflow_dispatch (manual, takes a `branch` input) -> ARTIFACT path. Checks out that branch's
+#     tip, builds the same zip + plugins.xml with `qgis-plugin-ci package --plugin-repo-url`, and
+#     UPLOADS BOTH AS WORKFLOW ARTIFACTS. It never touches any Release. Use it to inspect exactly what
+#     a branch would ship without cutting a release — building from `main` by hand and attaching that
+#     to a Release is precisely how 0.1.1 once shipped the wrong, post-tag source.
+#
+# Publishing to the official plugins.qgis.org repository (issue #9) runs only on the release path and
+# is INERT until the OSGEO_USERNAME / OSGEO_PASSWORD secrets are set. The changelog is NOT injected
+# into metadata.txt: commitizen owns CHANGELOG.md and .qgis-plugin-ci sets changelog_include: false.
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch whose tip to build. Produces workflow artifacts only - no Release is touched."
+        required: true
+        type: string
   workflow_run:
     workflows: ['github-release']
     types: [completed]
@@ -29,14 +39,14 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # workflow_run fires regardless of outcome: only publish when github-release succeeded and ran
-    # from this repo (a manual dispatch is always allowed). Matches pypi-release's guard.
+    # workflow_run fires regardless of outcome: only run when github-release succeeded and ran from
+    # this repo (a manual dispatch is always allowed). Matches pypi-release's guard.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_repository.full_name == github.repository)
     permissions:
-      contents: write  # upload the zip / plugins.xml assets to the Release
+      contents: write  # upload the zip / plugins.xml to the Release (workflow_run path only)
     steps:
       - name: Check actor is a repository admin
         # Gate the MANUAL path only; the workflow_run path is tied to the admin-gated github-release.
@@ -57,59 +67,52 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
-          # head_branch (not head_sha): github-release pushes the version-bump commit AFTER the
-          # workflow_run head_sha is captured, so the branch tip carries the released version.
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+          # workflow_dispatch -> the branch input; workflow_run -> the TIP of the release branch.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.event.workflow_run.head_branch }}
 
-      - name: Resolve the released version and ensure its Release is published
+      - name: Resolve the version from the checked-out tip
+        id: meta
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^version=' src/pyramids_qgis/metadata.txt | cut -d= -f2 | tr -d '[:space:]')
+          if [ -z "${VERSION}" ]; then echo "::error::could not read version= from src/pyramids_qgis/metadata.txt"; exit 1; fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          # Bare tag, no "v" prefix: [tool.commitizen] tag_format = "$version" cuts tags like `0.1.1`
+          # (org convention, #27).
+          echo "tag=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Resolved version ${VERSION} for event ${{ github.event_name }}."
+
+      # ----- RELEASE path (workflow_run): attach the zip + plugins.xml to the GitHub Release -----
+      - name: Verify the Release exists for this version
+        if: github.event_name == 'workflow_run'
         id: gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
+          TAG: ${{ steps.meta.outputs.tag }}
         run: |
           set -euo pipefail
-          VERSION=$(grep -m1 '^version=' src/pyramids_qgis/metadata.txt | cut -d= -f2 | tr -d '[:space:]')
-          # Bare tag, no "v" prefix: pyproject.toml's [tool.commitizen] tag_format = "$version"
-          # cuts tags like `0.1.1` (org convention, #27). A "v${VERSION}" lookup 404s here, and the
-          # workflow_run path reads that 404 as "draft" and silently skips the upload (this is
-          # exactly how the 0.1.1 release shipped with no assets while reporting success).
-          TAG="${VERSION}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          # Publish only a version that already has a PUBLISHED (non-draft) Release for its tag — the
-          # /releases/tags endpoint returns published releases only. This ties the upload to the tag
-          # the gate verified, so a version whose Release does not exist is never built (review L6).
-          # A manual dispatch for a missing Release fails fast with a clear message instead of a late
-          # qgis-plugin-ci "release not found" error (review L3); the workflow_run path skips a 404
-          # (the Release is still a draft / not published yet).
           ERR="${RUNNER_TEMP}/gh-release-check.err"
           if gh api "repos/${REPO}/releases/tags/${TAG}" >/dev/null 2>"${ERR}"; then
-            echo "Published release ${TAG} found — proceeding."
+            echo "Published release ${TAG} found - proceeding with the release upload."
             echo "publish=true" >> "$GITHUB_OUTPUT"
           elif grep -q 'HTTP 404' "${ERR}"; then
-            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-              echo "::error::no published GitHub Release for ${TAG}. Run github-release first (or publish its draft)."
-              exit 1
-            fi
-            echo "No published release for ${TAG} (draft or not yet published) — skipping."
+            echo "::warning::no published GitHub Release for ${TAG} (draft or not yet published) - skipping the release upload."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "::error::could not verify release ${TAG} (GitHub API error, not a 404)"; cat "${ERR}"; exit 1
           fi
 
       - name: Build and upload the plugin to the GitHub Release
-        if: steps.gate.outputs.publish == 'true'
+        if: github.event_name == 'workflow_run' && steps.gate.outputs.publish == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.gate.outputs.version }}
-          TAG: ${{ steps.gate.outputs.tag }}
-        # Run via pipx (like pip-audit.yml), not `pip install`: qgis-plugin-ci depends on
-        # transifex-python which is sdist-only, so a wheels-only `pip install --only-binary=:all:`
-        # cannot resolve it — and omitting --only-binary trips a setup-script warning. pipx isolates
-        # the build in its own venv and sidesteps both. 2.11.0 allows GitPython<3.3, so the CVE-fixed
-        # gitpython 3.2.1 is used (2.8.6 capped <3.2 and pinned the vulnerable 3.1.x). Version is
-        # x.y.z (metadata.txt); --release-tag is the real X.Y.Z tag so the tool finds the Release and
-        # the plugins.xml download URLs point at .../releases/download/X.Y.Z/.
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        # pipx (like pip-audit.yml), not `pip install`: qgis-plugin-ci depends on transifex-python which
+        # is sdist-only, so a wheels-only install cannot resolve it. --release-tag is the bare X.Y.Z tag
+        # so the tool finds the Release and the plugins.xml download URLs point at
+        # .../releases/download/X.Y.Z/; --create-plugin-repo also generates and uploads plugins.xml.
         run: |
           pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci release "${VERSION}" \
             --release-tag "${TAG}" \
@@ -117,25 +120,49 @@ jobs:
             --create-plugin-repo
 
       - name: Publish to the official plugins.qgis.org repository
-        if: steps.gate.outputs.publish == 'true'
+        if: github.event_name == 'workflow_run' && steps.gate.outputs.publish == 'true'
         env:
           OSGEO_USERNAME: ${{ secrets.OSGEO_USERNAME }}
           OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
-          VERSION: ${{ steps.gate.outputs.version }}
-          TAG: ${{ steps.gate.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG: ${{ steps.meta.outputs.tag }}
         # Additionally push the build to plugins.qgis.org (issue #9). INERT until both OSGEO_USERNAME
-        # and OSGEO_PASSWORD repo secrets are set — secrets cannot be referenced in a job `if:`, so
-        # the step is skipped from inside the script when either is empty (the GitHub Release +
-        # plugins.xml above is already published, so a release never fails for want of OSGeo creds).
-        # The very FIRST upload of a brand-new plugin is staff-approved via the web form
-        # (plugins.qgis.org/plugins/add/); once the listing exists this automates every later release.
+        # and OSGEO_PASSWORD repo secrets are set - secrets cannot be referenced in a job `if:`, so the
+        # step skips from inside the script when either is empty. The FIRST upload of a brand-new plugin
+        # is staff-approved via the web form; once the listing exists this automates every later release.
         run: |
           set -euo pipefail
           if [ -z "${OSGEO_USERNAME}" ] || [ -z "${OSGEO_PASSWORD}" ]; then
-            echo "::notice::OSGEO_USERNAME/OSGEO_PASSWORD not set — skipping plugins.qgis.org upload (issue #9); GitHub Release + plugins.xml still published."
+            echo "::notice::OSGEO_USERNAME/OSGEO_PASSWORD not set - skipping plugins.qgis.org upload (issue #9); GitHub Release + plugins.xml still published."
             exit 0
           fi
           pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci release "${VERSION}" \
             --release-tag "${TAG}" \
             --osgeo-username "${OSGEO_USERNAME}" \
             --osgeo-password "${OSGEO_PASSWORD}"
+
+      # ----- ARTIFACT path (workflow_dispatch): build + upload the zip + plugins.xml as artifacts -----
+      - name: Build the plugin package (zip + plugins.xml)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REPO: ${{ github.repository }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        # `package` (not `release`) builds the zip WITHOUT needing a published Release, and
+        # --plugin-repo-url is required to make it write plugins.xml into the working dir (./plugins.xml).
+        # That URL is a BASE/directory - qgis-plugin-ci appends the zip filename to it - so it MUST end
+        # with a slash. It is where the asset WOULD live if this version were released; for a dispatch
+        # build it is informational only (the real output is the uploaded artifact, not a Release). The
+        # zip lands at src/pyramids_qgis.<version>.zip.
+        run: |
+          pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci package "${VERSION}" \
+            --plugin-repo-url "https://github.com/${REPO}/releases/download/${VERSION}/"
+
+      - name: Upload the build as workflow artifacts
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: pyramids_qgis-${{ steps.meta.outputs.version }}
+          if-no-files-found: error
+          path: |
+            src/pyramids_qgis.${{ steps.meta.outputs.version }}.zip
+            plugins.xml
