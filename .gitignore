@@ -30,3 +30,6 @@ Thumbs.db
 
 # GDAL statistics sidecars written next to the example fixtures when a raster is read
 examples/data/*.aux.xml
+
+# MkDocs build output (mkdocs build --strict / the docs-strict task)
+site/

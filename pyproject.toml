@@ -148,6 +148,16 @@ compile = { cmd = "python -m compileall -q src/pyramids_qgis scripts", descripti
 build-dist = { cmd = "python -m build", description = "Build the sdist and wheel" }
 cz-bump = { cmd = "cz bump", description = "Bump the version with commitizen" }
 
+# Tasks for the `docs` env specifically. They MUST live on the `docs` feature, not in
+# [tool.pixi.tasks] above: the `docs` env sets no-default-feature = true, which drops the default
+# feature entirely — and its tasks with it, so a task declared above is simply not available there
+# ("the task 'docs-strict' is not available in environment 'docs'").
+[tool.pixi.feature.docs.tasks]
+# The docs gate github-pages-mkdocs.yml runs on every pull request. mkdocs-deploy builds non-strict,
+# so without a --strict build a broken nav entry or a dangling link would publish silently. Same
+# command locally (`pixi run -e docs docs-strict`) and in CI, so the two cannot drift.
+docs-strict = { cmd = "mkdocs build --strict", description = "Build the docs site with warnings as errors (the CI docs gate)" }
+
 [tool.pixi.environments]
 # conda-forge QGIS 4.x requires Python >= 3.13, so the pixi env is py313 — it cannot be the 3.11-3.14
 # matrix a pure-Python package (pyramids-mesh) uses, because `qgis` has no build for the older ones.
