@@ -82,6 +82,8 @@ nav:
       - End-to-end testing: testing.md
   - Reference:
       - Algorithms: algorithms.md
+  - Development:
+      - CI/CD: ci.md
   - About:
       - Change-log: about/change-log.md
       - License: about/license.md
