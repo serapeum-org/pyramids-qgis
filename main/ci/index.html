@@ -1072,7 +1072,7 @@ only to test the import surface — that wheel is never released.)</p>
 <li><strong><code>gh-pages</code> site</strong> — the rendered documentation, committed to the <code>gh-pages</code> branch by <code>mike</code> and served by
   GitHub Pages.</li>
 <li><strong>plugins.qgis.org</strong> — the official QGIS plugin repository (the real "publish"). Inert until the
-  <code>OSGEO_USERNAME</code> / <code>OSGEO_PASSWORD</code> secrets are set.</li>
+  <code>QGIS_TOKEN</code> secret is set.</li>
 </ul>
 <h2 id="how-triggers-map-to-workflows"><a class="toclink" href="#how-triggers-map-to-workflows">How triggers map to workflows</a><a class="headerlink" href="#how-triggers-map-to-workflows" title="Permanent link">#</a></h2>
 <pre class="mermaid"><code>flowchart TD
@@ -1228,7 +1228,7 @@ event, so in the automated release flow <code>deploy-release</code> runs via the
 <td>docs cannot push to <code>gh-pages</code></td>
 </tr>
 <tr>
-<td><code>OSGEO_USERNAME</code> / <code>OSGEO_PASSWORD</code></td>
+<td><code>QGIS_TOKEN</code></td>
 <td>publish.yml (release path)</td>
 <td>plugins.qgis.org upload is skipped; the Release assets still publish</td>
 </tr>
