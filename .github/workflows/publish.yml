@@ -86,6 +86,8 @@ jobs:
 
       - name: Resolve the version from the checked-out tip
         id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           VERSION=$(grep -m1 '^version=' src/pyramids_qgis/metadata.txt | cut -d= -f2 | tr -d '[:space:]')
@@ -94,7 +96,7 @@ jobs:
           # Bare tag, no "v" prefix: [tool.commitizen] tag_format = "$version" cuts tags like `0.1.1`
           # (org convention, #27).
           echo "tag=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Resolved version ${VERSION} for event ${{ github.event_name }}."
+          echo "Resolved version ${VERSION} for event ${EVENT_NAME}."
 
       # ----- RELEASE path (workflow_run): attach the zip + plugins.xml to the GitHub Release -----
       - name: Verify the Release exists for this version
@@ -128,6 +130,13 @@ jobs:
         # so the tool finds the Release and the plugins.xml download URLs point at
         # .../releases/download/X.Y.Z/; --create-plugin-repo also generates and uploads plugins.xml.
         run: |
+          set -euo pipefail
+          # Archive from the TAG, not the branch tip. The checkout above is the branch tip (needed to
+          # read the commitizen-bumped version); `qgis-plugin-ci release` archives HEAD, so a commit
+          # landing on the branch between the bump and this run would otherwise ship post-tag source
+          # under tag ${TAG}. The tag points at the bump commit, so checking it out pins the archived
+          # tree to exactly ${TAG}. (Tag is present: fetch-depth 0 above, and the gate confirmed it.)
+          git checkout --quiet "${TAG}"
           pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci release "${VERSION}" \
             --release-tag "${TAG}" \
             --github-token "${GITHUB_TOKEN}" \
