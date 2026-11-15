@@ -813,7 +813,7 @@ algorithm reaches pyramids:</p>
   (<code>pyramids.cli.main</code>). The CLI maps 1:1 onto library calls and is pyramids' stable, documented
   contract, so the plugin never re-implements raster logic and never drifts from the library.</li>
 <li><strong>Library-direct</strong> (mesh + Earth-observation algorithms). Those backing packages have no CLI, so
-  the algorithm imports and calls the library directly — <code>UgridDataset</code> for mesh, <code>pyramids_eo</code> for
+  the algorithm imports and calls the library directly — <code>MeshDataset</code> for mesh, <code>pyramids_eo</code> for
   EO.</li>
 </ul>
 <p>Work is passed by <strong>file path</strong>, never by in-memory GDAL objects: QGIS hands pyramids an input path,

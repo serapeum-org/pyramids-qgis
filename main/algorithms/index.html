@@ -937,7 +937,7 @@ and runs it in-process.</p>
 </tbody>
 </table>
 <h2 id="mesh"><a class="toclink" href="#mesh">Mesh</a><a class="headerlink" href="#mesh" title="Permanent link">#</a></h2>
-<p>These wrap pyramids' <code>UgridDataset</code> (with <a href="https://github.com/serapeum-org/pyramids-mesh">pyramids-mesh</a>
+<p>These wrap pyramids' <code>MeshDataset</code> (with <a href="https://github.com/serapeum-org/pyramids-mesh">pyramids-mesh</a>
 providing the format drivers) rather than the CLI, since pyramids-mesh has no CLI. UGRID NetCDF is
 built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need <code>pyramids-mesh</code> installed.</p>
 <table>
@@ -951,12 +951,12 @@ built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need <code>pyramids
 <tbody>
 <tr>
 <td>Convert mesh format</td>
-<td><code>UgridDataset.read_file</code> / <code>to_file</code></td>
+<td><code>MeshDataset.read_file</code> / <code>to_file</code></td>
 <td>any format → UGRID NetCDF or a driver</td>
 </tr>
 <tr>
 <td>Mesh to vector</td>
-<td><code>UgridDataset.to_geodataframe</code></td>
+<td><code>MeshDataset.to_geodataframe</code></td>
 <td>faces / nodes / edges → GeoJSON</td>
 </tr>
 </tbody>
