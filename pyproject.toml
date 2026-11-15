@@ -126,6 +126,17 @@ markers = [
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
+# Tell pixi that conda-forge's `pyramids` IS the pypi `pyramids-core`, so the conda package satisfies
+# the [project.dependencies] floor and pixi does NOT additionally install the PyPI wheel. Without
+# this, pixi needs a per-artifact conda->pypi mapping from conda-mapping.prefix.dev; that mapping is
+# published some time AFTER a release lands on conda-forge, and until it is, pixi falls back to a
+# name-based guess that resolves `pyramids` to the LEGACY distribution `pyramids-gis`. The
+# `pyramids-core` requirement then looks unsatisfied and pixi pulls `pyramids_core-*.whl` into every
+# environment — the vendored-GDAL wheel that must never enter a QGIS env (see the top of CLAUDE.md
+# and `dependencies.py:vendored_gdal_warning`). Stating the mapping here removes that dependency on a
+# third-party indexer entirely, so every future pyramids bump is immune. The lock records the result
+# as `pkg:pypi/pyramids-core?source=project-defined-mapping`.
+conda-pypi-map = { conda-forge = "conda-pypi-map.json" }
 # osx-arm64 baseline raised to 14.0 so pixi's `__osx` virtual package satisfies conda-forge qgis's
 # `__osx >=13.3` requirement (same fix pyramids-mesh uses). macos-latest runners are >= 14.
 platforms = ["win-64", "linux-64", { platform = "osx-arm64", macos = "14.0" }]
