@@ -165,18 +165,26 @@ jobs:
         # --plugin-repo-url is required to make it write plugins.xml into the working dir (./plugins.xml).
         # That URL is a BASE/directory - qgis-plugin-ci appends the zip filename to it - so it MUST end
         # with a slash. It is where the asset WOULD live if this version were released; for a dispatch
-        # build it is informational only (the real output is the uploaded artifact, not a Release). The
-        # zip lands at src/pyramids_qgis.<version>.zip.
+        # build it is informational only (the real output is the uploaded artifact, not a Release).
+        # qgis-plugin-ci writes the zip under src/ (the plugin_path parent) and plugins.xml in the cwd;
+        # move BOTH into dist/ so the downloaded artifact is flat (not nested under src/). The explicit
+        # `mv`s fail loudly under `set -euo pipefail` if either output ever lands elsewhere, and `ls`
+        # prints the real layout - this is the self-check for a path that only ever runs on dispatch.
         run: |
+          set -euo pipefail
           pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci package "${VERSION}" \
             --plugin-repo-url "https://github.com/${REPO}/releases/download/${VERSION}/"
+          mkdir -p dist
+          mv "src/pyramids_qgis.${VERSION}.zip" dist/
+          mv plugins.xml dist/
+          ls -la dist/
 
       - name: Upload the build as workflow artifacts
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: pyramids_qgis-${{ steps.meta.outputs.version }}
           if-no-files-found: error
           path: |
-            src/pyramids_qgis.${{ steps.meta.outputs.version }}.zip
-            plugins.xml
+            dist/pyramids_qgis.${{ steps.meta.outputs.version }}.zip
+            dist/plugins.xml
