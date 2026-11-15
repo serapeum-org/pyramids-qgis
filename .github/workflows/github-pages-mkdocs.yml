@@ -164,7 +164,13 @@ jobs:
             git fetch origin gh-pages
             git branch -f gh-pages FETCH_HEAD
 
-            pixi run -e docs mike list | awk '{print $1}' | sort -u > /tmp/mike-all
+            # `tr -d '\r'` is defensive, for a runner whose mike emits CRLF (Windows does; this job
+            # pins ubuntu-latest, which does not). It is NOT a fix for an observed failure: GNU awk
+            # and grep both treat a trailing CR as a line terminator, so the pipeline below was
+            # verified correct on CRLF input without it. The guard exists because the consequence of
+            # a version failing the X.Y.Z match is that it falls into the DELETE set, and silently
+            # deleting published documentation is worth one word to rule out.
+            pixi run -e docs mike list | tr -d '\r' | awk '{print $1}' | sort -u > /tmp/mike-all
             # `sort -V` is load-bearing: a lexical sort ranks 0.9.0 above 0.11.0 and would retain the
             # wrong versions. Only X.Y.Z entries count as releases, so `develop` and any alias-only
             # row fall through to the delete set rather than consuming a retention slot.
