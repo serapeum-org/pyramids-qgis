@@ -1,9 +1,10 @@
-"""Fixtures for the end-to-end algorithm tests: tiny real raster and mesh inputs.
+"""Fixtures for the end-to-end algorithm tests: tiny real raster, mesh and vector inputs.
 
-These build genuine on-disk inputs — a small GeoTIFF and a UGRID NetCDF — that the algorithms
-read and process through real pyramids, so the end-to-end tests assert against actual outputs
-rather than mocks. Both are generated once per session (cheaper and more portable than checking
-binary fixtures into git, and immune to GDAL-version drift in a stored file).
+These build genuine on-disk inputs — a small GeoTIFF, a UGRID NetCDF and a pair of overlapping
+vector polygons — that the algorithms read and process through real pyramids, so the end-to-end
+tests assert against actual outputs rather than mocks. All are generated once per session (cheaper
+and more portable than checking binary fixtures into git, and immune to GDAL-version drift in a
+stored file).
 """
 
 from __future__ import annotations
@@ -38,6 +39,24 @@ def tiny_raster(tmp_path_factory) -> Path:
     dataset.FlushCache()
     dataset = None  # noqa: F841  (close the GDAL dataset by dropping the last reference)
     return path
+
+
+@pytest.fixture(scope="session")
+def overlapping_vectors(tmp_path_factory) -> tuple[Path, Path]:
+    """Two overlapping unit-square GeoJSON polygons in EPSG:4326: ``(left, right)``.
+
+    ``left`` covers ``[0, 2]^2`` and ``right`` covers ``[1, 3]^2``, so their intersection is the
+    unit square ``[1, 2]^2`` — an area of exactly 1.0. That exact expected area is what lets the
+    vector end-to-end test assert the overlay really ran, rather than only that a file appeared.
+    """
+    import geopandas as gpd
+    from shapely.geometry import box
+
+    directory = tmp_path_factory.mktemp("vectors")
+    left, right = directory / "left.geojson", directory / "right.geojson"
+    gpd.GeoDataFrame({"a": [1]}, geometry=[box(0, 0, 2, 2)], crs="EPSG:4326").to_file(left)
+    gpd.GeoDataFrame({"b": [1]}, geometry=[box(1, 1, 3, 3)], crs="EPSG:4326").to_file(right)
+    return left, right
 
 
 @pytest.fixture(scope="session")
