@@ -9,6 +9,13 @@ name: Deploy MkDocs
 # Pages source requirement: mike publishes by committing the built site to the `gh-pages` branch, so
 # the repo's Settings -> Pages -> Source must be "Deploy from a branch -> gh-pages". Needs the
 # ACTIONS_DEPLOY_TOKEN secret (a token with Pages/contents write), same as pyramids-mesh.
+#
+# Pull requests build the site but do NOT publish it (#22). Each PR deploy was a full site commit on
+# the shared `gh-pages` branch: 11 of the branch's first 18 commits came from PR previews. earthlens
+# let the same workflow run until the repository hit 6.0 GB and the published site 9.7 GB, at which
+# point GitHub Pages stopped building and the current release's docs were silently never published.
+# `build-strict` is the replacement gate, and reviewers download the rendered site from the run's
+# artifact instead of visiting a published preview.
 
 permissions:
   contents: read  # top-level stays read-only; each deploy job grants its own contents: write (S8233).
@@ -28,27 +35,55 @@ on:
     types: [completed]
 
 jobs:
-  deploy-pr:
-    if: github.event_name == 'pull_request'
+  # Gate every deploy on a warnings-as-errors build. The deploy action builds non-strict, so a broken
+  # nav entry, a dangling link or a malformed snippet would publish silently -- this fails the run
+  # instead. This repo had no such gate before #22: deleting `deploy-pr` without adding it would have
+  # left pull requests with no docs validation at all.
+  build-strict:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # only reads the tree; the deploy jobs grant their own write scope.
+    steps:
+      # No explicit ref: checkout's default is what we want on every trigger, and on a pull_request
+      # that is the merge commit rather than the fork's head. Naming a ref from the event payload
+      # would pull fork-controlled code into this job.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same environment the deploy jobs get: mkdocs-deploy calls this action internally with
+      # these inputs, so the gate and the deploy build on one env instead of drifting apart.
+      - name: Set up the pixi docs env
+        uses: serapeum-org/github-actions/actions/python-setup/pixi@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # pixi/v1.2.1
+        with:
+          environments: docs
+          activate-environment: docs
+          cache: true
+          verify-lock: false
+          version: v0.73.0
+
+      # `pixi run -e docs` rather than a bare `mkdocs`, matching tests.yml's `pixi run -e <env> <task>`
+      # convention: explicit about which env builds, regardless of what activation puts on PATH.
+      - name: Build the docs with warnings as errors
+        run: pixi run -e docs docs-strict
+
+      - name: Upload the built site for review
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: site-pr-${{ github.event.pull_request.number }}
+          path: site
+          retention-days: 7
+
+  # deploy-main / deploy-release are deliberately un-serialised: mkdocs-deploy retries the shared
+  # gh-pages push (mike_push.sh), so each one completes. Do not add workflow-level concurrency here --
+  # it would also evict the build-strict gate.
+  deploy-main:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-strict
     runs-on: ubuntu-latest
     permissions:
       contents: write  # mike pushes the built docs to the gh-pages branch.
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          fetch-depth: 0
-      - uses: serapeum-org/github-actions/actions/mkdocs-deploy@38c111084f99d5ff5f4a1e63bedce48fe33a10c0  # mkdocs/v1.3.1
-        with:
-          trigger: 'pull_request'
-          package-manager: 'pixi'
-          install-groups: 'docs'
-          deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
-
-  deploy-main:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -68,6 +103,7 @@ jobs:
       (github.event_name == 'workflow_run'
        && github.event.workflow_run.conclusion == 'success'
        && github.event.workflow_run.head_repository.fork == false)
+    needs: build-strict
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -96,3 +132,67 @@ jobs:
           deploy-token: ${{ secrets.ACTIONS_DEPLOY_TOKEN }}
           release-tag: ${{ github.event.release.tag_name || steps.version.outputs.tag }}
           mike-alias: 'latest'
+
+      # Retain `main` plus the RETAIN_RELEASES most recent releases and delete everything else, so
+      # per-release version directories stop accumulating (#22). Every retained release holds a FULL
+      # copy of the site, which is what took earthlens's published site to 9.7 GB.
+      #
+      # Why 15 here and 5 on earthlens: one version directory in this repo is 2.60 MB / 53 files
+      # (measured on gh-pages, 2026-11-15), so 15 releases plus `main` is ~42 MB. earthlens's copies
+      # are ~464 MB each, which is the only reason it caps at 5. The per-version size is the thing to
+      # watch, not the count -- if a release ever fails to publish, lower RETAIN_RELEASES first.
+      #
+      # `main` is always retained: deploy-main republishes it on every push, so deleting it here would
+      # only have it return minutes later. `develop` is NOT special-cased -- it is not X.Y.Z, so it
+      # falls into the delete set, which is correct now that no PR deploy recreates it.
+      #
+      # mike comes from the pixi `docs` env the mkdocs-deploy step above installed in this job; auth
+      # comes from the checkout, the same way the deploy's own pushes work.
+      - name: Prune superseded documentation versions
+        env:
+          KEEP_VERSION: ${{ github.event.release.tag_name || steps.version.outputs.tag }}
+          RETAIN_RELEASES: '15'
+        run: |
+          if [ -z "$KEEP_VERSION" ]; then
+            echo "::error::no release version resolved; refusing to prune"
+            exit 1
+          fi
+          # Re-sync, recompute and retry as a unit: a concurrent main deploy moves gh-pages, which
+          # makes mike's fast-forward push lose the race, and the stale list computed against the old
+          # tip must not be reused.
+          for attempt in 1 2 3; do
+            git fetch origin gh-pages
+            git branch -f gh-pages FETCH_HEAD
+
+            # `tr -d '\r'` is defensive, for a runner whose mike emits CRLF (Windows does; this job
+            # pins ubuntu-latest, which does not). It is NOT a fix for an observed failure: GNU awk
+            # and grep both treat a trailing CR as a line terminator, so the pipeline below was
+            # verified correct on CRLF input without it. The guard exists because the consequence of
+            # a version failing the X.Y.Z match is that it falls into the DELETE set, and silently
+            # deleting published documentation is worth one word to rule out.
+            pixi run -e docs mike list | tr -d '\r' | awk '{print $1}' | sort -u > /tmp/mike-all
+            # `sort -V` is load-bearing: a lexical sort ranks 0.9.0 above 0.11.0 and would retain the
+            # wrong versions. Only X.Y.Z entries count as releases, so `develop` and any alias-only
+            # row fall through to the delete set rather than consuming a retention slot.
+            grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' /tmp/mike-all \
+              | sort -rV | head -n "$RETAIN_RELEASES" > /tmp/mike-keep-releases
+            # KEEP_VERSION is listed explicitly as a floor: the release just deployed must survive
+            # even if it somehow sorts outside the top RETAIN_RELEASES.
+            { echo main; echo "$KEEP_VERSION"; cat /tmp/mike-keep-releases; } \
+              | grep -v '^$' | sort -u > /tmp/mike-keep
+            stale=$(comm -23 /tmp/mike-all /tmp/mike-keep | tr '\n' ' ')
+
+            if [ -z "$stale" ]; then
+              echo "nothing to prune; retaining $(tr '\n' ' ' < /tmp/mike-keep)"
+              exit 0
+            fi
+            echo "retaining $(tr '\n' ' ' < /tmp/mike-keep)"
+            echo "deleting: $stale"
+            if pixi run -e docs mike delete --push $stale; then
+              exit 0
+            fi
+            echo "::warning::prune lost a gh-pages push race (attempt ${attempt}/3); retrying"
+            sleep $(( attempt * 3 ))
+          done
+          echo "::error::could not prune superseded documentation versions after 3 attempts"
+          exit 1

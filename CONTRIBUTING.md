@@ -41,13 +41,48 @@ Processing Toolbox.
 - **Byte-compile** to catch syntax errors without QGIS:
 
   ```bash
-  python -m compileall pyramids_qgis scripts
+  pixi run -e dev compile          # python -m compileall -q src/pyramids_qgis scripts
   ```
+
+  Mind the `src/` prefix — the package is a src layout. `compileall` exits 0 on a path it cannot
+  list, so the pre-src-layout `compileall pyramids_qgis scripts` printed `Can't list` and silently
+  compiled nothing rather than failing.
+
+- **Build the docs** if you touched anything under `docs/` or `mkdocs.yml`. The CI gate is a
+  warnings-as-errors build, so a broken nav entry or a dangling link fails the run:
+
+  ```bash
+  pixi run -e docs docs-strict        # mkdocs build --strict, output in site/
+  ```
+
+  Pull requests no longer publish a preview to the live site. The `build-strict` job uploads the
+  rendered site as a run artifact instead — open the workflow run and download `site-pr-<number>` to
+  look at the pages.
 
 - **Verify in QGIS.** CI cannot import PyQGIS, so it only lints and compiles. Run the affected
   algorithm inside QGIS and confirm it loads a correct output layer. Describe that check in the PR.
 
 - Bump the plugin version in `pyramids_qgis/metadata.txt` when the change is user-visible.
+
+## Keeping your clone small
+
+The published documentation lives on a `gh-pages` branch that holds a full copy of the site for
+`main` and for every retained release. You never need it to work on the plugin, and fetching it makes
+your clone considerably larger than the source warrants. Drop it:
+
+```bash
+git remote set-branches origin main
+git fetch --prune origin
+git update-ref -d refs/remotes/origin/gh-pages   # not optional, see below
+git gc --prune=now
+```
+
+The `git update-ref` line is the one people miss. `fetch --prune` only removes refs the refspec still
+covers, and the first command has just narrowed that refspec to `main` — so `origin/gh-pages` is left
+orphaned, and while it exists its objects stay reachable and `gc` reclaims nothing.
+
+This is purely local. It does not touch the remote, and `git remote set-branches origin '*'` undoes
+the narrowing if you ever want the branch back.
 
 ## Commit and branch conventions
 
