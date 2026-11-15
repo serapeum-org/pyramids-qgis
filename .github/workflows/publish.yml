@@ -18,7 +18,7 @@ name: publish
 #     to a Release is precisely how 0.1.1 once shipped the wrong, post-tag source.
 #
 # Publishing to the official plugins.qgis.org repository (issue #9) runs only on the release path and
-# is INERT until the OSGEO_USERNAME / OSGEO_PASSWORD secrets are set. The changelog is NOT injected
+# is INERT until the QGIS_TOKEN secret is set. The changelog is NOT injected
 # into metadata.txt: commitizen owns CHANGELOG.md and .qgis-plugin-ci sets changelog_include: false.
 
 on:
@@ -145,24 +145,25 @@ jobs:
       - name: Publish to the official plugins.qgis.org repository
         if: github.event_name == 'workflow_run' && steps.gate.outputs.publish == 'true'
         env:
-          OSGEO_USERNAME: ${{ secrets.OSGEO_USERNAME }}
-          OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
+          QGIS_TOKEN: ${{ secrets.QGIS_TOKEN }}
           VERSION: ${{ steps.meta.outputs.version }}
           TAG: ${{ steps.meta.outputs.tag }}
-        # Additionally push the build to plugins.qgis.org (issue #9). INERT until both OSGEO_USERNAME
-        # and OSGEO_PASSWORD repo secrets are set - secrets cannot be referenced in a job `if:`, so the
-        # step skips from inside the script when either is empty. The FIRST upload of a brand-new plugin
-        # is staff-approved via the web form; once the listing exists this automates every later release.
+        # Additionally push the build to plugins.qgis.org (issue #9) with a plugins.qgis.org API token
+        # (qgis-plugin-ci --qgis-token). INERT until the QGIS_TOKEN repo secret is set - secrets cannot
+        # be referenced in a job `if:`, so the step skips from inside the script when it is empty. The
+        # token upload hits /plugins/api/<package>/version/add/, which only ADDS A VERSION to an
+        # EXISTING plugin: the FIRST upload of a brand-new plugin must still go through the staff-approved
+        # web form (plugins.qgis.org/plugins/add/); once the listing exists this automates every later
+        # release.
         run: |
           set -euo pipefail
-          if [ -z "${OSGEO_USERNAME}" ] || [ -z "${OSGEO_PASSWORD}" ]; then
-            echo "::notice::OSGEO_USERNAME/OSGEO_PASSWORD not set - skipping plugins.qgis.org upload (issue #9); GitHub Release + plugins.xml still published."
+          if [ -z "${QGIS_TOKEN}" ]; then
+            echo "::notice::QGIS_TOKEN not set - skipping plugins.qgis.org upload (issue #9); GitHub Release + plugins.xml still published."
             exit 0
           fi
           pipx run --spec "qgis-plugin-ci==2.11.0" qgis-plugin-ci release "${VERSION}" \
             --release-tag "${TAG}" \
-            --osgeo-username "${OSGEO_USERNAME}" \
-            --osgeo-password "${OSGEO_PASSWORD}"
+            --qgis-token "${QGIS_TOKEN}"
 
       # ----- ARTIFACT path (workflow_dispatch): build + upload the zip + plugins.xml as artifacts -----
       - name: Build the plugin package (zip + plugins.xml)
