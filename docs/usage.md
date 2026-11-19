@@ -9,21 +9,8 @@ what each algorithm does, see the [Algorithms reference](algorithms.md).
 
 ## Before you start
 
-1. **Install the plugin** — see [Installation](installation.md). It is published as *experimental*, so in
-   *Plugins → Manage and Install Plugins → Settings* you must tick **"Show also experimental plugins"** before it
-   appears in the list.
-2. **`pyramids-core` must be importable from the Python that QGIS runs.** The plugin carries no GIS logic of its
-   own — it calls `pyramids`. If `pyramids-core` is missing, the provider still loads but every algorithm fails
-   with a clear dependency error. Install it into the QGIS interpreter:
-
-    ```bash
-    conda install -c conda-forge pyramids      # conda / OSGeo4W QGIS
-    # or, into the QGIS interpreter:
-    pip install pyramids-core
-    ```
-
-    Do **not** use a platform wheel that vendors its own GDAL — it conflicts with QGIS's GDAL. (0.2.0 and later
-    require `pyramids-core >= 0.79`.)
+Install the plugin from the QGIS Plugin Manager (and its `pyramids-core` dependency into QGIS's Python) — see
+[Installation](installation.md).
 
 ## 1. Find the algorithms
 
