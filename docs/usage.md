@@ -86,9 +86,9 @@ Because these are standard Processing algorithms, they also run:
     processing.run(
         "pyramids:warp",
         {
-            "INPUT": "C:/data/dem.tif",     # a file path or a loaded layer
+            "INPUT": "C:/data/dem.tif",  # a file path or a loaded layer
             "CRS": "EPSG:3857",
-            "RESAMPLING": 1,                 # index into [nearest, bilinear, cubic, cubic_spline, lanczos, average, mode]
+            "RESAMPLING": 1,  # index into [nearest, bilinear, cubic, cubic_spline, lanczos, average, mode]
             "OUTPUT": "C:/data/dem_3857.tif",
         },
     )
