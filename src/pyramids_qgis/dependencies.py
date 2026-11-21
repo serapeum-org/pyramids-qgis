@@ -37,8 +37,8 @@ _INSTALL_HINT = (
     "The 'pyramids-core' package is not importable from the QGIS Python environment.\n"
     f"Install it (>= {MIN_PYRAMIDS_VERSION_STR}) into the interpreter QGIS runs:\n"
     f"  - any QGIS (from PyPI):  <qgis-python> -m pip install '{PYRAMIDS_REQUIREMENT}'\n"
-    "  - conda-based QGIS:      conda install -c conda-forge pyramids  (must resolve to the floor\n"
-    "                           above; conda-forge can lag PyPI, so use the pip line until it does)\n"
+    "  - conda-based QGIS: conda install -c conda-forge pyramids (must satisfy the floor;\n"
+    "    conda-forge can lag PyPI, so prefer the pip line until it catches up)\n"
     "The plugin can also install it for you from Plugins (it offers on load)."
 )
 
@@ -52,8 +52,8 @@ def _version_tuple(version: str) -> tuple[int, ...]:
     """Parse the leading numeric ``x.y.z`` of a version string into a comparable tuple.
 
     Each dotted chunk contributes its leading digits; a chunk that does not start with a digit stops
-    the parse. So ``"1.2.dev0"`` becomes ``(1, 2)`` while ``"0.81.0rc1"`` becomes ``(0, 81, 0)`` (the
-    ``0rc1`` chunk still starts with a digit) — adequate for a ``>=`` floor comparison.
+    the parse. So ``"1.2.dev0"`` becomes ``(1, 2)``, and ``"0.81.0rc1"`` becomes ``(0, 81, 0)``
+    (the ``0rc1`` chunk still starts with a digit) — adequate for a ``>=`` floor comparison.
 
     Args:
         version: A distribution version string.
@@ -214,7 +214,7 @@ def vendored_gdal_warning() -> str | None:
         report; absence is :func:`ensure_pyramids`'s).
     """
     if not _vendors_gdal():
-        # Not vendored, not installed, or a broken install (find_spec raised): nothing to warn about.
+        # Not vendored, not installed, or broken (find_spec raised): nothing to warn about.
         return None
     version = pyramids_version()
     if version is not None and version >= MIN_PYRAMIDS_VERSION:
