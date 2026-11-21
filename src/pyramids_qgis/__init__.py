@@ -10,6 +10,17 @@ the factory, not here.
 
 from __future__ import annotations
 
+import os
+
+# Guarantee host-managed GDAL before `pyramids` is imported anywhere in this process (pyramids-core
+# #1588). pyramids-core >= 0.81.0 reads PYRAMIDS_MANAGE_GDAL_ENV: "0" tells it NOT to touch the
+# process-global GDAL environment (GDAL_DRIVER_PATH / GDAL_DATA / PROJ_LIB / PATH) and NOT to
+# activate its vendored GDAL — so a GDAL-vendoring wheel installed into QGIS's Python leaves QGIS's
+# own GDAL intact instead of clobbering it. QGIS loads this module eagerly, before any algorithm
+# imports pyramids, so setting it here is early enough. `setdefault` lets a user who deliberately
+# exported the variable override us.
+os.environ.setdefault("PYRAMIDS_MANAGE_GDAL_ENV", "0")
+
 
 def _class_factory(iface):
     """Return the plugin instance QGIS drives.

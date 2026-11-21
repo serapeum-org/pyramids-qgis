@@ -32,11 +32,68 @@ class PyramidsPlugin:
         QgsApplication.processingRegistry().addProvider(self.provider)
 
     def _init_gui(self) -> None:
-        """Enable the plugin: register the Processing provider.
+        """Enable the plugin: register the Processing provider, then offer to install pyramids.
 
         QGIS reaches this through the ``initGui`` name exposed by :meth:`__getattr__`.
         """
         self.init_processing()
+        self._offer_pyramids_install()
+
+    def _offer_pyramids_install(self) -> None:
+        """Offer to install/upgrade ``pyramids-core`` when it is missing or too old.
+
+        The plugin is useless without ``pyramids-core``, and only ``>= MIN_PYRAMIDS_VERSION`` is
+        safe inside QGIS (it honours the ``PYRAMIDS_MANAGE_GDAL_ENV`` opt-out set in ``__init__``).
+        On load, if it is absent or outdated, pop a prompt and — on the user's confirmation — pip
+        install it into QGIS's interpreter, then suggest a restart. Everything is wrapped so a
+        failure in the offer never blocks the plugin from loading; a user who declines still gets
+        the actionable error from ``ensure_pyramids`` when they run an algorithm.
+        """
+        try:
+            from qgis.PyQt.QtWidgets import QMessageBox
+
+            from .dependencies import (
+                PYRAMIDS_REQUIREMENT,
+                install_pyramids,
+                pyramids_installed,
+                pyramids_outdated,
+            )
+
+            missing = not pyramids_installed()
+            outdated = (not missing) and pyramids_outdated()
+            if not missing and not outdated:
+                return
+
+            parent = self.iface.mainWindow() if self.iface is not None else None
+            verb = "is not installed" if missing else "is older than the supported version"
+            question = (
+                f"The Pyramids plugin needs <b>{PYRAMIDS_REQUIREMENT}</b>, which {verb} in QGIS's "
+                "Python.<br><br>Install it now with pip into QGIS's interpreter?"
+            )
+            if (
+                QMessageBox.question(parent, "Pyramids: install pyramids-core", question)
+                != QMessageBox.StandardButton.Yes
+            ):
+                return
+
+            ok, output = install_pyramids(upgrade=outdated)
+            tail = output[-1500:] if output else ""
+            if ok:
+                QMessageBox.information(
+                    parent,
+                    "Pyramids",
+                    "pyramids-core installed. Restart QGIS for the algorithms to pick it up.",
+                )
+            else:
+                QMessageBox.warning(
+                    parent,
+                    "Pyramids: install failed",
+                    "Could not install pyramids-core automatically. Install it by hand into QGIS's "
+                    f"Python:<br><br><code>pip install '{PYRAMIDS_REQUIREMENT}'</code>"
+                    + (f"<br><br><pre>{tail}</pre>" if tail else ""),
+                )
+        except Exception:
+            return
 
     def unload(self) -> None:
         """Remove the provider when the plugin is disabled or QGIS shuts down."""
