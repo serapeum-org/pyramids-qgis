@@ -50,8 +50,9 @@ def pyramids_installed() -> bool:
 def _version_tuple(version: str) -> tuple[int, ...]:
     """Parse the leading numeric ``x.y.z`` of a version string into a comparable tuple.
 
-    Trailing non-numeric parts (``rc1``, ``.dev0``, local segments) stop the parse, so
-    ``"0.81.0rc1"`` becomes ``(0, 81)`` — adequate for a ``>=`` floor comparison.
+    Each dotted chunk contributes its leading digits; a chunk that does not start with a digit stops
+    the parse. So ``"1.2.dev0"`` becomes ``(1, 2)`` while ``"0.81.0rc1"`` becomes ``(0, 81, 0)`` (the
+    ``0rc1`` chunk still starts with a digit) — adequate for a ``>=`` floor comparison.
 
     Args:
         version: A distribution version string.
@@ -208,15 +209,15 @@ def vendored_gdal_warning() -> str | None:
 
     Returns:
         str | None: A warning when a too-old vendored build is detected, otherwise ``None`` (also
-        when pyramids is absent — that case is :func:`ensure_pyramids`'s, not this one's).
+        when pyramids is absent, not vendored, or a broken install — those are not this one's to
+        report; absence is :func:`ensure_pyramids`'s).
     """
-    if not pyramids_installed():
+    if not _vendors_gdal():
+        # Not vendored, not installed, or a broken install (find_spec raised): nothing to warn about.
         return None
     version = pyramids_version()
     if version is not None and version >= MIN_PYRAMIDS_VERSION:
         # Honours the env opt-out this plugin sets, so the vendored GDAL is never activated.
-        return None
-    if not _vendors_gdal():
         return None
     return (
         "The installed pyramids build vendors its own GDAL and is older than "
