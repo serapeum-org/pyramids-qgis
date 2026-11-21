@@ -40,7 +40,12 @@ class PyramidsPlugin:
         QGIS reaches this through the ``initGui`` name exposed by :meth:`__getattr__`.
         """
         self.init_processing()
-        self._offer_pyramids_install()
+        # Defer the install offer with a 0-ms timer so initGui returns immediately: the dialog then
+        # appears once the event loop is running and the main window is up, instead of blocking the
+        # startup critical path (M1). The install itself is still synchronous when accepted.
+        from qgis.PyQt.QtCore import QTimer
+
+        QTimer.singleShot(0, self._offer_pyramids_install)
 
     def _offer_pyramids_install(self) -> None:
         """Offer to install/upgrade ``pyramids-core`` when it is missing or too old.
@@ -108,12 +113,20 @@ class PyramidsPlugin:
             "<br><br><b>QGIS will be unresponsive for a few minutes</b> while it downloads and "
             "installs — there is no progress indicator."
         )
-        if (
-            QMessageBox.question(parent, "Pyramids: install pyramids-core", question)
-            != QMessageBox.StandardButton.Yes
-        ):
-            settings.setValue(dismissed_key, state)
+        box = QMessageBox(parent)
+        box.setWindowTitle("Pyramids: install pyramids-core")
+        box.setTextFormat(Qt.TextFormat.RichText)
+        box.setText(question)
+        yes = box.addButton(QMessageBox.StandardButton.Yes)
+        box.addButton("Not now", QMessageBox.ButtonRole.RejectRole)
+        never = box.addButton("Don't ask again", QMessageBox.ButtonRole.DestructiveRole)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is never:
+            settings.setValue(dismissed_key, state)  # persist only on an explicit "Don't ask again"
             return
+        if clicked is not yes:
+            return  # "Not now" / closed: re-offer next start, do not persist
 
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
