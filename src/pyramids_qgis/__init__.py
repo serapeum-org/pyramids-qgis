@@ -20,12 +20,12 @@ import os
 #
 # Set unconditionally, NOT setdefault: an inherited truthy value (a shell that exported
 # PYRAMIDS_MANAGE_GDAL_ENV=1 and then launched QGIS) would make pyramids activate its vendored GDAL
-# inside QGIS — exactly the clobber this plugin exists to prevent — so host protection must win here.
+# inside QGIS — the exact clobber this plugin prevents — so host protection must win here.
 #
-# Guarantee caveat: this only holds if nothing imported `pyramids` earlier in the process. QGIS loads
-# this plugin's __init__ eagerly at startup, but a different plugin that imports pyramids at its own
-# module top AND sorts before this one would bootstrap pyramids first; pyramids-core's own best-effort
-# host auto-detection is the only backstop in that (unlikely) case.
+# Guarantee caveat: this only holds if nothing imported `pyramids` earlier in the process. QGIS
+# loads this plugin's __init__ eagerly at startup, but a different plugin that imports pyramids at
+# its own module top AND sorts before this one would bootstrap pyramids first; pyramids-core's own
+# best-effort host auto-detection is the only backstop in that (unlikely) case.
 os.environ["PYRAMIDS_MANAGE_GDAL_ENV"] = "0"
 
 
