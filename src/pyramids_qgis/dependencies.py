@@ -43,9 +43,27 @@ _INSTALL_HINT = (
 )
 
 
+def _locatable(name: str) -> bool:
+    """Return whether ``name`` can be located without importing it; ``False`` on a broken install.
+
+    A partial/broken install can make :func:`importlib.util.find_spec` raise ``ImportError`` or
+    ``ValueError``; swallow those to ``False`` so the probes never leak a bare error (L3).
+
+    Args:
+        name: The import name to look up.
+
+    Returns:
+        bool: ``True`` when a spec is found, ``False`` when absent or the lookup errored.
+    """
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
 def pyramids_installed() -> bool:
     """Return whether the ``pyramids`` package can be located (without importing it)."""
-    return importlib.util.find_spec("pyramids") is not None
+    return _locatable("pyramids")
 
 
 def _version_tuple(version: str) -> tuple[int, ...]:
@@ -93,6 +111,25 @@ def pyramids_version() -> tuple[int, ...] | None:
     return None
 
 
+def _meets_floor(version: tuple[int, ...]) -> bool:
+    """Return whether ``version`` is at least :data:`MIN_PYRAMIDS_VERSION`, length-padded.
+
+    Tuple comparison makes a shorter prefix sort below a longer one (``(0, 81) < (0, 81, 0)``), so a
+    bare ``"0.81"`` would be wrongly judged below a ``(0, 81, 0)`` floor. Pad both to equal length
+    with zeros before comparing (L1).
+
+    Args:
+        version: A parsed version tuple from :func:`_version_tuple`.
+
+    Returns:
+        bool: ``True`` when ``version`` is greater than or equal to the floor.
+    """
+    width = max(len(version), len(MIN_PYRAMIDS_VERSION))
+    padded = version + (0,) * (width - len(version))
+    floor = MIN_PYRAMIDS_VERSION + (0,) * (width - len(MIN_PYRAMIDS_VERSION))
+    return padded >= floor
+
+
 def pyramids_outdated() -> bool:
     """Return whether an installed pyramids is older than :data:`MIN_PYRAMIDS_VERSION`.
 
@@ -103,7 +140,7 @@ def pyramids_outdated() -> bool:
         bool: ``True`` only when a version is known and below the floor.
     """
     version = pyramids_version()
-    return version is not None and version < MIN_PYRAMIDS_VERSION
+    return version is not None and not _meets_floor(version)
 
 
 def ensure_pyramids() -> None:
@@ -128,7 +165,7 @@ _EO_HINT = (
 
 def pyramids_eo_installed() -> bool:
     """Return whether the ``pyramids_eo`` package can be located."""
-    return importlib.util.find_spec("pyramids_eo") is not None
+    return _locatable("pyramids_eo")
 
 
 def ensure_pyramids_eo() -> None:
@@ -156,7 +193,7 @@ _MESH_DRIVERS_HINT = (
 
 def pyramids_mesh_installed() -> bool:
     """Return whether the ``pyramids_mesh`` driver package can be located."""
-    return importlib.util.find_spec("pyramids_mesh") is not None
+    return _locatable("pyramids_mesh")
 
 
 def mesh_drivers_warning() -> str | None:
@@ -217,7 +254,7 @@ def vendored_gdal_warning() -> str | None:
         # Not vendored, not installed, or broken (find_spec raised): nothing to warn about.
         return None
     version = pyramids_version()
-    if version is not None and version >= MIN_PYRAMIDS_VERSION:
+    if version is not None and _meets_floor(version):
         # Honours the env opt-out this plugin sets, so the vendored GDAL is never activated.
         return None
     return (

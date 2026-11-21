@@ -11,7 +11,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from qgis.core import QgsProcessingException
 
 import pyramids_qgis.dependencies as deps
 
@@ -30,6 +29,18 @@ def test_pyramids_installed_reflects_find_spec(monkeypatch):
     assert deps.pyramids_installed() is True
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
     assert deps.pyramids_installed() is False
+
+
+def test_installed_probes_false_when_find_spec_raises(monkeypatch):
+    """A broken install (find_spec raises) makes every *_installed probe return False, not raise."""
+
+    def boom(name):
+        raise ValueError("partial pyramids install")
+
+    monkeypatch.setattr(deps.importlib.util, "find_spec", boom)
+    assert deps.pyramids_installed() is False
+    assert deps.pyramids_eo_installed() is False
+    assert deps.pyramids_mesh_installed() is False
 
 
 def test_mesh_warning_present_only_when_absent(monkeypatch):
@@ -85,6 +96,8 @@ def test_vendored_warning_none_when_find_spec_raises(monkeypatch):
 
 def test_ensure_pyramids_raises_when_absent(monkeypatch):
     """`ensure_pyramids` raises with the install hint when pyramids cannot be located."""
+    from qgis.core import QgsProcessingException
+
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
     with pytest.raises(QgsProcessingException, match="pyramids-core"):
         deps.ensure_pyramids()
@@ -98,6 +111,8 @@ def test_ensure_pyramids_silent_when_present(monkeypatch):
 
 def test_ensure_pyramids_eo_raises_when_absent(monkeypatch):
     """`ensure_pyramids_eo` raises with its own hint when pyramids-eo is missing."""
+    from qgis.core import QgsProcessingException
+
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
     with pytest.raises(QgsProcessingException, match="pyramids-eo"):
         deps.ensure_pyramids_eo()
@@ -177,7 +192,9 @@ class TestPyramidsOutdated:
         [
             ((0, 2, 0), True),
             ((0, 80, 999), True),
+            ((0, 81), False),
             ((0, 81, 0), False),
+            ((0, 81, 0, 1), False),
             ((0, 82, 0), False),
             ((1, 0, 0), False),
             (None, False),
