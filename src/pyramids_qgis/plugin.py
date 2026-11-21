@@ -9,6 +9,9 @@ method QGIS calls exists without a camelCase declaration.
 
 from __future__ import annotations
 
+import html
+import traceback
+
 from qgis.core import QgsApplication
 
 from .provider import PyramidsProvider
@@ -44,56 +47,105 @@ class PyramidsPlugin:
 
         The plugin is useless without ``pyramids-core``, and only ``>= MIN_PYRAMIDS_VERSION`` is
         safe inside QGIS (it honours the ``PYRAMIDS_MANAGE_GDAL_ENV`` opt-out set in ``__init__``).
-        On load, if it is absent or outdated, pop a prompt and — on the user's confirmation — pip
-        install it into QGIS's interpreter, then suggest a restart. Everything is wrapped so a
-        failure in the offer never blocks the plugin from loading; a user who declines still gets
-        the actionable error from ``ensure_pyramids`` when they run an algorithm.
+        The work is delegated to :meth:`_run_install_offer`; any failure there is logged to the QGIS
+        message log (never silently swallowed) and never blocks plugin load. A user who declines
+        still gets the actionable error from ``ensure_pyramids`` when they run an algorithm.
         """
         try:
-            from qgis.PyQt.QtWidgets import QMessageBox
+            self._run_install_offer()
+        except Exception:  # plugin load must never fail because of the offer
+            from qgis.core import Qgis, QgsMessageLog
 
-            from .dependencies import (
-                PYRAMIDS_REQUIREMENT,
-                install_pyramids,
-                pyramids_installed,
-                pyramids_outdated,
-            )
+            QgsMessageLog.logMessage(traceback.format_exc(), "Pyramids", level=Qgis.Warning)
 
-            missing = not pyramids_installed()
-            outdated = (not missing) and pyramids_outdated()
-            if not missing and not outdated:
-                return
+    def _run_install_offer(self) -> None:
+        """Prompt and, on confirmation, pip-install pyramids-core into QGIS's interpreter.
 
-            parent = self.iface.mainWindow() if self.iface is not None else None
-            verb = "is not installed" if missing else "is older than the supported version"
-            question = (
-                f"The Pyramids plugin needs <b>{PYRAMIDS_REQUIREMENT}</b>, which {verb} in QGIS's "
-                "Python.<br><br>Install it now with pip into QGIS's interpreter?"
-            )
-            if (
-                QMessageBox.question(parent, "Pyramids: install pyramids-core", question)
-                != QMessageBox.StandardButton.Yes
-            ):
-                return
+        Shows the resolved target interpreter and the exact command, warns that QGIS is unresponsive
+        during the (synchronous) install, remembers a decline per state so it does not re-ask every
+        start, and re-checks after a reported success that pyramids is actually importable from the
+        target (pip may have installed into an interpreter QGIS does not use).
 
-            ok, output = install_pyramids(upgrade=outdated)
-            tail = output[-1500:] if output else ""
-            if ok:
-                QMessageBox.information(
-                    parent,
-                    "Pyramids",
-                    "pyramids-core installed. Restart QGIS for the algorithms to pick it up.",
-                )
-            else:
-                QMessageBox.warning(
-                    parent,
-                    "Pyramids: install failed",
-                    "Could not install pyramids-core automatically. Install it by hand into QGIS's "
-                    f"Python:<br><br><code>pip install '{PYRAMIDS_REQUIREMENT}'</code>"
-                    + (f"<br><br><pre>{tail}</pre>" if tail else ""),
-                )
-        except Exception:
+        Note:
+            The install runs synchronously on the GUI thread, so QGIS is frozen for its duration; a
+            background ``QgsTask`` installer with progress is the intended follow-up (needs in-QGIS
+            validation, issue #3). This whole method is only reachable in a running QGIS and is not
+            exercised by the (QGIS-free) unit tests.
+        """
+        import importlib
+
+        from qgis.core import QgsSettings
+        from qgis.PyQt.QtCore import Qt
+        from qgis.PyQt.QtWidgets import QApplication, QMessageBox
+
+        from .dependencies import (
+            PYRAMIDS_REQUIREMENT,
+            _python_executable,
+            install_pyramids,
+            pyramids_installed,
+            pyramids_outdated,
+        )
+
+        missing = not pyramids_installed()
+        outdated = (not missing) and pyramids_outdated()
+        if not missing and not outdated:
             return
+
+        state = "missing" if missing else "outdated"
+        settings = QgsSettings()
+        dismissed_key = "pyramids/install_offer_dismissed_for"
+        if settings.value(dismissed_key, "") == state:
+            return  # declined for this exact state already; re-offer only if the state changes (M3)
+
+        parent = self.iface.mainWindow() if self.iface is not None else None
+        target = _python_executable()
+        manual = f"<code>pip install '{html.escape(PYRAMIDS_REQUIREMENT)}'</code>"
+        verb = "is not installed" if missing else "is older than the supported version"
+        req = html.escape(PYRAMIDS_REQUIREMENT)
+        question = (
+            f"The Pyramids plugin needs <b>{req}</b>, which {verb} in QGIS's Python."
+            f"<br><br>Install it into:<br><code>{html.escape(target)}</code>"
+            "<br><br><b>QGIS will be unresponsive for a few minutes</b> while it downloads and "
+            "installs — there is no progress indicator."
+        )
+        if (
+            QMessageBox.question(parent, "Pyramids: install pyramids-core", question)
+            != QMessageBox.StandardButton.Yes
+        ):
+            settings.setValue(dismissed_key, state)
+            return
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            ok, output = install_pyramids(upgrade=outdated)
+        finally:
+            QApplication.restoreOverrideCursor()
+
+        importlib.invalidate_caches()  # so the re-check below can see a freshly installed package
+        tail = html.escape(output[-1500:]) if output else ""
+        if ok and pyramids_installed() and not pyramids_outdated():
+            settings.remove(dismissed_key)
+            QMessageBox.information(
+                parent,
+                "Pyramids",
+                "pyramids-core installed. Restart QGIS for the algorithms to pick it up.",
+            )
+        elif ok:
+            QMessageBox.warning(
+                parent,
+                "Pyramids: install incomplete",
+                "pip reported success, but pyramids-core is still not importable from "
+                f"<code>{html.escape(target)}</code> — it may not be the interpreter QGIS uses. "
+                f"Install it into QGIS's Python by hand:<br><br>{manual}"
+                + (f"<br><br><pre>{tail}</pre>" if tail else ""),
+            )
+        else:
+            QMessageBox.warning(
+                parent,
+                "Pyramids: install failed",
+                "Could not install pyramids-core automatically. Install it by hand into QGIS's "
+                f"Python:<br><br>{manual}" + (f"<br><br><pre>{tail}</pre>" if tail else ""),
+            )
 
     def unload(self) -> None:
         """Remove the provider when the plugin is disabled or QGIS shuts down."""
