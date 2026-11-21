@@ -95,31 +95,31 @@ def test_vendored_warning_none_when_find_spec_raises(monkeypatch):
 
 
 def test_ensure_pyramids_raises_when_absent(monkeypatch):
-    """`ensure_pyramids` raises with the install hint when pyramids cannot be located."""
-    from qgis.core import QgsProcessingException
-
+    """`ensure_pyramids` raises the install hint when pyramids cannot be located (needs QGIS)."""
+    qgis_core = pytest.importorskip("qgis.core")
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
-    with pytest.raises(QgsProcessingException, match="pyramids-core"):
+    with pytest.raises(qgis_core.QgsProcessingException, match="pyramids-core"):
         deps.ensure_pyramids()
 
 
 def test_ensure_pyramids_silent_when_present(monkeypatch):
-    """`ensure_pyramids` returns without raising when the package is locatable."""
+    """`ensure_pyramids` returns without raising when the package is locatable (needs QGIS)."""
+    pytest.importorskip("qgis.core")
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: object())
     assert deps.ensure_pyramids() is None
 
 
 def test_ensure_pyramids_eo_raises_when_absent(monkeypatch):
-    """`ensure_pyramids_eo` raises with its own hint when pyramids-eo is missing."""
-    from qgis.core import QgsProcessingException
-
+    """`ensure_pyramids_eo` raises its own hint when pyramids-eo is missing (needs QGIS)."""
+    qgis_core = pytest.importorskip("qgis.core")
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: None)
-    with pytest.raises(QgsProcessingException, match="pyramids-eo"):
+    with pytest.raises(qgis_core.QgsProcessingException, match="pyramids-eo"):
         deps.ensure_pyramids_eo()
 
 
 def test_ensure_pyramids_eo_silent_when_present(monkeypatch):
-    """`ensure_pyramids_eo` returns without raising when pyramids-eo is locatable."""
+    """`ensure_pyramids_eo` returns without raising when pyramids-eo is locatable (needs QGIS)."""
+    pytest.importorskip("qgis.core")
     monkeypatch.setattr(deps.importlib.util, "find_spec", lambda name: object())
     assert deps.ensure_pyramids_eo() is None
 
@@ -182,6 +182,11 @@ class TestPyramidsVersion:
 
         monkeypatch.setattr(deps.importlib.metadata, "version", fake)
         assert deps.pyramids_version() is None, "unknown version should be None"
+
+    def test_unparseable_version_is_none(self, monkeypatch):
+        """A version string with no leading digits (e.g. 'unknown') is reported as None (N2)."""
+        monkeypatch.setattr(deps.importlib.metadata, "version", lambda name: "unknown")
+        assert deps.pyramids_version() is None, "a no-digit version string should map to None"
 
 
 class TestPyramidsOutdated:
