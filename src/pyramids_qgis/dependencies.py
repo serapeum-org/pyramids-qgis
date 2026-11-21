@@ -284,16 +284,30 @@ def _python_executable() -> str:
     if exe and Path(exe).stem.lower().startswith("python"):
         return exe
     names = ("python3.exe", "python.exe") if os.name == "nt" else ("python3", "python")
-    bases = [p for p in (sys.exec_prefix, sys.base_prefix, os.path.dirname(exe)) if p]
-    subdirs = ("", "bin", "Scripts")
-    for base in bases:
-        for subdir in subdirs:
-            directory = Path(base, subdir) if subdir else Path(base)
-            for name in names:
-                candidate = directory / name
-                if candidate.is_file():
-                    return str(candidate)
+    for base in (sys.exec_prefix, sys.base_prefix, os.path.dirname(exe)):
+        found = _find_python_in(base, names) if base else None
+        if found:
+            return found
     return exe or "python"
+
+
+def _find_python_in(base: str, names: tuple[str, ...]) -> str | None:
+    """Return the first ``names`` file that exists under ``base`` (or its ``bin``/``Scripts``).
+
+    Args:
+        base: A prefix directory to probe (e.g. ``sys.exec_prefix``).
+        names: Candidate executable basenames to look for, in priority order.
+
+    Returns:
+        str | None: The path of the first matching file, or ``None`` when none exists.
+    """
+    for subdir in ("", "bin", "Scripts"):
+        directory = Path(base, subdir) if subdir else Path(base)
+        for name in names:
+            candidate = directory / name
+            if candidate.is_file():
+                return str(candidate)
+    return None
 
 
 def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:

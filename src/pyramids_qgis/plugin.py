@@ -135,30 +135,54 @@ class PyramidsPlugin:
             QApplication.restoreOverrideCursor()
 
         importlib.invalidate_caches()  # so the re-check below can see a freshly installed package
+        if self._report_install_result(parent, ok=ok, output=output, target=target, manual=manual):
+            settings.remove(dismissed_key)  # succeeded and importable: clear any stale dismissal
+
+    def _report_install_result(
+        self, parent, *, ok: bool, output: str, target: str, manual: str
+    ) -> bool:
+        """Show the post-install outcome dialog and report whether pyramids is now usable.
+
+        Args:
+            parent: The dialog parent widget (the QGIS main window, or ``None``).
+            ok: Whether ``install_pyramids`` reported success (pip exit code 0).
+            output: The captured pip stdout/stderr, whose tail is shown on a non-success.
+            target: The interpreter path the install targeted, shown in the incomplete message.
+            manual: Pre-rendered HTML with the manual ``pip install`` fallback command.
+
+        Returns:
+            bool: ``True`` only when pip succeeded and pyramids-core is now importable at a
+            supported version (the caller then clears the dismissal key); ``False`` otherwise.
+        """
+        from qgis.PyQt.QtWidgets import QMessageBox
+
+        from .dependencies import pyramids_installed, pyramids_outdated
+
         tail = html.escape(output[-1500:]) if output else ""
+        extra = f"<br><br><pre>{tail}</pre>" if tail else ""
         if ok and pyramids_installed() and not pyramids_outdated():
-            settings.remove(dismissed_key)
             QMessageBox.information(
                 parent,
                 "Pyramids",
                 "pyramids-core installed. Restart QGIS for the algorithms to pick it up.",
             )
-        elif ok:
+            return True
+        if ok:
             QMessageBox.warning(
                 parent,
                 "Pyramids: install incomplete",
                 "pip reported success, but pyramids-core is still not importable from "
                 f"<code>{html.escape(target)}</code> — it may not be the interpreter QGIS uses. "
-                f"Install it into QGIS's Python by hand:<br><br>{manual}"
-                + (f"<br><br><pre>{tail}</pre>" if tail else ""),
+                f"Install it into QGIS's Python by hand:<br><br>{manual}" + extra,
             )
-        else:
-            QMessageBox.warning(
-                parent,
-                "Pyramids: install failed",
-                "Could not install pyramids-core automatically. Install it by hand into QGIS's "
-                f"Python:<br><br>{manual}" + (f"<br><br><pre>{tail}</pre>" if tail else ""),
-            )
+            return False
+        QMessageBox.warning(
+            parent,
+            "Pyramids: install failed",
+            "Could not install pyramids-core automatically. Install it by hand into QGIS's "
+            f"Python:<br><br>{manual}" + extra,
+        )
+        return False
 
     def unload(self) -> None:
         """Remove the provider when the plugin is disabled or QGIS shuts down."""
