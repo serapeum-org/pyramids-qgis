@@ -71,7 +71,9 @@ def _version_tuple(version: str) -> tuple[int, ...]:
 
     Each dotted chunk contributes its leading digits; a chunk that does not start with a digit stops
     the parse. So ``"1.2.dev0"`` becomes ``(1, 2)``, and ``"0.81.0rc1"`` becomes ``(0, 81, 0)``
-    (the ``0rc1`` chunk still starts with a digit) — adequate for a ``>=`` floor comparison.
+    (the ``0rc1`` chunk still starts with a digit) — adequate for a ``>=`` floor comparison. PEP 440
+    epochs (``"1!2.3"``) and local segments are NOT understood (the epoch is dropped); pyramids-core
+    uses plain ``N.N.N[pre]`` releases, so this is sufficient here.
 
     Args:
         version: A distribution version string.
@@ -97,17 +99,20 @@ def pyramids_version() -> tuple[int, ...] | None:
     """Return the installed pyramids version as a comparable tuple, or ``None`` if unknown.
 
     Tries each distribution name pyramids is published under (``pyramids-core`` on PyPI,
-    ``pyramids`` on conda-forge).
+    ``pyramids`` on conda-forge). A version string that parses to no digits (e.g. ``"unknown"``)
+    is reported as ``None`` so callers take the unknown-version path rather than treating it as
+    below the floor (N2).
 
     Returns:
         tuple[int, ...] | None: e.g. ``(0, 81, 0)``, or ``None`` when neither distribution's
-        metadata is found.
+        metadata is found (or its version string yields no digits).
     """
     for name in _PYRAMIDS_DISTRIBUTIONS:
         try:
-            return _version_tuple(importlib.metadata.version(name))
+            parsed = _version_tuple(importlib.metadata.version(name))
         except importlib.metadata.PackageNotFoundError:
             continue
+        return parsed or None
     return None
 
 
