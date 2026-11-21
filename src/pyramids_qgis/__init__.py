@@ -12,14 +12,21 @@ from __future__ import annotations
 
 import os
 
-# Guarantee host-managed GDAL before `pyramids` is imported anywhere in this process (pyramids-core
+# Force host-managed GDAL before `pyramids` is imported anywhere in this process (pyramids-core
 # #1588). pyramids-core >= 0.81.0 reads PYRAMIDS_MANAGE_GDAL_ENV: "0" tells it NOT to touch the
 # process-global GDAL environment (GDAL_DRIVER_PATH / GDAL_DATA / PROJ_LIB / PATH) and NOT to
 # activate its vendored GDAL — so a GDAL-vendoring wheel installed into QGIS's Python leaves QGIS's
-# own GDAL intact instead of clobbering it. QGIS loads this module eagerly, before any algorithm
-# imports pyramids, so setting it here is early enough. `setdefault` lets a user who deliberately
-# exported the variable override us.
-os.environ.setdefault("PYRAMIDS_MANAGE_GDAL_ENV", "0")
+# own GDAL intact instead of clobbering it.
+#
+# Set unconditionally, NOT setdefault: an inherited truthy value (a shell that exported
+# PYRAMIDS_MANAGE_GDAL_ENV=1 and then launched QGIS) would make pyramids activate its vendored GDAL
+# inside QGIS — exactly the clobber this plugin exists to prevent — so host protection must win here.
+#
+# Guarantee caveat: this only holds if nothing imported `pyramids` earlier in the process. QGIS loads
+# this plugin's __init__ eagerly at startup, but a different plugin that imports pyramids at its own
+# module top AND sorts before this one would bootstrap pyramids first; pyramids-core's own best-effort
+# host auto-detection is the only backstop in that (unlikely) case.
+os.environ["PYRAMIDS_MANAGE_GDAL_ENV"] = "0"
 
 
 def _class_factory(iface):
