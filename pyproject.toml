@@ -31,7 +31,7 @@ requires-python = ">= 3.11, <4"
 # QGIS, which provides `qgis.*` and GDAL; nothing here installs or pins qgis/PyQGIS. The one runtime
 # requirement is pyramids-core (imported lazily by the algorithms); the EO/mesh families are extras.
 dependencies = [
-    "pyramids-core >=0.79,<0.80",
+    "pyramids-core >=0.81,<0.82",
 ]
 
 [project.optional-dependencies]

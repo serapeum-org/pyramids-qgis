@@ -36,8 +36,9 @@ _PYRAMIDS_DISTRIBUTIONS = ("pyramids-core", "pyramids")
 _INSTALL_HINT = (
     "The 'pyramids-core' package is not importable from the QGIS Python environment.\n"
     f"Install it (>= {MIN_PYRAMIDS_VERSION_STR}) into the interpreter QGIS runs:\n"
-    f"  - any QGIS:          <qgis-python> -m pip install '{PYRAMIDS_REQUIREMENT}'\n"
-    "  - conda-based QGIS:   conda install -c conda-forge 'pyramids>=0.81.0'\n"
+    f"  - any QGIS (from PyPI):  <qgis-python> -m pip install '{PYRAMIDS_REQUIREMENT}'\n"
+    "  - conda-based QGIS:      conda install -c conda-forge pyramids  (must resolve to the floor\n"
+    "                           above; conda-forge can lag PyPI, so use the pip line until it does)\n"
     "The plugin can also install it for you from Plugins (it offers on load)."
 )
 
