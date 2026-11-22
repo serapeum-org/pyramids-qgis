@@ -9,8 +9,9 @@ what each algorithm does, see the [Algorithms reference](algorithms.md).
 
 ## Before you start
 
-Install the plugin from the QGIS Plugin Manager (and its `pyramids-core` dependency into QGIS's Python) — see
-[Installation](installation.md).
+Install the plugin from the QGIS Plugin Manager — see [Installation](installation.md). The plugin checks for its
+`pyramids-core` dependency when it loads and offers to install it into QGIS's Python if it is missing or older than
+0.81.0, so there is usually nothing else to set up.
 
 ## 1. Find the algorithms
 
@@ -96,8 +97,10 @@ Because these are standard Processing algorithms, they also run:
 
 ## Troubleshooting
 
-- **"pyramids is not importable" / every algorithm fails immediately** — `pyramids-core` is not installed in the
-  QGIS Python. Install it (see *Before you start*) and restart QGIS.
+- **"pyramids is not importable" / every algorithm fails immediately** — `pyramids-core` is missing from the QGIS
+  Python, or is older than 0.81.0. The plugin offers to install it on load; if you dismissed that with **Don't ask
+  again**, install it yourself (`pip install 'pyramids-core>=0.81.0'`) and restart QGIS. See
+  [Installation](installation.md).
 - **The Earth-observation algorithms fail with a dependency error** — those need **`pyramids-eo`** (a hard
   requirement for the EO group only). Install it into the QGIS interpreter.
 - **A non-UGRID mesh format fails** — mesh formats beyond UGRID NetCDF need the optional **`pyramids-mesh`**; the
