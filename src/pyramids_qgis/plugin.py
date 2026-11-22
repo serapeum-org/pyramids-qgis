@@ -33,6 +33,12 @@ class PyramidsPlugin:
     state.
     """
 
+    #: QGIS-mandated camelCase start hooks, mapped to the snake_case methods implementing them.
+    #: ``initGui`` is the desktop path; ``initProcessing`` is the headless one QGIS requires for a
+    #: ``hasProcessingProvider`` plugin. Both :meth:`__getattr__` and :meth:`__dir__` read this, so
+    #: adding a hook here is enough to expose it.
+    _QGIS_HOOKS = {"initGui": "_init_gui", "initProcessing": "init_processing"}
+
     def __init__(self, iface):
         """Store the QGIS interface handle and leave the provider to the start hook.
 
@@ -248,9 +254,11 @@ class PyramidsPlugin:
           QGIS unloads the plugin outright when it is missing ("plugin has no initProcessing()
           method"), which left the algorithms unavailable to ``qgis_process``.
 
-        Resolving both on demand keeps the QGIS-mandated camelCase names working without declaring
-        camelCase methods. ``__getattr__`` only runs for attributes normal lookup does not find, so
-        every real attribute (``iface``, ``provider``, ``_init_gui``, ``unload``, …) is unaffected.
+        Both are resolved from :attr:`_QGIS_HOOKS`, which :meth:`__dir__` also reads so the names
+        show up in introspection instead of being invisible. This keeps the QGIS-mandated camelCase
+        names working without declaring camelCase methods. ``__getattr__`` only runs for attributes
+        normal lookup does not find, so every real attribute (``iface``, ``provider``,
+        ``_init_gui``, ``unload``, …) is unaffected.
 
         Args:
             name: The attribute being looked up on the instance.
@@ -262,8 +270,19 @@ class PyramidsPlugin:
         Raises:
             AttributeError: For any other attribute name.
         """
-        if name == "initGui":
-            return self._init_gui
-        if name == "initProcessing":
-            return self.init_processing
+        target = self._QGIS_HOOKS.get(name)
+        if target is not None:
+            return getattr(self, target)
         raise AttributeError(f"{type(self).__name__!r} object has no attribute {name!r}")
+
+    def __dir__(self):
+        """Include the dynamically resolved QGIS hook names in ``dir()``.
+
+        Without this, ``initGui`` and ``initProcessing`` are reachable but invisible: they are
+        produced by :meth:`__getattr__`, so they appear in no listing, and nothing but a test
+        notices if one stops resolving.
+
+        Returns:
+            list[str]: The normal attribute listing plus the QGIS hook names.
+        """
+        return [*super().__dir__(), *self._QGIS_HOOKS]

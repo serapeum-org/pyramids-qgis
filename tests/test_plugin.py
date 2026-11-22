@@ -107,6 +107,14 @@ def test_both_start_hooks_exist_for_a_processing_provider_plugin():
     )
 
 
+def test_the_qgis_hooks_are_visible_to_dir():
+    """Both hooks appear in `dir()`, so they are discoverable and not just reachable."""
+    plugin = PyramidsPlugin(object())
+    listed = dir(plugin)
+    assert "initGui" in listed, "initGui is reachable but invisible to introspection"
+    assert "initProcessing" in listed, "initProcessing is reachable but invisible to introspection"
+
+
 def test_unknown_instance_attribute_raises():
     """A non-existent instance attribute raises AttributeError."""
     plugin = PyramidsPlugin(object())
