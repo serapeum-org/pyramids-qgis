@@ -10,7 +10,7 @@ schedules the ``pyramids-core`` install offer — headlessly there is no window 
 from __future__ import annotations
 
 import pytest
-from qgis.core import QgsApplication
+from qgis.core import QgsApplication, QgsMessageLog
 from qgis.PyQt import QtCore
 
 import pyramids_qgis
@@ -30,16 +30,18 @@ def _provider_is_registered() -> bool:
 
 @pytest.fixture
 def clean_registry():
-    """Assert the Processing registry starts free of a ``pyramids`` provider, and warn if one leaks.
+    """Guarantee the Processing registry holds no ``pyramids`` provider before and after a test.
 
-    The registry is process-wide and the ``qgis_app`` fixture is session-scoped, so every test here
-    unloads its own plugin while that plugin is still alive — the way QGIS does, since it holds the
-    plugin in ``qgis.utils.plugins`` until ``unload``. This fixture only guards that invariant, so a
-    future test that forgets to unload fails loudly instead of corrupting the ones after it.
+    The registry is process-wide and the ``qgis_app`` fixture is session-scoped, so a leak would
+    otherwise persist for the rest of the run and fail later tests that are not at fault. Teardown
+    therefore *cleans* first and only then reports, which keeps a leak contained to the test that
+    caused it. The entry assertion stays as a tripwire.
     """
     assert not _provider_is_registered(), "a previous test leaked a registered pyramids provider"
     yield
-    assert not _provider_is_registered(), "this test left a pyramids provider in the registry"
+    leaked = _provider_is_registered()
+    QgsApplication.processingRegistry().removeProvider("pyramids")
+    assert not leaked, "this test left a pyramids provider in the registry"
 
 
 @pytest.fixture
@@ -54,15 +56,18 @@ def recording_timer(monkeypatch):
     class RecordingTimer:
         """Stand-in for ``QTimer`` that records the deferred callbacks."""
 
-        calls: list[tuple[int, object]] = []
+        calls: list[tuple[int, object]] = []  # fresh class per fixture use, so no reset needed
 
         @classmethod
         def singleShot(cls, msec, callback):  # noqa: N802  (mirrors the Qt API name)
             """Record the scheduling request without running or queueing the callback."""
             cls.calls.append((msec, callback))
 
-    RecordingTimer.calls = []
     monkeypatch.setattr(QtCore, "QTimer", RecordingTimer)
+    assert QtCore.QTimer is RecordingTimer, (
+        "the patch target drifted: _init_gui imports QTimer from somewhere else now, so a test "
+        "asserting that nothing was scheduled would pass vacuously"
+    )
     return RecordingTimer
 
 
@@ -107,6 +112,53 @@ def test_unknown_instance_attribute_raises():
     plugin = PyramidsPlugin(object())
     with pytest.raises(AttributeError):
         _ = plugin.does_not_exist
+
+
+def test_initgui_hook_registers_the_provider(clean_registry, recording_timer):
+    """Called under the QGIS name, the GUI hook registers the provider and defers the offer."""
+    plugin = PyramidsPlugin(object())
+    plugin.initGui()
+    try:
+        assert _provider_is_registered(), "the initGui hook did not register the provider"
+        assert len(recording_timer.calls) == 1
+    finally:
+        plugin.unload()
+
+
+def test_headless_start_works_without_an_iface(clean_registry):
+    """A start must not need a window: ``qgis.utils.iface`` is None in headless runs."""
+    plugin = PyramidsPlugin(None)
+    plugin.initProcessing()
+    try:
+        assert plugin.iface is None
+        assert _provider_is_registered(), "a start with iface=None failed to register"
+    finally:
+        plugin.unload()
+
+
+def test_second_start_does_not_dangle_the_provider(clean_registry):
+    """A duplicate start is a no-op: the registry would destroy the second provider (M1)."""
+    first = PyramidsPlugin(None)
+    first.init_processing()
+    try:
+        second = PyramidsPlugin(None)
+        second.init_processing()
+        assert second.provider is None, "the second start kept a provider the registry destroyed"
+        second.unload()
+        assert _provider_is_registered(), "unloading the second plugin dropped the registration"
+    finally:
+        first.unload()
+    assert not _provider_is_registered()
+
+
+def test_repeated_start_on_one_plugin_unloads_cleanly(clean_registry):
+    """Starting the same plugin twice still leaves exactly one registration to unload (M1)."""
+    plugin = PyramidsPlugin(None)
+    plugin.init_processing()
+    plugin.init_processing()
+    plugin.unload()
+    assert not _provider_is_registered(), "a repeated start left a registration behind"
+    assert plugin.provider is None
 
 
 def test_init_stores_the_iface_and_defers_the_provider():
@@ -168,8 +220,10 @@ def test_unload_removes_the_provider(clean_registry):
     """`unload` takes the provider out of the registry and clears the attribute."""
     plugin = PyramidsPlugin(object())
     plugin.init_processing()
-    assert _provider_is_registered()
-    plugin.unload()
+    try:
+        assert _provider_is_registered(), "init_processing did not register the provider"
+    finally:
+        plugin.unload()
     assert plugin.provider is None
     assert not _provider_is_registered(), "the provider outlived unload()"
 
@@ -182,11 +236,18 @@ def test_unload_without_a_provider_is_a_noop(clean_registry):
 
 
 def test_offer_pyramids_install_swallows_and_logs_failures(monkeypatch):
-    """A failing offer is logged, never raised: plugin load must not fail because of it."""
+    """A failing offer is attempted, logged and swallowed: plugin load must not fail with it."""
+    attempted = []
+    logged = []
 
     def boom():
+        attempted.append(True)
         raise RuntimeError("offer exploded")
 
+    monkeypatch.setattr(QgsMessageLog, "logMessage", lambda *args, **kw: logged.append(args))
     plugin = PyramidsPlugin(object())
     monkeypatch.setattr(plugin, "_run_install_offer", boom)
     plugin._offer_pyramids_install()
+    assert attempted == [True], "the offer was never attempted, so nothing was swallowed"
+    assert logged, "the failure was swallowed silently instead of reaching the QGIS log"
+    assert "offer exploded" in logged[0][0], f"the traceback was not logged: {logged[0][0]!r}"
