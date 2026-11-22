@@ -39,7 +39,8 @@ _INSTALL_HINT = (
     f"  - any QGIS (from PyPI):  <qgis-python> -m pip install '{PYRAMIDS_REQUIREMENT}'\n"
     "  - conda-based QGIS: conda install -c conda-forge pyramids (must satisfy the floor;\n"
     "    conda-forge can lag PyPI, so prefer the pip line until it catches up)\n"
-    "The plugin can also install it for you from Plugins (it offers on load)."
+    "When QGIS starts with a window, the plugin offers to install it for you; running headlessly "
+    "(qgis_process) there is no dialog, so install it yourself."
 )
 
 

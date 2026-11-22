@@ -2,7 +2,7 @@
 
 Pyramids QGIS is a **Processing provider** — it adds algorithms, not a toolbar or a menu. Everything you run lives
 in the **Processing Toolbox**, so the algorithms work the same way as any native QGIS tool: in the toolbox, the
-graphical modeler, batch mode, and the Python `processing.run(...)` API.
+graphical modeler, batch mode, the Python `processing.run(...)` API, and the `qgis_process` command line.
 
 This page walks through finding the algorithms and running a couple of them end to end. For the full catalogue of
 what each algorithm does, see the [Algorithms reference](algorithms.md).
@@ -78,6 +78,18 @@ Because these are standard Processing algorithms, they also run:
 
 - **Batch** — right-click an algorithm → **Execute as Batch Process…** to run it over many inputs at once.
 - **Graphical Modeler** — drag a Pyramids algorithm into a model to chain it with other steps.
+- **`qgis_process`** — run an algorithm from a shell, with no QGIS window open at all:
+
+    ```bash
+    qgis_process plugins enable pyramids_qgis    # once per profile
+    qgis_process plugins                         # '* pyramids_qgis' means it loaded
+    qgis_process list                            # every algorithm, including the pyramids: ones
+    qgis_process run pyramids:warp -- INPUT=dem.tif CRS=EPSG:3857 OUTPUT=out.tif
+    ```
+
+    The plugin must be enabled in the profile `qgis_process` uses; `pyramids-core` still has to be
+    installed in that QGIS's Python, and the install offer never appears here because there is no
+    GUI to show it in.
 - **Python console** — call it by its provider-qualified id, `pyramids:<name>`:
 
     ```python

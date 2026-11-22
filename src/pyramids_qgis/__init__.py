@@ -36,7 +36,8 @@ def _class_factory(iface):
         iface: The ``QgisInterface`` handle QGIS passes to every plugin.
 
     Returns:
-        PyramidsPlugin: The plugin object exposing ``initGui`` / ``unload``.
+        PyramidsPlugin: The plugin object exposing the lifecycle hooks QGIS calls — ``initGui``
+            (desktop), ``initProcessing`` (headless, e.g. ``qgis_process``) and ``unload``.
     """
     from .plugin import PyramidsPlugin
 
