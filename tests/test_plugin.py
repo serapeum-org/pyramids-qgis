@@ -289,6 +289,64 @@ def test_unload_removes_the_provider(clean_registry):
     assert not _provider_is_registered(), "the provider outlived unload()"
 
 
+def test_unload_tolerates_a_provider_destroyed_elsewhere(clean_registry):
+    """`unload` must not raise when something else already destroyed the provider.
+
+    Passing a dead wrapper to the registry raises ``RuntimeError``, QGIS catches that inside
+    ``unloadPlugin``, and then never reaches ``del plugins[...]`` — leaving the plugin "active"
+    with stale modules. The ``sip.isdeleted`` guard is what prevents it.
+    """
+    from qgis.PyQt import sip
+
+    plugin = PyramidsPlugin(None)
+    plugin.init_processing()
+    QgsApplication.processingRegistry().removeProvider("pyramids")  # destroys the C++ object
+    assert sip.isdeleted(plugin.provider), "precondition: the wrapper should now be dead"
+    plugin.unload()
+    assert plugin.provider is None
+    assert not _provider_is_registered()
+
+
+def test_a_duplicate_start_is_logged(clean_registry, monkeypatch):
+    """A start that registers nothing must say so: silence is how #44 stayed hidden."""
+    logged = []
+    owner = PyramidsPlugin(None)
+    try:
+        owner.init_processing()
+        monkeypatch.setattr(QgsMessageLog, "logMessage", lambda *a, **k: logged.append(a))
+        PyramidsPlugin(None).init_processing()
+        assert logged, "the duplicate start was silent"
+        assert "already registered" in logged[0][0], f"unexpected message: {logged[0][0]!r}"
+    finally:
+        owner.unload()
+
+
+def test_a_refused_registration_is_logged(clean_registry, monkeypatch):
+    """When the registry refuses the provider, the plugin logs instead of looking successful."""
+    logged = []
+
+    class RefusingRegistry:
+        """Stands in for the Processing registry and rejects every provider."""
+
+        @staticmethod
+        def providerById(provider_id):  # noqa: N802  (mirrors the QGIS API name)
+            """Report nothing registered, so the start proceeds to addProvider."""
+            return None
+
+        @staticmethod
+        def addProvider(provider):  # noqa: N802  (mirrors the QGIS API name)
+            """Refuse the provider the way QGIS does for a duplicate id."""
+            return False
+
+    monkeypatch.setattr(QgsMessageLog, "logMessage", lambda *a, **k: logged.append(a))
+    monkeypatch.setattr(QgsApplication, "processingRegistry", lambda: RefusingRegistry)
+    plugin = PyramidsPlugin(None)
+    plugin.init_processing()
+    assert plugin.provider is None, "a refused provider must not be recorded"
+    assert logged, "a refused registration was silent"
+    assert "refused" in logged[0][0], f"unexpected message: {logged[0][0]!r}"
+
+
 def test_unload_without_a_provider_is_a_noop(clean_registry):
     """`unload` on a plugin that never started does nothing and does not raise."""
     plugin = PyramidsPlugin(object())
