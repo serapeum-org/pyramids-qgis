@@ -24,9 +24,14 @@ class PyramidsProvider(QgsProcessingProvider):
         for algorithm_cls in ALGORITHMS:
             self.addAlgorithm(algorithm_cls())
 
+    #: The stable provider id, also the prefix of every algorithm id (``pyramids:<name>``).
+    #: Exposed as a constant so teardown can address the registration without the instance —
+    #: see :meth:`pyramids_qgis.plugin.PyramidsPlugin.unload`.
+    PROVIDER_ID = "pyramids"
+
     def id(self) -> str:  # noqa: A003  (QGIS API: the method is named ``id``)
         """Return the stable provider id used in algorithm identifiers (``pyramids:...``)."""
-        return "pyramids"
+        return self.PROVIDER_ID
 
     def name(self) -> str:
         """Return the provider name shown in the Processing Toolbox."""

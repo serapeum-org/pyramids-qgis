@@ -33,11 +33,13 @@ class PyramidsPlugin:
     state.
     """
 
-    #: QGIS-mandated camelCase start hooks, mapped to the snake_case methods implementing them.
-    #: ``initGui`` is the desktop path; ``initProcessing`` is the headless one QGIS requires for a
-    #: ``hasProcessingProvider`` plugin. Both :meth:`__getattr__` and :meth:`__dir__` read this, so
-    #: adding a hook here is enough to expose it.
-    _QGIS_HOOKS = {"initGui": "_init_gui", "initProcessing": "init_processing"}
+    #: QGIS-mandated camelCase start hooks, mapped to the methods implementing them. ``initGui``
+    #: is the desktop path; ``initProcessing`` is the headless one QGIS requires for a
+    #: ``hasProcessingProvider`` plugin. :meth:`__getattr__` resolves from this table and
+    #: :meth:`__dir__` lists it, but an entry alone proves nothing: QGIS only calls a hook it has
+    #: a reason to call, which for ``initProcessing`` is ``hasProcessingProvider=yes`` in
+    #: ``metadata.txt``. A test pins the pair (``test_metadata_declares_a_processing_provider``).
+    _QGIS_HOOKS: dict[str, str] = {"initGui": "_init_gui", "initProcessing": "init_processing"}
 
     def __init__(self, iface):
         """Store the QGIS interface handle and leave the provider to the start hook.
@@ -67,11 +69,37 @@ class PyramidsPlugin:
         registry has actually accepted it, and a second start is a no-op rather than a corruption.
         """
         registry = QgsApplication.processingRegistry()
+        existing = registry.providerById(PyramidsProvider.PROVIDER_ID)
+        if existing is not None:
+            self._log(
+                f"a provider with id {PyramidsProvider.PROVIDER_ID!r} is already registered "
+                f"({type(existing).__name__}); this start is a no-op, so the algorithms you see "
+                "belong to that registration"
+            )
+            return
         provider = PyramidsProvider()
-        if registry.providerById(provider.id()) is not None:
-            return  # already started; the first start owns the registration
         if registry.addProvider(provider):
             self.provider = provider
+            return
+        self._log(
+            "QgsProcessingRegistry.addProvider refused the Pyramids provider, so no algorithms "
+            "will appear in the Processing Toolbox"
+        )
+
+    @staticmethod
+    def _log(message: str) -> None:
+        """Send a warning to the QGIS message log under the ``Pyramids`` tab.
+
+        Used for the states that would otherwise be invisible: a start that registered nothing
+        still looks successful to QGIS, and the only symptom is an empty Pyramids group in the
+        Processing Toolbox — the exact confusion this plugin already hit once.
+
+        Args:
+            message: The text to log, without a trailing newline.
+        """
+        from qgis.core import Qgis, QgsMessageLog
+
+        QgsMessageLog.logMessage(message, "Pyramids", level=Qgis.Warning)
 
     def _init_gui(self) -> None:
         """Enable the plugin: register the Processing provider, then offer to install pyramids.
@@ -141,7 +169,7 @@ class PyramidsPlugin:
         settings = QgsSettings()
         dismissed_key = "pyramids/install_offer_dismissed_for"
         if settings.value(dismissed_key, "") == state:
-            return  # declined for this exact state already; re-offer only if the state changes (M3)
+            return  # declined for this exact state already; re-offer only if the state changes
 
         parent = self.iface.mainWindow() if self.iface is not None else None
         target = _python_executable()
@@ -228,16 +256,23 @@ class PyramidsPlugin:
     def unload(self) -> None:
         """Remove the provider when the plugin is disabled or QGIS shuts down.
 
-        Serves both start paths, and does nothing when no start hook ever ran — QGIS calls
-        ``unload`` on a plugin it only constructed, and there is no registration to undo.
+        Removal is **by id, not by object**, and runs whether or not this instance recorded a
+        provider. Both details matter:
 
-        :attr:`provider` is cleared **before** the registry call, not after: removing a provider
-        hands it to QGIS, which destroys it, so the attribute must not keep a wrapper around a
-        dead object, and a failed call cannot leave one behind either.
+        - Passing the wrapper means a provider destroyed by anyone else — another instance, a test
+          teardown, QGIS's own shutdown ordering — makes this raise ``RuntimeError: wrapped C/C++
+          object ... has been deleted``. QGIS catches that in ``unloadPlugin``, shows an exception
+          dialog and returns early, so it never reaches ``del plugins[...]`` or
+          ``active_plugins.remove(...)`` and the plugin stays "active" with stale modules loaded.
+        - Skipping the call when :attr:`provider` is ``None`` would strand a live registration
+          whenever :meth:`init_processing` found the id already taken and recorded nothing: that
+          registration is reachable by id but by no object QGIS still holds.
+
+        ``removeProvider`` with an id is a no-op returning ``False`` when nothing is registered, so
+        the unconditional call is safe for a plugin QGIS only ever constructed.
         """
-        provider, self.provider = self.provider, None
-        if provider is not None:
-            QgsApplication.processingRegistry().removeProvider(provider)
+        self.provider = None
+        QgsApplication.processingRegistry().removeProvider(PyramidsProvider.PROVIDER_ID)
 
     def __getattr__(self, name: str):
         """Expose the QGIS-required camelCase lifecycle hooks dynamically.
@@ -272,10 +307,19 @@ class PyramidsPlugin:
         """
         target = self._QGIS_HOOKS.get(name)
         if target is not None:
-            return getattr(self, target)
+            try:
+                return getattr(self, target)
+            except AttributeError:
+                # A table entry pointing at a method that no longer exists: report it against the
+                # hook QGIS asked for, not the private target, which would send the reader hunting
+                # for the wrong name.
+                raise AttributeError(
+                    f"{type(self).__name__!r} maps the QGIS hook {name!r} to {target!r}, "
+                    "which does not exist"
+                ) from None
         raise AttributeError(f"{type(self).__name__!r} object has no attribute {name!r}")
 
-    def __dir__(self):
+    def __dir__(self) -> list[str]:
         """Include the dynamically resolved QGIS hook names in ``dir()``.
 
         Without this, ``initGui`` and ``initProcessing`` are reachable but invisible: they are
