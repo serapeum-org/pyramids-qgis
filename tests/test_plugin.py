@@ -137,7 +137,7 @@ def test_headless_start_works_without_an_iface(clean_registry):
 
 
 def test_second_start_does_not_dangle_the_provider(clean_registry):
-    """A duplicate start is a no-op: the registry would destroy the second provider (M1)."""
+    """A duplicate start is a no-op: addProvider would destroy the second provider."""
     first = PyramidsPlugin(None)
     first.init_processing()
     try:
@@ -152,7 +152,7 @@ def test_second_start_does_not_dangle_the_provider(clean_registry):
 
 
 def test_repeated_start_on_one_plugin_unloads_cleanly(clean_registry):
-    """Starting the same plugin twice still leaves exactly one registration to unload (M1)."""
+    """Starting the same plugin twice still leaves exactly one registration to unload."""
     plugin = PyramidsPlugin(None)
     plugin.init_processing()
     plugin.init_processing()
@@ -201,7 +201,7 @@ def test_initprocessing_does_not_schedule_the_install_offer(clean_registry, reco
 
 
 def test_init_gui_registers_the_provider_and_defers_the_offer(clean_registry, recording_timer):
-    """The GUI hook registers the provider and defers the offer with a 0 ms timer (M1)."""
+    """The GUI hook registers the provider and defers the offer with a 0 ms timer."""
     plugin = PyramidsPlugin(object())
     plugin._init_gui()
     try:

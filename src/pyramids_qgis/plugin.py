@@ -5,9 +5,10 @@ does nothing but add the provider to the Processing registry, and ``unload`` rem
 toolbar or menu action to manage. QGIS's camelCase lifecycle hooks are implemented as snake_case
 methods and exposed under the names QGIS calls via ``__getattr__``: ``initGui`` (the desktop GUI
 path) resolves to :meth:`PyramidsPlugin._init_gui`, and ``initProcessing`` (the headless path used
-by ``qgis_process`` and QGIS Server for ``hasProcessingProvider`` plugins) resolves to
+by ``qgis_process`` for ``hasProcessingProvider`` plugins) resolves to
 :meth:`PyramidsPlugin.init_processing`. Both must exist: QGIS unloads the plugin if the hook for the
-way it was started is absent.
+way it was started is absent. QGIS Server is a third path and not one this plugin serves — it loads
+plugins through ``serverClassFactory``, which this package does not expose.
 """
 
 from __future__ import annotations
@@ -23,11 +24,13 @@ from .provider import PyramidsProvider
 class PyramidsPlugin:
     """Thin lifecycle wrapper that owns the Processing provider.
 
-    QGIS builds one instance per session through :func:`pyramids_qgis.classFactory`, then starts it
-    through whichever hook fits how it is running — ``initGui`` with a GUI, ``initProcessing``
-    without one — and calls :meth:`unload` when the plugin is disabled or QGIS shuts down. The
-    provider is created by whichever start hook runs, never in the constructor, so an instance that
-    QGIS never starts holds no registry state.
+    QGIS builds one instance per load/start cycle through the package-level ``classFactory``
+    (surfaced by ``pyramids_qgis.__getattr__``), then starts it through whichever hook fits how it
+    is running — ``initGui`` with a GUI, ``initProcessing`` without one — and calls :meth:`unload`
+    when the plugin is disabled or QGIS shuts down. Disabling and re-enabling it builds a fresh
+    instance, so there can be more than one per QGIS session. The provider is created by whichever
+    start hook runs, never in the constructor, so an instance QGIS never starts holds no registry
+    state.
     """
 
     def __init__(self, iface):
@@ -73,7 +76,7 @@ class PyramidsPlugin:
         self.init_processing()
         # Defer the install offer with a 0-ms timer so initGui returns immediately: the dialog then
         # appears once the event loop is running and the main window is up, instead of blocking the
-        # startup critical path (M1). The install itself is still synchronous when accepted.
+        # startup critical path. The install itself is still synchronous when accepted.
         from qgis.PyQt.QtCore import QTimer
 
         QTimer.singleShot(0, self._offer_pyramids_install)
@@ -106,7 +109,8 @@ class PyramidsPlugin:
             The install runs synchronously on the GUI thread, so QGIS is frozen for its duration; a
             background ``QgsTask`` installer with progress is the intended follow-up (needs in-QGIS
             validation, issue #3). This whole method is only reachable in a running QGIS and is not
-            exercised by the (QGIS-free) unit tests.
+            exercised by the unit tests, which build parameters and check the dependency
+            helpers but never open a dialog.
         """
         import importlib
 
@@ -218,13 +222,12 @@ class PyramidsPlugin:
     def unload(self) -> None:
         """Remove the provider when the plugin is disabled or QGIS shuts down.
 
-        Serves both start paths, and is a no-op when no start hook ever ran: without the guard,
-        unloading a plugin QGIS had only constructed would pass ``None`` to the registry.
+        Serves both start paths, and does nothing when no start hook ever ran — QGIS calls
+        ``unload`` on a plugin it only constructed, and there is no registration to undo.
 
-        :attr:`provider` is cleared **before** the registry call, not after. Removing a provider
-        hands it to QGIS, which destroys it, so the attribute must not keep a stale wrapper; and
-        should the call ever fail, clearing first means a retry cannot raise on the same dead
-        object a second time.
+        :attr:`provider` is cleared **before** the registry call, not after: removing a provider
+        hands it to QGIS, which destroys it, so the attribute must not keep a wrapper around a
+        dead object, and a failed call cannot leave one behind either.
         """
         provider, self.provider = self.provider, None
         if provider is not None:
@@ -240,10 +243,10 @@ class PyramidsPlugin:
           :meth:`_init_gui`, which registers the provider and then offers to install pyramids.
         - **``initProcessing``** — used headlessly for plugins that declare
           ``hasProcessingProvider=yes`` (``qgis.utils.startProcessingPlugin``), i.e.
-          ``qgis_process`` and QGIS Server. Resolves to :meth:`init_processing`, which only
-          registers the provider: there is no GUI to show an install dialog in. **This hook is
-          mandatory** — QGIS unloads the plugin outright when it is missing ("plugin has no
-          initProcessing() method"), which left the algorithms unavailable to ``qgis_process``.
+          ``qgis_process``. Resolves to :meth:`init_processing`, which only registers the
+          provider: there is no GUI to show an install dialog in. **This hook is mandatory** —
+          QGIS unloads the plugin outright when it is missing ("plugin has no initProcessing()
+          method"), which left the algorithms unavailable to ``qgis_process``.
 
         Resolving both on demand keeps the QGIS-mandated camelCase names working without declaring
         camelCase methods. ``__getattr__`` only runs for attributes normal lookup does not find, so
