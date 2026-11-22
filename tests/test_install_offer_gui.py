@@ -10,7 +10,7 @@ and clicks a button, so ``exec()`` returns normally. That needs no extra test de
 session ``QgsApplication`` the suite already builds and the ``QT_QPA_PLATFORM=offscreen`` platform
 ``conftest`` already sets, so these run headless on both Qt5 and Qt6.
 
-Four details are load-bearing, each of them learned by running it:
+Five details are load-bearing, each of them learned by running it:
 
 - The driver **polls** rather than scheduling one handler per dialog at a fixed offset. Accepting
   the offer opens a **second** modal — the outcome dialog — which does not exist until the first is
@@ -26,6 +26,12 @@ Four details are load-bearing, each of them learned by running it:
 - **Nothing may escape a Qt timer slot.** An exception there does not fail a test, it aborts the
   interpreter — observed as exit ``0xC0000409``, with no traceback and no pytest summary. Every tick
   is wrapped, and any dialog the driver cannot answer is force-closed so ``exec()`` always returns.
+- ``QApplication.activeModalWidget()`` can be ``None`` while a modal really is open, so
+  :func:`_open_modal` falls back to scanning ``topLevelWidgets()``. This matters more than it looks:
+  a driver that gives up *without closing* the dialog leaves ``exec()`` spinning, so the test body
+  is never reached, nothing is reported, and the CI job runs to its own timeout. For the same reason
+  :meth:`DialogDriver._force_close` walks the widget list itself instead of reusing that lookup —
+  the last resort must not depend on the thing that failed.
 
 :attr:`DialogDriver.ticks` and :attr:`DialogDriver.pending` exist so a test can prove the driver was
 alive: asserting only "no dialog appeared" would pass just as well against a driver that never ran.
