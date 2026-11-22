@@ -48,7 +48,9 @@ library directly. Run at least one of each path, and at least one per group:
       start; **Don't ask again** does not. A failed install should show the manual `pip` command.
 - [ ] **Error surfacing** — a bad CRS / missing file should come back as a clean
       `QgsProcessingException` in the Processing log, not a raw traceback.
-- [ ] **Headless (`qgis_process`)** — `qgis_process plugins` must list `* pyramids_qgis` (the `*`
+- [ ] **Headless (`qgis_process`)** — enable it in that profile first
+      (`qgis_process plugins enable pyramids_qgis`), or it reports no algorithms for the ordinary
+      reason that it is switched off. Then `qgis_process plugins` must list `* pyramids_qgis` (the `*`
       means it loaded as a Processing provider) and `qgis_process list` must show the `pyramids:`
       algorithms; then run one to an output file. This path is separate from the GUI: QGIS starts
       the plugin through `initProcessing` rather than `initGui`, so a missing hook shows up here and

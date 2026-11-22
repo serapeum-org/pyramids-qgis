@@ -9,13 +9,20 @@ schedules the ``pyramids-core`` install offer — headlessly there is no window 
 
 from __future__ import annotations
 
+import configparser
+from pathlib import Path
+
 import pytest
 from qgis.core import QgsApplication, QgsMessageLog
 from qgis.PyQt import QtCore
 
 import pyramids_qgis
+import pyramids_qgis.plugin as plugin_module
 from pyramids_qgis.plugin import PyramidsPlugin
 from pyramids_qgis.provider import PyramidsProvider
+
+#: The installed plugin package, for the metadata half of the headless contract.
+_PACKAGE_DIR = Path(__file__).resolve().parents[1] / "src" / "pyramids_qgis"
 
 
 def _provider_is_registered() -> bool:
@@ -64,9 +71,9 @@ def recording_timer(monkeypatch):
             cls.calls.append((msec, callback))
 
     monkeypatch.setattr(QtCore, "QTimer", RecordingTimer)
-    assert QtCore.QTimer is RecordingTimer, (
-        "the patch target drifted: _init_gui imports QTimer from somewhere else now, so a test "
-        "asserting that nothing was scheduled would pass vacuously"
+    assert "QTimer" not in vars(plugin_module), (
+        "pyramids_qgis.plugin now holds its own QTimer reference, so patching qgis.PyQt.QtCore no "
+        "longer reaches _init_gui and any 'nothing was scheduled' assertion would pass vacuously"
     )
     return RecordingTimer
 
@@ -107,6 +114,21 @@ def test_both_start_hooks_exist_for_a_processing_provider_plugin():
     )
 
 
+def test_the_metadata_flag_and_the_headless_hook_agree():
+    """The declared flag and the hook it obliges must travel together.
+
+    ``hasProcessingProvider=yes`` makes QGIS start this plugin through ``startProcessingPlugin``,
+    which unloads any plugin without ``initProcessing()``. Removing either one alone is the bug
+    this suite exists to prevent, so both are asserted in one place.
+    """
+    parser = configparser.ConfigParser()
+    parser.read(_PACKAGE_DIR / "metadata.txt", encoding="utf-8")
+    assert parser["general"]["hasProcessingProvider"] == "yes"
+    assert hasattr(PyramidsPlugin(None), "initProcessing"), (
+        "metadata declares hasProcessingProvider=yes, so the plugin must expose initProcessing()"
+    )
+
+
 def test_the_qgis_hooks_are_visible_to_dir():
     """Both hooks appear in `dir()`, so they are discoverable and not just reachable."""
     plugin = PyramidsPlugin(object())
@@ -115,22 +137,44 @@ def test_the_qgis_hooks_are_visible_to_dir():
     assert "initProcessing" in listed, "initProcessing is reachable but invisible to introspection"
 
 
+def test_unload_clears_a_registration_it_did_not_record(clean_registry):
+    """A start that found the id taken records nothing, yet unload must still clear it.
+
+    This is the orphan case: removal is by id, so the live registration cannot outlive the plugin
+    QGIS holds even though that plugin never owned it.
+    """
+    owner = PyramidsPlugin(None)
+    owner.init_processing()
+    stranger = PyramidsPlugin(None)
+    stranger.init_processing()
+    assert stranger.provider is None, "the second start should record no ownership"
+    stranger.unload()
+    assert not _provider_is_registered(), "unload left a registration nothing else can reach"
+    owner.provider = None  # the registry already destroyed it; do not re-remove by object
+
+
+def test_dir_keeps_the_real_attributes(clean_registry):
+    """`__dir__` adds the hooks without dropping what `super().__dir__()` reports."""
+    plugin = PyramidsPlugin(object())
+    listed = dir(plugin)
+    for expected in ("iface", "provider", "unload", "init_processing", "_init_gui"):
+        assert expected in listed, f"__dir__ dropped the real attribute {expected!r}"
+    assert len(listed) == len(set(listed)), "__dir__ reported duplicates"
+
+
+def test_a_hook_pointing_at_a_missing_method_blames_the_hook(monkeypatch):
+    """An unresolvable hook target reports the hook QGIS asked for, not the private target."""
+    monkeypatch.setitem(PyramidsPlugin._QGIS_HOOKS, "initGui", "_gone")
+    plugin = PyramidsPlugin(object())
+    with pytest.raises(AttributeError, match="initGui"):
+        _ = plugin.initGui
+
+
 def test_unknown_instance_attribute_raises():
     """A non-existent instance attribute raises AttributeError."""
     plugin = PyramidsPlugin(object())
     with pytest.raises(AttributeError):
         _ = plugin.does_not_exist
-
-
-def test_initgui_hook_registers_the_provider(clean_registry, recording_timer):
-    """Called under the QGIS name, the GUI hook registers the provider and defers the offer."""
-    plugin = PyramidsPlugin(object())
-    plugin.initGui()
-    try:
-        assert _provider_is_registered(), "the initGui hook did not register the provider"
-        assert len(recording_timer.calls) == 1
-    finally:
-        plugin.unload()
 
 
 def test_headless_start_works_without_an_iface(clean_registry):
@@ -144,16 +188,22 @@ def test_headless_start_works_without_an_iface(clean_registry):
         plugin.unload()
 
 
-def test_second_start_does_not_dangle_the_provider(clean_registry):
-    """A duplicate start is a no-op: addProvider would destroy the second provider."""
+def test_second_start_records_no_provider(clean_registry):
+    """A duplicate start records nothing, so no wrapper can dangle over a destroyed provider.
+
+    It deliberately does **not** assert that the second plugin's ``unload`` leaves the first
+    registration alone: QGIS keys ``qgis.utils.plugins`` by package name and ``_startPlugin``
+    returns early while the package is in ``active_plugins``, so two live instances are not a state
+    QGIS produces. Treating the surviving registration as reachable would instead make it
+    permanently unremovable — see :meth:`PyramidsPlugin.unload` and the orphan test below.
+    """
     first = PyramidsPlugin(None)
-    first.init_processing()
     try:
+        first.init_processing()
         second = PyramidsPlugin(None)
         second.init_processing()
         assert second.provider is None, "the second start kept a provider the registry destroyed"
-        second.unload()
-        assert _provider_is_registered(), "unloading the second plugin dropped the registration"
+        assert _provider_is_registered(), "the first registration should still be in place"
     finally:
         first.unload()
     assert not _provider_is_registered()
@@ -209,9 +259,12 @@ def test_initprocessing_does_not_schedule_the_install_offer(clean_registry, reco
 
 
 def test_init_gui_registers_the_provider_and_defers_the_offer(clean_registry, recording_timer):
-    """The GUI hook registers the provider and defers the offer with a 0 ms timer."""
+    """The GUI hook registers the provider and defers the offer with a 0 ms timer.
+
+    Driven through the public ``initGui`` name QGIS actually calls, not the private target.
+    """
     plugin = PyramidsPlugin(object())
-    plugin._init_gui()
+    plugin.initGui()
     try:
         assert _provider_is_registered(), "_init_gui did not register the provider"
         assert len(recording_timer.calls) == 1, (

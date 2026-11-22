@@ -36,22 +36,18 @@ def test_plugin_name_slugs_to_the_package_folder():
 
 
 def test_metadata_declares_a_processing_provider():
-    """``hasProcessingProvider=yes`` is half the headless contract; ``initProcessing`` is the other.
+    """``hasProcessingProvider=yes`` is what routes a headless start through ``initProcessing``.
 
-    This flag is what makes QGIS start the plugin through ``qgis.utils.startProcessingPlugin``,
-    which requires an ``initProcessing()`` method and unloads the plugin when it is missing. Drop
-    the flag and the plugin stops being a Processing provider headlessly; drop the method and QGIS
-    refuses to start it. Both are pinned so neither can be removed on its own.
+    It makes QGIS start the plugin via ``qgis.utils.startProcessingPlugin``, which requires an
+    ``initProcessing()`` method and unloads the plugin when it is missing. Drop this flag and the
+    plugin stops being a Processing provider headlessly. The matching half — that the method
+    exists — is asserted next to the plugin tests, in
+    ``test_plugin.py::test_the_metadata_flag_and_the_headless_hook_agree``, so this module stays a
+    metadata/layout check that needs no PyQGIS.
     """
     parser = configparser.ConfigParser()
     parser.read(_PACKAGE_DIR / "metadata.txt", encoding="utf-8")
     assert parser["general"]["hasProcessingProvider"] == "yes"
-
-    from pyramids_qgis.plugin import PyramidsPlugin
-
-    assert hasattr(PyramidsPlugin(None), "initProcessing"), (
-        "metadata declares hasProcessingProvider=yes, so the plugin must expose initProcessing()"
-    )
 
 
 def test_plugin_folder_does_not_collide_with_the_pyramids_library():

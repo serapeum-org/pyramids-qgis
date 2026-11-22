@@ -2,8 +2,9 @@
 
 A QGIS plugin that exposes the [pyramids](https://github.com/serapeum-org/pyramids) GIS toolkit
 (`pyramids-core`) as a **QGIS Processing provider**. The algorithms appear in the Processing Toolbox
-under **Pyramids**, so they work in the toolbox, the graphical modeler, batch mode, and the Python
-`processing.run(...)` API — the same as any native QGIS algorithm.
+under **Pyramids**, so they work in the toolbox, the graphical modeler, batch mode, the Python
+`processing.run(...)` API, and the `qgis_process` command line — the same as any native QGIS
+algorithm.
 
 !!! warning "Status: experimental"
     First release ships file-in / file-out raster, conversion, mesh, and Earth-observation

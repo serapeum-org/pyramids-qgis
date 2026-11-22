@@ -38,7 +38,10 @@ class PyramidsPlugin:
     #: ``hasProcessingProvider`` plugin. :meth:`__getattr__` resolves from this table and
     #: :meth:`__dir__` lists it, but an entry alone proves nothing: QGIS only calls a hook it has
     #: a reason to call, which for ``initProcessing`` is ``hasProcessingProvider=yes`` in
-    #: ``metadata.txt``. A test pins the pair (``test_metadata_declares_a_processing_provider``).
+    #: ``metadata.txt``; ``test_the_metadata_flag_and_the_headless_hook_agree`` pins that pair. The
+    #: targets are deliberately asymmetric: ``init_processing`` is public because :meth:`_init_gui`
+    #: and the tests call it directly, while ``_init_gui`` is private because nothing but QGIS
+    #: starts the GUI path.
     _QGIS_HOOKS: dict[str, str] = {"initGui": "_init_gui", "initProcessing": "init_processing"}
 
     def __init__(self, iface):
@@ -256,23 +259,32 @@ class PyramidsPlugin:
     def unload(self) -> None:
         """Remove the provider when the plugin is disabled or QGIS shuts down.
 
-        Removal is **by id, not by object**, and runs whether or not this instance recorded a
-        provider. Both details matter:
+        Teardown happens in two passes, because one is not enough:
 
-        - Passing the wrapper means a provider destroyed by anyone else — another instance, a test
-          teardown, QGIS's own shutdown ordering — makes this raise ``RuntimeError: wrapped C/C++
-          object ... has been deleted``. QGIS catches that in ``unloadPlugin``, shows an exception
-          dialog and returns early, so it never reaches ``del plugins[...]`` or
-          ``active_plugins.remove(...)`` and the plugin stays "active" with stale modules loaded.
-        - Skipping the call when :attr:`provider` is ``None`` would strand a live registration
-          whenever :meth:`init_processing` found the id already taken and recorded nothing: that
-          registration is reachable by id but by no object QGIS still holds.
+        1. **By object**, when this instance recorded a provider — the normal case, and the only
+           form that reliably removes a provider this plugin registered. It is skipped when the
+           C++ object has already been destroyed by someone else (checked with ``sip.isdeleted``);
+           passing a dead wrapper raises ``RuntimeError: wrapped C/C++ object ... has been
+           deleted``, QGIS catches that in ``unloadPlugin``, shows a dialog and returns early, and
+           then never reaches ``del plugins[...]`` or ``active_plugins.remove(...)`` — leaving the
+           plugin "active" with stale modules loaded.
+        2. **By id**, if anything is still registered afterwards. This sweeps up a registration
+           this instance never recorded, which happens when :meth:`init_processing` found the id
+           already taken. QGIS keys ``qgis.utils.plugins`` by package name and refuses to start a
+           second instance while one is active, so such a registration belongs to no plugin object
+           QGIS can still reach: clearing it is the only way it can ever go away.
 
-        ``removeProvider`` with an id is a no-op returning ``False`` when nothing is registered, so
-        the unconditional call is safe for a plugin QGIS only ever constructed.
+        Both passes are conditional, so a plugin QGIS merely constructed unloads without touching
+        the registry.
         """
-        self.provider = None
-        QgsApplication.processingRegistry().removeProvider(PyramidsProvider.PROVIDER_ID)
+        from qgis.PyQt import sip
+
+        provider, self.provider = self.provider, None
+        registry = QgsApplication.processingRegistry()
+        if provider is not None and not sip.isdeleted(provider):
+            registry.removeProvider(provider)
+        if registry.providerById(PyramidsProvider.PROVIDER_ID) is not None:
+            registry.removeProvider(PyramidsProvider.PROVIDER_ID)
 
     def __getattr__(self, name: str):
         """Expose the QGIS-required camelCase lifecycle hooks dynamically.
