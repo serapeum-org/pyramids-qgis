@@ -18,10 +18,23 @@ Install the plugin from the QGIS Plugin Manager — see [Installation](installat
 Open the toolbox with **Processing → Toolbox** (or `Ctrl+Alt+T`), then expand the **Pyramids** provider. The
 algorithms are grouped by theme:
 
-- **Raster** — reproject (warp), clip, raster calculator, merge, edit info, and more.
-- **Conversion** — convert format, rasterize, polygonize, create Cloud Optimized GeoTIFF.
-- **Mesh** — UGRID/mesh conversions.
-- **Earth Observation** — contrast stretch, tasseled cap.
+- **Raster** — reproject (warp), clip, raster calculator, merge, edit info, convert format, rasterize,
+  polygonize, and much more (the largest group).
+- **Vector** — geometry operations (buffer, simplify, make valid, rotate, scale), overlays (clip, union,
+  intersection, difference, dissolve, spatial joins) and tessellation (fishnet, Voronoi, Delaunay, quadtree, H3).
+- **Collection** — whole-stack raster operations: align to a reference grid, crop, merge (mosaic), reduce over
+  time, reproject, resample.
+- **NetCDF** — crop by bounding box, extract a variable to raster, extract a group, select a time step.
+- **Mesh** — convert mesh format, mesh to vector.
+- **Earth Observation** — contrast stretch, tasseled cap transform.
+- **Fetch** — pull a window or features from OGC services: WMS, WMTS, WFS, WCS, OGC API Coverages.
+- **STAC** — download STAC assets.
+- **Process** — apply a processing tool, run a processing pipeline.
+- **Cloud Optimized GeoTIFF** — create a COG.
+
+Every algorithm ships its own help text, shown in the right-hand pane of its dialog — that is the authoritative
+description of its parameters. The [Algorithms reference](algorithms.md) covers the raster, mesh and
+Earth-observation algorithms in depth, but has not yet caught up with the newer groups.
 
 If the **Pyramids** group is not there, the plugin did not load — recheck the install and that `pyramids-core`
 imports in the QGIS Python console (`import pyramids`).
@@ -105,7 +118,9 @@ Because these are standard Processing algorithms, they also run:
   requirement for the EO group only). Install it into the QGIS interpreter.
 - **A non-UGRID mesh format fails** — mesh formats beyond UGRID NetCDF need the optional **`pyramids-mesh`**; the
   plugin warns rather than hard-fails when it is absent.
-- **An in-memory layer is rejected** — save it to a file first (see *The file-in / file-out model*).
+- **A warning that the input "is not a local file"** — the plugin warns rather than refusing, then the run fails
+  downstream. Usually it means the input is an in-memory/scratch or database layer: save it to a file first (see
+  *The file-in / file-out model*). Remote and `/vsi…` paths are fine and warn harmlessly.
 
 ## Where to go next
 
