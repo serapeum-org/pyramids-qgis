@@ -44,15 +44,25 @@ class PyramidsPlugin:
         self.provider: PyramidsProvider | None = None
 
     def init_processing(self) -> None:
-        """Create the provider and add it to the Processing registry.
+        """Create the provider and add it to the Processing registry, at most once.
 
         Reached directly as ``initProcessing`` (via :meth:`__getattr__`) when QGIS starts the plugin
-        headlessly — ``qgis_process`` and QGIS Server — and also called first by
-        :meth:`_init_gui` on the desktop path. It does no GUI work, so it is safe with no
-        main window.
+        headlessly — ``qgis_process``, for instance — and also called first by :meth:`_init_gui` on
+        the desktop path. It does no GUI work, so it is safe with no main window.
+
+        Registering is guarded because ``QgsProcessingRegistry.addProvider`` takes ownership and
+        **destroys** a provider whose id is already registered, returning ``False``. Keeping that
+        destroyed provider in :attr:`provider` would leave a dangling wrapper whose every later use
+        raises ``RuntimeError: wrapped C/C++ object ... has been deleted`` — including
+        :meth:`unload`, which could then never finish. So a provider is only remembered once the
+        registry has actually accepted it, and a second start is a no-op rather than a corruption.
         """
-        self.provider = PyramidsProvider()
-        QgsApplication.processingRegistry().addProvider(self.provider)
+        registry = QgsApplication.processingRegistry()
+        provider = PyramidsProvider()
+        if registry.providerById(provider.id()) is not None:
+            return  # already started; the first start owns the registration
+        if registry.addProvider(provider):
+            self.provider = provider
 
     def _init_gui(self) -> None:
         """Enable the plugin: register the Processing provider, then offer to install pyramids.
@@ -209,13 +219,16 @@ class PyramidsPlugin:
         """Remove the provider when the plugin is disabled or QGIS shuts down.
 
         Serves both start paths, and is a no-op when no start hook ever ran: without the guard,
-        unloading a plugin QGIS had only constructed would pass ``None`` to the registry. Removing
-        the provider hands it back to QGIS, which destroys it, so ``provider`` is cleared to avoid
-        holding a stale wrapper.
+        unloading a plugin QGIS had only constructed would pass ``None`` to the registry.
+
+        :attr:`provider` is cleared **before** the registry call, not after. Removing a provider
+        hands it to QGIS, which destroys it, so the attribute must not keep a stale wrapper; and
+        should the call ever fail, clearing first means a retry cannot raise on the same dead
+        object a second time.
         """
-        if self.provider is not None:
-            QgsApplication.processingRegistry().removeProvider(self.provider)
-            self.provider = None
+        provider, self.provider = self.provider, None
+        if provider is not None:
+            QgsApplication.processingRegistry().removeProvider(provider)
 
     def __getattr__(self, name: str):
         """Expose the QGIS-required camelCase lifecycle hooks dynamically.
