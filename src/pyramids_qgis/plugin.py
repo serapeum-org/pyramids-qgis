@@ -2,9 +2,12 @@
 
 This plugin is Processing-only (``hasProcessingProvider=yes`` in ``metadata.txt``), so enabling it
 does nothing but add the provider to the Processing registry, and ``unload`` removes it. There is no
-toolbar or menu action to manage. QGIS's ``initGui`` lifecycle hook is implemented as the snake_case
-:meth:`PyramidsPlugin._init_gui` and exposed under the ``initGui`` name via ``__getattr__``, so the
-method QGIS calls exists without a camelCase declaration.
+toolbar or menu action to manage. QGIS's camelCase lifecycle hooks are implemented as snake_case
+methods and exposed under the names QGIS calls via ``__getattr__``: ``initGui`` (the desktop GUI
+path) resolves to :meth:`PyramidsPlugin._init_gui`, and ``initProcessing`` (the headless path used
+by ``qgis_process`` and QGIS Server for ``hasProcessingProvider`` plugins) resolves to
+:meth:`PyramidsPlugin.init_processing`. Both must exist: QGIS unloads the plugin if the hook for the
+way it was started is absent.
 """
 
 from __future__ import annotations
@@ -30,7 +33,13 @@ class PyramidsPlugin:
         self.provider: PyramidsProvider | None = None
 
     def init_processing(self) -> None:
-        """Create the provider and add it to the Processing registry."""
+        """Create the provider and add it to the Processing registry.
+
+        Reached directly as ``initProcessing`` (via :meth:`__getattr__`) when QGIS starts the plugin
+        headlessly — ``qgis_process`` and QGIS Server — and also called first by
+        :meth:`_init_gui` on the desktop path. It does no GUI work, so it is safe with no
+        main window.
+        """
         self.provider = PyramidsProvider()
         QgsApplication.processingRegistry().addProvider(self.provider)
 
@@ -191,22 +200,36 @@ class PyramidsPlugin:
             self.provider = None
 
     def __getattr__(self, name: str):
-        """Expose the QGIS-required ``initGui`` lifecycle method dynamically.
+        """Expose the QGIS-required camelCase lifecycle hooks dynamically.
 
-        QGIS enables the plugin by calling ``initGui``; resolve that to the snake_case
-        :meth:`_init_gui` on demand so the method QGIS needs exists without declaring a camelCase
-        method. ``__getattr__`` only runs for attributes normal lookup does not find, so every real
-        attribute (``iface``, ``provider``, ``_init_gui``, ``unload``, …) is unaffected.
+        QGIS starts this plugin through one of two entry points, and which one depends on how QGIS
+        is running:
+
+        - **``initGui``** — used by the desktop GUI (``qgis.utils.startPlugin``). Resolves to
+          :meth:`_init_gui`, which registers the provider and then offers to install pyramids.
+        - **``initProcessing``** — used headlessly for plugins that declare
+          ``hasProcessingProvider=yes`` (``qgis.utils.startProcessingPlugin``), i.e.
+          ``qgis_process`` and QGIS Server. Resolves to :meth:`init_processing`, which only
+          registers the provider: there is no GUI to show an install dialog in. **This hook is
+          mandatory** — QGIS unloads the plugin outright when it is missing ("plugin has no
+          initProcessing() method"), which left the algorithms unavailable to ``qgis_process``.
+
+        Resolving both on demand keeps the QGIS-mandated camelCase names working without declaring
+        camelCase methods. ``__getattr__`` only runs for attributes normal lookup does not find, so
+        every real attribute (``iface``, ``provider``, ``_init_gui``, ``unload``, …) is unaffected.
 
         Args:
             name: The attribute being looked up on the instance.
 
         Returns:
-            The bound ``_init_gui`` method when ``name`` is ``"initGui"``.
+            The bound :meth:`_init_gui` for ``"initGui"``, or :meth:`init_processing` for
+            ``"initProcessing"``.
 
         Raises:
             AttributeError: For any other attribute name.
         """
         if name == "initGui":
             return self._init_gui
+        if name == "initProcessing":
+            return self.init_processing
         raise AttributeError(f"{type(self).__name__!r} object has no attribute {name!r}")
