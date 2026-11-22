@@ -5,8 +5,8 @@ A QGIS plugin that exposes the [pyramids](https://github.com/serapeum-org/pyrami
 Toolbox under **Pyramids**, so they work in the toolbox, the graphical modeler, batch mode, and
 the Python `processing.run(...)` API — the same as any native QGIS algorithm.
 
-> Status: **experimental**, v0.1.0. First release ships file-in / file-out raster & vector
-> algorithms that mirror the `pyramids` command-line interface.
+> Status: **experimental**, v0.2.0. Installable from the official QGIS plugin repository (tick *Show also
+> experimental plugins*). File-in / file-out algorithms that mirror the `pyramids` command-line interface.
 
 ## How it works
 
@@ -19,62 +19,55 @@ Work is passed by **file path**, never by in-memory GDAL objects: QGIS hands pyr
 path, pyramids writes an output file, and QGIS loads it as a new layer. This deliberately avoids
 sharing live `gdal.Dataset` handles across two GDAL builds in one process.
 
-## Algorithms in v0.1.0
+## Algorithms
 
-| Algorithm                      | pyramids command | Notes                                |
-|--------------------------------|------------------|--------------------------------------|
-| Reproject raster (warp)        | `warp`           | target CRS + resampling              |
-| Clip raster                    | `clip`           | by polygon mask or extent            |
-| Assign CRS / NoData (edit info) | `edit-info`     | stamp CRS/nodata, no reprojection    |
-| Merge rasters (mosaic)         | `merge`          | two or more inputs                   |
-| Raster calculator              | `calc`           | expression over A, B, C … (safe AST) |
-| Convert raster format          | `convert`        | driver from extension or explicit    |
-| Rasterize (vector → raster)    | `rasterize`      | cell size or template grid           |
-| Polygonize raster              | `shapes`         | one feature per cell, GeoJSON out    |
-| Create Cloud Optimized GeoTIFF | `cog create`     | validated COG                        |
+**92 algorithms** in ten Processing-Toolbox groups under **Pyramids**. The
+[Algorithms reference](https://serapeum-org.github.io/pyramids-qgis/algorithms/) lists every one with its
+Processing id and the pyramids command behind it.
 
-### Mesh algorithms
+| Group | Algorithms | Covers |
+|---|---|---|
+| Raster | 33 | warp, crop, calc, merge, edit-info, convert, rasterize, polygonize, contour, proximity, zonal stats, … |
+| Vector | 36 | geometry ops, overlays (clip, union, intersection, dissolve, spatial joins), tessellation (fishnet, Voronoi, Delaunay, quadtree, H3) |
+| Collection | 6 | whole-stack raster ops: align, crop, merge, reduce over time, reproject, resample |
+| Fetch | 5 | WMS, WMTS, WFS, WCS, OGC API Coverages |
+| NetCDF | 4 | crop, extract a variable, extract a group, select a time step |
+| Earth Observation | 2 | contrast stretch, tasseled cap — needs `pyramids-eo` |
+| Mesh | 2 | convert mesh format, mesh to vector — other formats need `pyramids-mesh` |
+| Process | 2 | apply a processing tool, run a pipeline |
+| Cloud Optimized GeoTIFF | 1 | create a validated COG |
+| STAC | 1 | download STAC assets |
 
-These wrap pyramids' `MeshDataset` (with [pyramids-mesh](https://github.com/serapeum-org/pyramids-mesh)
-providing the format drivers) rather than the CLI, since pyramids-mesh has no CLI. UGRID NetCDF is
-built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need pyramids-mesh installed.
+Note that the toolbox group is **not** the source subpackage: `conversion/`'s convert, rasterize and polygonize
+appear under **Raster**, while its COG algorithm has its own group. There is no "Conversion" group.
 
-| Algorithm           | pyramids API                      | Notes                                   |
-|---------------------|-----------------------------------|-----------------------------------------|
-| Convert mesh format | `MeshDataset.read_file/to_file`   | any format → UGRID NetCDF or a driver   |
-| Mesh to vector      | `MeshDataset.to_geodataframe`     | faces/nodes/edges → GeoJSON             |
-
-### Earth-observation algorithms
-
-These wrap [pyramids-eo](https://github.com/serapeum-org/pyramids-eo) (the EO tier on top of
-pyramids) directly, since it has no CLI. They need `pyramids-eo` installed.
-
-| Algorithm             | pyramids-eo API         | Notes                                        |
-|-----------------------|-------------------------|----------------------------------------------|
-| Contrast stretch (EO) | `enhance.stretch`       | linear/crude/cira/histogram + gamma, to dtype |
-| Tasseled cap transform| `spectral.tasseled_cap` | Landsat 5/7/8 reflectance → brightness/greenness/wetness |
-
-More of the pyramids surface (terrain: slope/aspect/hillshade; sieve/fill/proximity; vector
-H3 / voronoi / quadtree; STAC; datacube reductions) is planned — see **Roadmap**.
+**Two wiring paths.** 88 of the 92 are CLI-backed as described above. The Mesh and Earth-observation groups call
+their library directly (`MeshDataset`, `pyramids_eo`), because neither backing package ships a CLI.
 
 ## Requirements
 
-- **QGIS 3.22+** (works through 4.x; the plugin uses the `qgis.PyQt` shim for Qt5/Qt6).
-- **`pyramids-core` importable from QGIS's own Python**, bound to **QGIS's GDAL**.
+- **QGIS 3.40+** (through 4.99 — see `qgisMinimumVersion` in `metadata.txt`; the plugin uses the `qgis.PyQt`
+  shim for Qt5/Qt6).
+- **`pyramids-core` >= 0.81.0 importable from QGIS's own Python**, bound to **QGIS's GDAL**.
 
-Install pyramids into the interpreter QGIS runs — **not** a platform wheel that vendors its own
-GDAL (those inject a private `osgeo` and force `GDAL_DRIVER_PATH`, which conflicts with QGIS's
-GDAL in-process). The plugin detects a vendored build and warns.
+**You usually do not have to do this by hand.** The plugin checks on load and offers to install — or upgrade —
+`pyramids-core` into the interpreter QGIS runs; accept the prompt, let it finish, then restart QGIS. 0.81.0 is the
+floor because that release honours the `PYRAMIDS_MANAGE_GDAL_ENV` opt-out the plugin sets, which stops pyramids
+rewriting QGIS's own global GDAL environment.
+
+To install it yourself instead, target the interpreter QGIS runs — and **not** a platform wheel that vendors its
+own GDAL (those inject a private `osgeo` and force `GDAL_DRIVER_PATH`, which conflicts with QGIS's GDAL
+in-process). The plugin detects a vendored build and warns.
 
 ```bash
 # Windows (OSGeo4W shell):
-python -m pip install pyramids-core
+python -m pip install "pyramids-core>=0.81.0"
 
-# conda-based QGIS:
-conda install -c conda-forge pyramids
+# conda-based QGIS (conda-forge names the package `pyramids`):
+conda install -c conda-forge "pyramids>=0.81"
 
 # Linux / macOS:
-<qgis-python> -m pip install pyramids-core
+<qgis-python> -m pip install "pyramids-core>=0.81.0"
 ```
 
 **Optional — mesh formats.** The two mesh algorithms work on UGRID NetCDF with `pyramids-core`
@@ -88,9 +81,15 @@ clear message when it is absent.
 
 ## Install the plugin
 
-Copy (or symlink) the `src/pyramids_qgis/` package into your QGIS profile's plugin directory (as
-`pyramids_qgis`), then enable **Pyramids QGIS** in *Plugins → Manage and Install Plugins*. The deploy
-helper does this:
+From inside QGIS:
+
+1. **Plugins → Manage and Install Plugins…**
+2. On the **Settings** tab, tick **"Show also experimental plugins"** — the plugin is published as experimental,
+   so it is hidden otherwise.
+3. On the **All** tab, search for **Pyramids QGIS** and click **Install Plugin**.
+
+For development, deploy the working tree instead: copy (or symlink) `src/pyramids_qgis/` into your QGIS profile's
+plugin directory (as `pyramids_qgis`) and enable **Pyramids QGIS**. The deploy helper does this:
 
 ```bash
 python scripts/deploy.py            # copy into the default profile
@@ -148,8 +147,14 @@ src/pyramids_qgis/          the plugin package (this is what gets deployed)
   algorithms/
     base.py                 PyramidsAlgorithm base + CLI runner + CRS/path helpers
     __init__.py             the ALGORITHMS registry
-    raster/                 reproject, clip, merge, calc
-    conversion/             convert, rasterize, polygonize, cog
+    raster/                 33 algorithms: warp, crop, calc, merge, edit-info, contour, proximity, …
+    vector/                 36 algorithms: geometry ops, overlays, tessellation
+    collection/             6: whole-stack (datacube) operations
+    conversion/             convert, rasterize, polygonize (group Raster) + cog (its own group)
+    fetch/                  5: WMS / WMTS / WFS / WCS / OGC API Coverages
+    nc/                     4: NetCDF crop, extract variable/group, select time step
+    process/                2: apply a processing tool, run a pipeline
+    stac/                   1: download STAC assets
     mesh/                   pyramids-mesh: convert, to_vector
     eo/                     pyramids-eo: stretch, tasseled_cap
   resources/icon.png        Plugin Manager / plugins.qgis.org listing icon (metadata.txt)
@@ -159,11 +164,11 @@ scripts/deploy.py           copy/symlink the plugin into a QGIS profile
 
 ## Roadmap
 
-- Auto-generate algorithms from pyramids' `processing/schema.py` registry (slope, aspect,
-  hillshade, resample, sieve, fill, voronoi, quadtree, H3 …).
-- Vector-native outputs (GPKG) and multi-band / NetCDF subdataset handling.
-- STAC search/download and datacube temporal reductions.
-- An optional dock widget for interactive COG preview and STAC browsing.
+- **Terrain derivatives** — slope, aspect, hillshade and sieve have no algorithm yet.
+- **Vector-native outputs** — the provider pins vector destinations to GeoJSON
+  (`provider.py:supportedOutputVectorLayerExtensions`), so GPKG output is not available.
+- **An optional dock widget** for interactive COG preview and STAC browsing; the plugin is Processing-only today
+  and adds no toolbar, menu or panel.
 
 ## License
 

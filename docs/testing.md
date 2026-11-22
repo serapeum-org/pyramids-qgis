@@ -8,17 +8,24 @@ That still has to be done by hand, and it is the gate before a non-experimental 
 This page is that by-hand validation guide. Install the plugin first — see
 [Installation](installation.md).
 
-## What to run — cover both wiring paths and all four groups
+## What to run — cover both wiring paths and every group
 
-The raster / conversion algorithms call the pyramids CLI in-process; the mesh / EO ones call the
-library directly. Run at least one of each path:
+88 of the 92 algorithms call the pyramids CLI in-process; only the Mesh and Earth-observation groups call their
+library directly. Run at least one of each path, and at least one per group:
 
 - [ ] **Raster (CLI path):** Reproject (warp) a GeoTIFF to another CRS; confirm the output layer
       loads and looks right.
 - [ ] **Raster:** Clip (by mask and by extent), Merge, Raster calculator (e.g. NDVI over two
-      inputs), Assign CRS / NoData.
-- [ ] **Conversion:** Rasterize a vector, Polygonize a raster (GeoJSON output), Create COG, Convert
-      format.
+      inputs), Assign CRS / NoData — and the format-conversion ones that also live in this group:
+      Rasterize a vector, Polygonize a raster (GeoJSON output), Convert format.
+- [ ] **Cloud Optimized GeoTIFF:** Create COG, and confirm the result validates as a COG.
+- [ ] **Vector:** one of each kind — a geometry op (buffer / simplify), an overlay (clip or
+      intersection), and a tessellation (fishnet or Voronoi).
+- [ ] **Collection:** one whole-stack operation (align or reduce over time) on a small stack.
+- [ ] **NetCDF:** extract a variable to raster, and select a time step.
+- [ ] **Fetch:** pull a small window from a public WMS or WFS (needs network).
+- [ ] **STAC:** download an asset from a public catalogue (needs network).
+- [ ] **Process:** apply a processing tool, and run a short pipeline.
 - [ ] **Mesh (library path):** Convert a `.2dm` / Selafin mesh to UGRID NetCDF, and Mesh → vector
       (needs `pyramids-mesh`).
 - [ ] **EO (library path):** Contrast stretch, and Tasseled cap on a Landsat reflectance stack
@@ -34,6 +41,11 @@ library directly. Run at least one of each path:
 - [ ] **Dependency guards** — with `pyramids-mesh` / `pyramids-eo` absent, the mesh / EO algorithms
       should raise a clear "install ..." message; the vendored-GDAL warning should appear only for a
       vendored build.
+- [ ] **The `pyramids-core` install offer** — no automated test can reach it. With `pyramids-core`
+      absent (and again with a version below 0.81.0), starting QGIS should show the offer *after* the
+      main window appears, not block startup. Check all three buttons: **Yes** installs into the
+      interpreter the dialog names and then asks for a restart; **Not now** re-offers on the next
+      start; **Don't ask again** does not. A failed install should show the manual `pip` command.
 - [ ] **Error surfacing** — a bad CRS / missing file should come back as a clean
       `QgsProcessingException` in the Processing log, not a raw traceback.
 - [ ] **Qt5 / Qt6** — ideally smoke-test on a QGIS 3.x (Qt5) and a 4.x (Qt6) build, since the plugin

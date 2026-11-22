@@ -79,6 +79,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - Installation: installation.md
+      - Usage tutorial: usage.md
       - End-to-end testing: testing.md
   - Reference:
       - Algorithms: algorithms.md
