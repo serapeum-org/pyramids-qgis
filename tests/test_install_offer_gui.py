@@ -193,13 +193,21 @@ class DialogDriver:
         Rejecting only ``activeModalWidget()`` is not enough: it is ``None`` in exactly the case the
         rescue exists for, and skipping the close leaves ``exec()`` spinning until the CI job's own
         timeout kills the run with no output at all.
+
+        It walks ``topLevelWidgets()`` itself rather than going through :func:`_open_modal`, so the
+        last resort does not depend on the same lookup that may have failed.
         """
         for _ in range(5):
-            box = _open_modal()
-            if box is None:
+            open_dialogs = [
+                widget
+                for widget in QApplication.topLevelWidgets()
+                if isinstance(widget, QDialog) and widget.isVisible()
+            ]
+            if not open_dialogs:
                 return
-            box.reject()
-            box.close()
+            for dialog in open_dialogs:
+                dialog.reject()
+                dialog.close()
 
 
 @pytest.fixture
@@ -489,6 +497,28 @@ def test_the_driver_reports_a_button_it_cannot_find(
     assert driver.seen[0]["clicked"] is None, "nothing should have been clicked"
     assert installs == [], "rejecting the offer must not reach the installer"
     assert QgsSettings().value(INSTALL_OFFER_DISMISSED_KEY, "") == ""
+
+
+def test_a_modal_the_active_lookup_cannot_see_is_still_answered(driver, monkeypatch):
+    """A modal that ``activeModalWidget()`` reports as absent is still found and closed.
+
+    This is the one failure mode that cannot merely fail a test: if the driver gives up without
+    closing the dialog, ``exec()`` never returns, the test body is never reached, and the CI job
+    runs to its own timeout with no output at all. The top-level scan in :func:`_open_modal` is what
+    prevents it, so blinding the primary lookup is the regression test for it.
+    """
+    monkeypatch.setattr(QApplication, "activeModalWidget", staticmethod(lambda: None))
+    box = QMessageBox()
+    box.setWindowTitle("blinded modal")
+    box.setText("activeModalWidget() cannot see me")
+    box.addButton(QMessageBox.StandardButton.Yes)
+
+    driver.expect("Yes")
+    box.exec()
+
+    assert driver.titles == ["blinded modal"], "the fallback scan did not find the dialog"
+    assert driver.seen[0]["clicked"] == "Yes"
+    assert not box.isVisible(), "exec() only returns because the dialog was closed"
 
 
 def test_a_modal_that_is_not_a_message_box_is_closed_not_crashed_into(driver):
