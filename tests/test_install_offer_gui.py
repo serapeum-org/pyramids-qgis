@@ -170,6 +170,31 @@ def installs(monkeypatch):
 
 
 @pytest.fixture
+def becomes_installed(monkeypatch):
+    """Stub a successful install that actually makes ``pyramids-core`` importable afterwards.
+
+    The offer must first see pyramids as missing and the outcome dialog must then see it as
+    present, which is what a real successful install looks like. A flag flipped by the stubbed
+    installer models that, so the success branch of ``_report_install_result`` is reachable.
+
+    Returns:
+        list[dict]: The keyword arguments of each install call, for assertions.
+    """
+    calls: list[dict] = []
+    installed = {"yes": False}
+
+    def fake_install(**kwargs):
+        calls.append(kwargs)
+        installed["yes"] = True
+        return True, "stubbed installer: no pip ran"
+
+    monkeypatch.setattr(deps, "install_pyramids", fake_install)
+    monkeypatch.setattr(deps, "pyramids_installed", lambda: installed["yes"])
+    monkeypatch.setattr(deps, "pyramids_outdated", lambda: False)
+    return calls
+
+
+@pytest.fixture
 def missing_pyramids(monkeypatch):
     """Make the plugin see ``pyramids-core`` as absent, the state that offers a fresh install."""
     monkeypatch.setattr(deps, "pyramids_installed", lambda: False)
@@ -229,18 +254,23 @@ def test_a_recorded_decline_shows_no_dialog(driver, clean_dismissal, installs, m
 
 
 def test_accepting_runs_the_installer_and_reports_success(
-    driver, clean_dismissal, installs, missing_pyramids, monkeypatch
+    driver, clean_dismissal, becomes_installed, monkeypatch
 ):
-    """Yes installs, then a second dialog reports the result and the decline is cleared."""
+    """Yes installs, the real outcome dialog confirms it, and the decline is cleared.
+
+    The outcome dialog is the genuine one here, not a stub: it is the only path that returns
+    ``True`` and so the only one that makes the caller clear the recorded decline.
+    """
     QgsSettings().setValue(DISMISSED_KEY, "outdated")  # a decline recorded for the OTHER state
     driver.expect("Yes", "OK")
 
-    plugin = PyramidsPlugin(None)
-    monkeypatch.setattr(plugin, "_report_install_result", lambda *a, **k: True)
-    plugin._run_install_offer()
+    PyramidsPlugin(None)._run_install_offer()
 
     assert not driver.errors, driver.errors
-    assert installs == [{"upgrade": False}], f"installer calls were {installs}"
+    assert becomes_installed == [{"upgrade": False}], f"installer calls were {becomes_installed}"
+    assert len(driver.seen) == 2, f"expected the offer and an outcome dialog, got {driver.titles}"
+    outcome = driver.seen[1]
+    assert "Restart QGIS" in outcome["text"], f"outcome text was {outcome['text']!r}"
     assert QgsSettings().value(DISMISSED_KEY, "") == "", (
         "a successful install must clear the decline, including one recorded for the other state"
     )
@@ -287,3 +317,58 @@ def test_a_failed_install_reports_the_manual_command(
     assert "failed" in outcome["title"].lower()
     assert "pip install" in outcome["text"], "the outcome must name the manual command"
     assert QgsSettings().value(DISMISSED_KEY, "") == "", "a failed install must not be remembered"
+
+
+def test_an_incomplete_install_names_the_interpreter_it_targeted(
+    driver, clean_dismissal, missing_pyramids, monkeypatch
+):
+    """pip succeeding while pyramids stays unimportable is reported as incomplete, not success.
+
+    This is the "installed into the wrong interpreter" case: the message has to name the target so
+    the user can see which Python was used.
+    """
+    monkeypatch.setattr(deps, "install_pyramids", lambda **kw: (True, "Successfully installed"))
+    driver.expect("Yes", "OK")
+
+    PyramidsPlugin(None)._run_install_offer()
+
+    assert not driver.errors, driver.errors
+    assert len(driver.seen) == 2, f"expected an outcome dialog, got {driver.titles}"
+    outcome = driver.seen[1]
+    assert "incomplete" in outcome["title"].lower(), f"title was {outcome['title']!r}"
+    assert "not importable" in outcome["text"]
+    assert "pip install" in outcome["text"], "the user needs the manual command"
+    assert QgsSettings().value(DISMISSED_KEY, "") == "", "an incomplete install is not remembered"
+
+
+def test_the_outcome_dialog_shows_the_tail_of_the_pip_output(
+    driver, clean_dismissal, missing_pyramids, monkeypatch
+):
+    """A failure shows the end of pip's output, which is where its error actually is."""
+    noise = "\n".join(f"line {index}" for index in range(400))
+    monkeypatch.setattr(
+        deps, "install_pyramids", lambda **kw: (False, f"FIRST-LINE\n{noise}\nERROR: no such wheel")
+    )
+    driver.expect("Yes", "OK")
+
+    PyramidsPlugin(None)._run_install_offer()
+
+    assert not driver.errors, driver.errors
+    text = driver.seen[1]["text"]
+    assert "ERROR: no such wheel" in text, "the tail of the output must be shown"
+    assert "FIRST-LINE" not in text, "the output is truncated to its tail, so the head is dropped"
+
+
+def test_the_driver_reports_a_button_it_cannot_find(driver, clean_dismissal, missing_pyramids):
+    """The driver records a mismatched label and rejects the dialog instead of hanging.
+
+    Without this the suite could pass vacuously: a test whose label never matches would otherwise
+    sit on an open modal until the whole run timed out.
+    """
+    driver.expect("No Such Button")
+    PyramidsPlugin(None)._run_install_offer()
+
+    assert driver.errors, "a mismatched label must be reported"
+    assert "No Such Button" in driver.errors[0], f"errors were {driver.errors}"
+    assert len(driver.seen) == 1, "the dialog was still inspected before being rejected"
+    assert QgsSettings().value(DISMISSED_KEY, "") == "", "a rejected dialog records nothing"
