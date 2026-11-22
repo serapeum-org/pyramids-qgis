@@ -122,6 +122,11 @@ markers = [
     # these heavier tests but is NOT QGIS-free: every test module imports qgis.core, so the whole
     # suite requires a real QGIS env.
     "integration: exercises the plugin against a real QGIS install",
+    # Tests that drive real Qt dialogs (the pyramids-core install offer). They need the session
+    # QgsApplication and QT_QPA_PLATFORM=offscreen that conftest already provides, and no extra
+    # dependency: a zero-delay QTimer fires inside QMessageBox.exec()'s own event loop, where
+    # QApplication.activeModalWidget() is the dialog to click. Select with `-m gui`.
+    "gui: drives real Qt dialogs offscreen (the install offer)",
 ]
 
 [tool.pixi.workspace]
