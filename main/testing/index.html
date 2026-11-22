@@ -963,6 +963,13 @@ library directly. Run at least one of each path, and at least one per group:</p>
       start; <strong>Don't ask again</strong> does not. A failed install should show the manual <code>pip</code> command.</li>
 <li>[ ] <strong>Error surfacing</strong> — a bad CRS / missing file should come back as a clean
       <code>QgsProcessingException</code> in the Processing log, not a raw traceback.</li>
+<li>[ ] <strong>Headless (<code>qgis_process</code>)</strong> — enable it in that profile first
+      (<code>qgis_process plugins enable pyramids_qgis</code>), or it reports no algorithms for the ordinary
+      reason that it is switched off. Then <code>qgis_process plugins</code> must list <code>* pyramids_qgis</code> (the <code>*</code>
+      means it loaded as a Processing provider) and <code>qgis_process list</code> must show the <code>pyramids:</code>
+      algorithms; then run one to an output file. This path is separate from the GUI: QGIS starts
+      the plugin through <code>initProcessing</code> rather than <code>initGui</code>, so a missing hook shows up here and
+      nowhere else.</li>
 <li>[ ] <strong>Qt5 / Qt6</strong> — ideally smoke-test on a QGIS 3.x (Qt5) and a 4.x (Qt6) build, since the plugin
       uses the <code>qgis.PyQt</code> shim.</li>
 </ul>

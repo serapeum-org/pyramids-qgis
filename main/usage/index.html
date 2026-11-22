@@ -1030,7 +1030,7 @@
 <h1 id="usage-tutorial"><a class="toclink" href="#usage-tutorial">Usage tutorial</a><a class="headerlink" href="#usage-tutorial" title="Permanent link">#</a></h1>
 <p>Pyramids QGIS is a <strong>Processing provider</strong> — it adds algorithms, not a toolbar or a menu. Everything you run lives
 in the <strong>Processing Toolbox</strong>, so the algorithms work the same way as any native QGIS tool: in the toolbox, the
-graphical modeler, batch mode, and the Python <code>processing.run(...)</code> API.</p>
+graphical modeler, batch mode, the Python <code>processing.run(...)</code> API, and the <code>qgis_process</code> command line.</p>
 <p>This page walks through finding the algorithms and running a couple of them end to end. For the full catalogue of
 what each algorithm does, see the <a href="../algorithms/">Algorithms reference</a>.</p>
 <h2 id="before-you-start"><a class="toclink" href="#before-you-start">Before you start</a><a class="headerlink" href="#before-you-start" title="Permanent link">#</a></h2>
@@ -1095,29 +1095,38 @@ As…</strong>) and point the algorithm at the saved file.</p>
 <li><strong>Batch</strong> — right-click an algorithm → <strong>Execute as Batch Process…</strong> to run it over many inputs at once.</li>
 <li><strong>Graphical Modeler</strong> — drag a Pyramids algorithm into a model to chain it with other steps.</li>
 <li>
-<p><strong>Python console</strong> — call it by its provider-qualified id, <code>pyramids:&lt;name&gt;</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">processing</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Reproject to Web Mercator with bilinear resampling.</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">processing</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">"pyramids:warp"</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="p">{</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="s2">"INPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem.tif"</span><span class="p">,</span>  <span class="c1"># a file path or a loaded layer</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="s2">"CRS"</span><span class="p">:</span> <span class="s2">"EPSG:3857"</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="s2">"RESAMPLING"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># index into [nearest, bilinear, cubic, cubic_spline, lanczos, average, mode]</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="s2">"OUTPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem_3857.tif"</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="p">},</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># Clip to a polygon mask.</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">processing</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="s2">"pyramids:clip"</span><span class="p">,</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="p">{</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>        <span class="s2">"INPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem.tif"</span><span class="p">,</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>        <span class="s2">"MASK"</span><span class="p">:</span> <span class="s2">"C:/data/aoi.gpkg"</span><span class="p">,</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="s2">"OUTPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem_clipped.tif"</span><span class="p">,</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="p">},</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="p">)</span>
+<p><strong><code>qgis_process</code></strong> — run an algorithm from a shell, with no QGIS window open at all:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>qgis_process<span class="w"> </span>plugins<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>pyramids_qgis<span class="w">    </span><span class="c1"># once per profile</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>qgis_process<span class="w"> </span>plugins<span class="w">                         </span><span class="c1"># '* pyramids_qgis' means it loaded</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>qgis_process<span class="w"> </span>list<span class="w">                            </span><span class="c1"># every algorithm, including the pyramids: ones</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>qgis_process<span class="w"> </span>run<span class="w"> </span>pyramids:warp<span class="w"> </span>--<span class="w"> </span><span class="nv">INPUT</span><span class="o">=</span>dem.tif<span class="w"> </span><span class="nv">CRS</span><span class="o">=</span>EPSG:3857<span class="w"> </span><span class="nv">OUTPUT</span><span class="o">=</span>out.tif
+</code></pre></div>
+<p>The plugin must be enabled in the profile <code>qgis_process</code> uses; <code>pyramids-core</code> still has to be
+installed in that QGIS's Python, and the install offer never appears here because there is no
+GUI to show it in.
+- <strong>Python console</strong> — call it by its provider-qualified id, <code>pyramids:&lt;name&gt;</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">processing</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Reproject to Web Mercator with bilinear resampling.</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">processing</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">"pyramids:warp"</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="p">{</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="s2">"INPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem.tif"</span><span class="p">,</span>  <span class="c1"># a file path or a loaded layer</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="s2">"CRS"</span><span class="p">:</span> <span class="s2">"EPSG:3857"</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="s2">"RESAMPLING"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># index into [nearest, bilinear, cubic, cubic_spline, lanczos, average, mode]</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="s2">"OUTPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem_3857.tif"</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="p">},</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">)</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Clip to a polygon mask.</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">processing</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="s2">"pyramids:clip"</span><span class="p">,</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="p">{</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        <span class="s2">"INPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem.tif"</span><span class="p">,</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>        <span class="s2">"MASK"</span><span class="p">:</span> <span class="s2">"C:/data/aoi.gpkg"</span><span class="p">,</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="s2">"OUTPUT"</span><span class="p">:</span> <span class="s2">"C:/data/dem_clipped.tif"</span><span class="p">,</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="p">},</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="p">)</span>
 </code></pre></div>
 <p>The parameter keys are the UPPERCASE names shown here (<code>INPUT</code>, <code>CRS</code>, <code>OUTPUT</code>, …); <code>RESAMPLING</code> is an enum, so
 it takes the integer index of the method.</p>
