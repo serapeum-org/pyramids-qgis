@@ -33,8 +33,8 @@ algorithms are grouped by theme:
 - **Cloud Optimized GeoTIFF** — create a COG.
 
 Every algorithm ships its own help text, shown in the right-hand pane of its dialog — that is the authoritative
-description of its parameters. The [Algorithms reference](algorithms.md) covers the raster, mesh and
-Earth-observation algorithms in depth, but has not yet caught up with the newer groups.
+description of its parameters. The [Algorithms reference](algorithms.md) lists all 92 algorithms by group, with
+the Processing id and the pyramids command behind each one.
 
 If the **Pyramids** group is not there, the plugin did not load — recheck the install and that `pyramids-core`
 imports in the QGIS Python console (`import pyramids`).
