@@ -21,13 +21,24 @@ from .provider import PyramidsProvider
 
 
 class PyramidsPlugin:
-    """Thin lifecycle wrapper that owns the Processing provider."""
+    """Thin lifecycle wrapper that owns the Processing provider.
+
+    QGIS builds one instance per session through :func:`pyramids_qgis.classFactory`, then starts it
+    through whichever hook fits how it is running — ``initGui`` with a GUI, ``initProcessing``
+    without one — and calls :meth:`unload` when the plugin is disabled or QGIS shuts down. The
+    provider is created by whichever start hook runs, never in the constructor, so an instance that
+    QGIS never starts holds no registry state.
+    """
 
     def __init__(self, iface):
-        """Store the QGIS interface handle and defer provider creation to ``initGui``.
+        """Store the QGIS interface handle and leave the provider to the start hook.
+
+        The provider is built by :meth:`init_processing` (headless) or :meth:`_init_gui` (GUI), not
+        here, so constructing the plugin touches no QGIS global state.
 
         Args:
-            iface: The ``QgisInterface`` passed by QGIS.
+            iface: The ``QgisInterface`` passed by QGIS. It is ``None`` in headless runs such as
+                ``qgis_process``, so anything that needs a parent window must tolerate that.
         """
         self.iface = iface
         self.provider: PyramidsProvider | None = None
@@ -46,7 +57,8 @@ class PyramidsPlugin:
     def _init_gui(self) -> None:
         """Enable the plugin: register the Processing provider, then offer to install pyramids.
 
-        QGIS reaches this through the ``initGui`` name exposed by :meth:`__getattr__`.
+        QGIS reaches this through the ``initGui`` name exposed by :meth:`__getattr__`. The headless
+        counterpart is :meth:`init_processing`, which registers the provider without the offer.
         """
         self.init_processing()
         # Defer the install offer with a 0-ms timer so initGui returns immediately: the dialog then
@@ -194,7 +206,13 @@ class PyramidsPlugin:
         return False
 
     def unload(self) -> None:
-        """Remove the provider when the plugin is disabled or QGIS shuts down."""
+        """Remove the provider when the plugin is disabled or QGIS shuts down.
+
+        Serves both start paths, and is a no-op when no start hook ever ran: without the guard,
+        unloading a plugin QGIS had only constructed would pass ``None`` to the registry. Removing
+        the provider hands it back to QGIS, which destroys it, so ``provider`` is cleared to avoid
+        holding a stale wrapper.
+        """
         if self.provider is not None:
             QgsApplication.processingRegistry().removeProvider(self.provider)
             self.provider = None
