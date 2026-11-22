@@ -309,6 +309,8 @@
       
         
       
+        
+      
     
     
     
@@ -371,6 +373,34 @@
     
   
     Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage tutorial
   
 
     
@@ -555,10 +585,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#conversion" class="md-nav__link">
+  <a href="#vector" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conversion
+        Vector
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#netcdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetCDF
       
     </span>
   </a>
@@ -580,7 +632,51 @@
   <a href="#earth-observation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Earth observation
+        Earth Observation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fetch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        STAC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cloud-optimized-geotiff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloud Optimized GeoTIFF
       
     </span>
   </a>
@@ -599,10 +695,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#roadmap" class="md-nav__link">
+  <a href="#not-covered-yet" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Roadmap
+        Not covered yet
       
     </span>
   </a>
@@ -879,10 +975,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#conversion" class="md-nav__link">
+  <a href="#vector" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conversion
+        Vector
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#netcdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetCDF
       
     </span>
   </a>
@@ -904,7 +1022,51 @@
   <a href="#earth-observation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Earth observation
+        Earth Observation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fetch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        STAC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cloud-optimized-geotiff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloud Optimized GeoTIFF
       
     </span>
   </a>
@@ -923,10 +1085,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#roadmap" class="md-nav__link">
+  <a href="#not-covered-yet" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Roadmap
+        Not covered yet
       
     </span>
   </a>
@@ -955,144 +1117,669 @@
 
 <h1 id="algorithms"><a class="toclink" href="#algorithms">Algorithms</a><a class="headerlink" href="#algorithms" title="Permanent link">#</a></h1>
 <p>Every algorithm is <strong>file-in / file-out</strong> — work is passed by file path, never by a live in-memory
-<code>gdal.Dataset</code> handle. They are grouped in the Processing Toolbox under <strong>Pyramids</strong>, by origin and
-theme.</p>
-<h2 id="raster"><a class="toclink" href="#raster">Raster</a><a class="headerlink" href="#raster" title="Permanent link">#</a></h2>
-<p>Most raster algorithms are <strong>CLI-backed</strong>: the plugin builds a <code>pyramids &lt;command&gt; ...</code> argument list
-and runs it in-process.</p>
+<code>gdal.Dataset</code> handle. They appear in the Processing Toolbox under <strong>Pyramids</strong>, split into the groups below.</p>
+<p>Each algorithm's own help text (the right-hand pane of its dialog) is the authoritative description of its
+parameters; this page is the map of what exists and what it maps to in pyramids.</p>
+<p>The <strong>Processing id</strong> column is what you pass to <code>processing.run(...)</code>, e.g.
+<code>processing.run("pyramids:raster_align", {...})</code>. Most algorithms are <strong>CLI-backed</strong>: the plugin builds a
+<code>pyramids &lt;command&gt; ...</code> argument list and runs it in-process, so the command column is the pyramids CLI
+invocation behind the algorithm. The Mesh and Earth-observation groups call their library directly instead.</p>
+<p>There are <strong>92 algorithms</strong> across <strong>10 groups</strong>:</p>
 <table>
 <thead>
 <tr>
-<th>Algorithm</th>
-<th>pyramids command</th>
-<th>Notes</th>
+<th>Group</th>
+<th>Algorithms</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Reproject raster (warp)</td>
-<td><code>warp</code></td>
-<td>target CRS + resampling</td>
+<td><a href="#raster">Raster</a></td>
+<td>33</td>
 </tr>
 <tr>
-<td>Clip raster</td>
-<td><code>clip</code></td>
-<td>by polygon mask or extent</td>
+<td><a href="#vector">Vector</a></td>
+<td>36</td>
 </tr>
 <tr>
-<td>Assign CRS / NoData (edit info)</td>
-<td><code>edit-info</code></td>
-<td>stamp CRS / nodata, no reprojection</td>
+<td><a href="#collection">Collection</a></td>
+<td>6</td>
 </tr>
 <tr>
-<td>Merge rasters (mosaic)</td>
-<td><code>merge</code></td>
-<td>two or more inputs</td>
+<td><a href="#netcdf">NetCDF</a></td>
+<td>4</td>
 </tr>
 <tr>
-<td>Raster calculator</td>
-<td><code>calc</code></td>
-<td>expression over A, B, C … (safe AST)</td>
+<td><a href="#mesh">Mesh</a></td>
+<td>2</td>
+</tr>
+<tr>
+<td><a href="#earth-observation">Earth Observation</a></td>
+<td>2</td>
+</tr>
+<tr>
+<td><a href="#fetch">Fetch</a></td>
+<td>5</td>
+</tr>
+<tr>
+<td><a href="#stac">STAC</a></td>
+<td>1</td>
+</tr>
+<tr>
+<td><a href="#process">Process</a></td>
+<td>2</td>
+</tr>
+<tr>
+<td><a href="#cloud-optimized-geotiff">Cloud Optimized GeoTIFF</a></td>
+<td>1</td>
 </tr>
 </tbody>
 </table>
-<h2 id="conversion"><a class="toclink" href="#conversion">Conversion</a><a class="headerlink" href="#conversion" title="Permanent link">#</a></h2>
-<p>Also <strong>CLI-backed</strong>.</p>
+<h2 id="raster"><a class="toclink" href="#raster">Raster</a><a class="headerlink" href="#raster" title="Permanent link">#</a></h2>
+<p>The largest group: the raster engine surface, plus the format-conversion algorithms (convert,
+rasterize, polygonize) that have no group of their own and therefore appear here.</p>
 <table>
 <thead>
 <tr>
 <th>Algorithm</th>
+<th>Processing id</th>
 <th>pyramids command</th>
-<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>Add band from raster</td>
+<td><code>pyramids:raster_add_band</code></td>
+<td><code>raster add-band</code></td>
+</tr>
+<tr>
+<td>Align raster to reference grid</td>
+<td><code>pyramids:raster_align</code></td>
+<td><code>raster align</code></td>
+</tr>
+<tr>
+<td>Animate bands</td>
+<td><code>pyramids:raster_animate</code></td>
+<td><code>raster animate</code></td>
+</tr>
+<tr>
+<td>Assign CRS / NoData (edit info)</td>
+<td><code>pyramids:edit_info</code></td>
+<td><code>raster convert</code> + <code>raster edit-info</code></td>
+</tr>
+<tr>
+<td>Clip raster (by mask or extent)</td>
+<td><code>pyramids:clip</code></td>
+<td><code>raster crop</code></td>
+</tr>
+<tr>
+<td>Cluster (label value range)</td>
+<td><code>pyramids:raster_cluster</code></td>
+<td><code>raster cluster</code></td>
+</tr>
+<tr>
+<td>Combine rasters (element-wise)</td>
+<td><code>pyramids:raster_combine</code></td>
+<td><code>raster combine</code></td>
+</tr>
+<tr>
+<td>Contour (lines or filled bands)</td>
+<td><code>pyramids:raster_contour</code></td>
+<td><code>raster contour</code></td>
+</tr>
+<tr>
 <td>Convert raster format</td>
-<td><code>convert</code></td>
-<td>driver from extension or explicit</td>
+<td><code>pyramids:convert</code></td>
+<td><code>raster convert</code></td>
 </tr>
 <tr>
-<td>Rasterize (vector → raster)</td>
-<td><code>rasterize</code></td>
-<td>cell size or template grid</td>
+<td>Convert units</td>
+<td><code>pyramids:raster_convert_units</code></td>
+<td><code>raster convert-units</code></td>
 </tr>
 <tr>
-<td>Polygonize raster</td>
-<td><code>shapes</code></td>
-<td>one feature per cell, GeoJSON out</td>
+<td>Create empty raster</td>
+<td><code>pyramids:raster_create_empty</code></td>
+<td><code>raster create-empty</code></td>
 </tr>
 <tr>
-<td>Create Cloud Optimized GeoTIFF</td>
-<td><code>cog create</code></td>
-<td>validated COG</td>
+<td>Create empty raster like template</td>
+<td><code>pyramids:raster_empty_like</code></td>
+<td><code>raster empty-like</code></td>
+</tr>
+<tr>
+<td>Create raster</td>
+<td><code>pyramids:raster_create</code></td>
+<td><code>raster create</code></td>
+</tr>
+<tr>
+<td>Extract subdataset</td>
+<td><code>pyramids:raster_subdataset</code></td>
+<td><code>raster subdataset</code></td>
+</tr>
+<tr>
+<td>Extract values to CSV</td>
+<td><code>pyramids:raster_extract</code></td>
+<td><code>raster extract</code></td>
+</tr>
+<tr>
+<td>Fill no-data gaps (constant)</td>
+<td><code>pyramids:raster_fillna</code></td>
+<td><code>raster fillna</code></td>
+</tr>
+<tr>
+<td>Match histogram to reference</td>
+<td><code>pyramids:raster_match_histogram</code></td>
+<td><code>raster match-histogram</code></td>
+</tr>
+<tr>
+<td>Merge rasters (mosaic)</td>
+<td><code>pyramids:merge</code></td>
+<td><code>raster merge</code></td>
+</tr>
+<tr>
+<td>Orthorectify (RPC)</td>
+<td><code>pyramids:raster_orthorectify</code></td>
+<td><code>raster orthorectify</code></td>
+</tr>
+<tr>
+<td>Pan-sharpen</td>
+<td><code>pyramids:raster_pan_sharpen</code></td>
+<td><code>raster pan-sharpen</code></td>
+</tr>
+<tr>
+<td>Percentile stretch</td>
+<td><code>pyramids:raster_percentile_stretch</code></td>
+<td><code>raster percentile-stretch</code></td>
+</tr>
+<tr>
+<td>Polygonize raster (one feature per cell)</td>
+<td><code>pyramids:polygonize</code></td>
+<td><code>raster shapes</code></td>
+</tr>
+<tr>
+<td>Proximity (distance to targets)</td>
+<td><code>pyramids:raster_proximity</code></td>
+<td><code>raster proximity</code></td>
+</tr>
+<tr>
+<td>Raster calculator</td>
+<td><code>pyramids:calc</code></td>
+<td><code>raster calc</code></td>
+</tr>
+<tr>
+<td>Raster footprint (data coverage)</td>
+<td><code>pyramids:raster_footprint</code></td>
+<td><code>raster footprint</code></td>
+</tr>
+<tr>
+<td>Rasterize (vector to raster)</td>
+<td><code>pyramids:rasterize</code></td>
+<td><code>raster rasterize</code></td>
+</tr>
+<tr>
+<td>Render raster to image</td>
+<td><code>pyramids:raster_render</code></td>
+<td><code>raster render</code></td>
+</tr>
+<tr>
+<td>Reproject raster (warp)</td>
+<td><code>pyramids:warp</code></td>
+<td><code>raster warp</code></td>
+</tr>
+<tr>
+<td>Select bands</td>
+<td><code>pyramids:raster_select_bands</code></td>
+<td><code>raster select-bands</code></td>
+</tr>
+<tr>
+<td>Set colour ramp</td>
+<td><code>pyramids:raster_set_color_ramp</code></td>
+<td><code>raster set-color-ramp</code></td>
+</tr>
+<tr>
+<td>Where (conditional mask)</td>
+<td><code>pyramids:raster_where</code></td>
+<td><code>raster where</code></td>
+</tr>
+<tr>
+<td>Write array like template</td>
+<td><code>pyramids:raster_dataset_like</code></td>
+<td><code>raster dataset-like</code></td>
+</tr>
+<tr>
+<td>Zonal statistics to CSV</td>
+<td><code>pyramids:raster_zonal_stats</code></td>
+<td><code>raster zonal-stats</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="vector"><a class="toclink" href="#vector">Vector</a><a class="headerlink" href="#vector" title="Permanent link">#</a></h2>
+<p>Vector geometry, overlay and tessellation operations. All CLI-backed via <code>pyramids vector ...</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Processing id</th>
+<th>pyramids command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Buffer vector geometries</td>
+<td><code>pyramids:vector_geom_buffer</code></td>
+<td><code>vector geom buffer</code></td>
+</tr>
+<tr>
+<td>Clip by rectangle (overlay)</td>
+<td><code>pyramids:vector_overlay_clip_by_rect</code></td>
+<td><code>vector overlay clip-by-rect</code></td>
+</tr>
+<tr>
+<td>Clip vector (by mask or extent)</td>
+<td><code>pyramids:vector_clip</code></td>
+<td><code>vector clip</code></td>
+</tr>
+<tr>
+<td>Concave hull of vector geometries</td>
+<td><code>pyramids:vector_geom_concave_hull</code></td>
+<td><code>vector geom concave-hull</code></td>
+</tr>
+<tr>
+<td>Constrained Delaunay triangles</td>
+<td><code>pyramids:vector_tess_constrained_delaunay_triangles</code></td>
+<td><code>vector tess constrained-delaunay-triangles</code></td>
+</tr>
+<tr>
+<td>Convert vector format</td>
+<td><code>pyramids:vector_convert</code></td>
+<td><code>vector convert</code></td>
+</tr>
+<tr>
+<td>Delaunay triangles</td>
+<td><code>pyramids:vector_tess_delaunay_triangles</code></td>
+<td><code>vector tess delaunay-triangles</code></td>
+</tr>
+<tr>
+<td>Difference (overlay)</td>
+<td><code>pyramids:vector_overlay_difference</code></td>
+<td><code>vector overlay difference</code></td>
+</tr>
+<tr>
+<td>Dissolve</td>
+<td><code>pyramids:vector_overlay_dissolve</code></td>
+<td><code>vector overlay dissolve</code></td>
+</tr>
+<tr>
+<td>Explode (multi-part to single-part)</td>
+<td><code>pyramids:vector_overlay_explode</code></td>
+<td><code>vector overlay explode</code></td>
+</tr>
+<tr>
+<td>Filter by spatial predicate</td>
+<td><code>pyramids:vector_overlay_filter</code></td>
+<td><code>vector overlay filter</code></td>
+</tr>
+<tr>
+<td>Fishnet grid</td>
+<td><code>pyramids:vector_tess_fishnet</code></td>
+<td><code>vector tess fishnet</code></td>
+</tr>
+<tr>
+<td>Get coordinates (to CSV)</td>
+<td><code>pyramids:vector_tess_get_coordinates</code></td>
+<td><code>vector tess get-coordinates</code></td>
+</tr>
+<tr>
+<td>H3 bin (aggregate)</td>
+<td><code>pyramids:vector_tess_h3_bin</code></td>
+<td><code>vector tess h3-bin</code></td>
+</tr>
+<tr>
+<td>Interpolate to raster (IDW)</td>
+<td><code>pyramids:vector_tess_interpolate_to_raster</code></td>
+<td><code>vector tess interpolate-to-raster</code></td>
+</tr>
+<tr>
+<td>Intersection (all, self-overlay)</td>
+<td><code>pyramids:vector_overlay_intersection_all</code></td>
+<td><code>vector overlay intersection-all</code></td>
+</tr>
+<tr>
+<td>Intersection (overlay)</td>
+<td><code>pyramids:vector_overlay_intersection</code></td>
+<td><code>vector overlay intersection</code></td>
+</tr>
+<tr>
+<td>Make vector geometries valid</td>
+<td><code>pyramids:vector_geom_make_valid</code></td>
+<td><code>vector geom make-valid</code></td>
+</tr>
+<tr>
+<td>Minimum bounding circle of vector geometries</td>
+<td><code>pyramids:vector_geom_minimum_bounding_circle</code></td>
+<td><code>vector geom minimum-bounding-circle</code></td>
+</tr>
+<tr>
+<td>Overlay (general)</td>
+<td><code>pyramids:vector_overlay_overlay</code></td>
+<td><code>vector overlay apply</code></td>
+</tr>
+<tr>
+<td>Polygonize lines</td>
+<td><code>pyramids:vector_tess_polygonize</code></td>
+<td><code>vector tess polygonize</code></td>
+</tr>
+<tr>
+<td>Quadtree aggregation</td>
+<td><code>pyramids:vector_tess_quadtree</code></td>
+<td><code>vector tess quadtree</code></td>
+</tr>
+<tr>
+<td>Reproject vector (warp)</td>
+<td><code>pyramids:vector_warp</code></td>
+<td><code>vector warp</code></td>
+</tr>
+<tr>
+<td>Rotate vector geometries</td>
+<td><code>pyramids:vector_geom_rotate</code></td>
+<td><code>vector geom rotate</code></td>
+</tr>
+<tr>
+<td>Sample points</td>
+<td><code>pyramids:vector_tess_sample_points</code></td>
+<td><code>vector tess sample-points</code></td>
+</tr>
+<tr>
+<td>Scale vector geometries</td>
+<td><code>pyramids:vector_geom_scale</code></td>
+<td><code>vector geom scale</code></td>
+</tr>
+<tr>
+<td>Simplify vector geometries</td>
+<td><code>pyramids:vector_geom_simplify</code></td>
+<td><code>vector geom simplify</code></td>
+</tr>
+<tr>
+<td>Spatial join</td>
+<td><code>pyramids:vector_overlay_sjoin</code></td>
+<td><code>vector overlay sjoin</code></td>
+</tr>
+<tr>
+<td>Spatial join (nearest)</td>
+<td><code>pyramids:vector_overlay_sjoin_nearest</code></td>
+<td><code>vector overlay sjoin-nearest</code></td>
+</tr>
+<tr>
+<td>Symmetric difference (overlay)</td>
+<td><code>pyramids:vector_overlay_symmetric_difference</code></td>
+<td><code>vector overlay symmetric-difference</code></td>
+</tr>
+<tr>
+<td>To H3 cells</td>
+<td><code>pyramids:vector_tess_to_h3</code></td>
+<td><code>vector tess to-h3</code></td>
+</tr>
+<tr>
+<td>Translate vector geometries</td>
+<td><code>pyramids:vector_geom_translate</code></td>
+<td><code>vector geom translate</code></td>
+</tr>
+<tr>
+<td>Union (all, dissolve to one)</td>
+<td><code>pyramids:vector_overlay_union_all</code></td>
+<td><code>vector overlay union-all</code></td>
+</tr>
+<tr>
+<td>Union (overlay)</td>
+<td><code>pyramids:vector_overlay_union</code></td>
+<td><code>vector overlay union</code></td>
+</tr>
+<tr>
+<td>Voronoi diagram</td>
+<td><code>pyramids:vector_tess_voronoi</code></td>
+<td><code>vector tess voronoi</code></td>
+</tr>
+<tr>
+<td>Voronoi polygons</td>
+<td><code>pyramids:vector_tess_voronoi_polygons</code></td>
+<td><code>vector tess voronoi-polygons</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="collection"><a class="toclink" href="#collection">Collection</a><a class="headerlink" href="#collection" title="Permanent link">#</a></h2>
+<p>Operations over a <em>stack</em> of rasters (a datacube / time series) rather than a single file.</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Processing id</th>
+<th>pyramids command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Align raster collection (to reference grid)</td>
+<td><code>pyramids:collection_align</code></td>
+<td><code>collection align</code></td>
+</tr>
+<tr>
+<td>Crop raster collection (by mask or bbox)</td>
+<td><code>pyramids:collection_crop</code></td>
+<td><code>collection crop</code></td>
+</tr>
+<tr>
+<td>Merge raster collection (mosaic)</td>
+<td><code>pyramids:collection_merge</code></td>
+<td><code>collection merge</code></td>
+</tr>
+<tr>
+<td>Reduce raster collection (over time)</td>
+<td><code>pyramids:collection_reduce</code></td>
+<td><code>collection reduce</code></td>
+</tr>
+<tr>
+<td>Reproject raster collection</td>
+<td><code>pyramids:collection_reproject</code></td>
+<td><code>collection reproject</code></td>
+</tr>
+<tr>
+<td>Resample raster collection (temporal)</td>
+<td><code>pyramids:collection_resample</code></td>
+<td><code>collection resample</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="netcdf"><a class="toclink" href="#netcdf">NetCDF</a><a class="headerlink" href="#netcdf" title="Permanent link">#</a></h2>
+<p>Reach into a NetCDF file: crop it, pull a variable or group out, or select a time step.</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Processing id</th>
+<th>pyramids command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Crop NetCDF (by bounding box)</td>
+<td><code>pyramids:nc_crop</code></td>
+<td><code>nc crop</code></td>
+</tr>
+<tr>
+<td>Extract NetCDF group</td>
+<td><code>pyramids:nc_get_group</code></td>
+<td><code>nc get-group</code></td>
+</tr>
+<tr>
+<td>Extract NetCDF variable to raster</td>
+<td><code>pyramids:nc_extract</code></td>
+<td><code>nc extract</code></td>
+</tr>
+<tr>
+<td>Select NetCDF time step</td>
+<td><code>pyramids:nc_sel</code></td>
+<td><code>nc sel</code></td>
 </tr>
 </tbody>
 </table>
 <h2 id="mesh"><a class="toclink" href="#mesh">Mesh</a><a class="headerlink" href="#mesh" title="Permanent link">#</a></h2>
-<p>These wrap pyramids' <code>MeshDataset</code> (with <a href="https://github.com/serapeum-org/pyramids-mesh">pyramids-mesh</a>
-providing the format drivers) rather than the CLI, since pyramids-mesh has no CLI. UGRID NetCDF is
-built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need <code>pyramids-mesh</code> installed.</p>
+<p>These wrap pyramids' <code>MeshDataset</code> directly rather than the CLI, since pyramids-mesh has no CLI.
+UGRID NetCDF is built in; other formats (2DM, Selafin, DFSU, XMDF, PLY, …) need
+<a href="https://github.com/serapeum-org/pyramids-mesh">pyramids-mesh</a> installed.</p>
 <table>
 <thead>
 <tr>
 <th>Algorithm</th>
+<th>Processing id</th>
 <th>pyramids API</th>
-<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Convert mesh format</td>
+<td><code>pyramids:mesh_convert</code></td>
 <td><code>MeshDataset.read_file</code> / <code>to_file</code></td>
-<td>any format → UGRID NetCDF or a driver</td>
 </tr>
 <tr>
 <td>Mesh to vector</td>
-<td><code>MeshDataset.to_geodataframe</code></td>
-<td>faces / nodes / edges → GeoJSON</td>
+<td><code>pyramids:mesh_to_vector</code></td>
+<td><code>MeshDataset.to_geodataframe</code> → <code>FeatureCollection.to_file</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="earth-observation"><a class="toclink" href="#earth-observation">Earth observation</a><a class="headerlink" href="#earth-observation" title="Permanent link">#</a></h2>
-<p>These wrap <a href="https://github.com/serapeum-org/pyramids-eo">pyramids-eo</a> (the EO tier on top of pyramids)
-directly, since it has no CLI. They need <code>pyramids-eo</code> installed.</p>
+<h2 id="earth-observation"><a class="toclink" href="#earth-observation">Earth Observation</a><a class="headerlink" href="#earth-observation" title="Permanent link">#</a></h2>
+<p>These wrap <a href="https://github.com/serapeum-org/pyramids-eo">pyramids-eo</a> directly, since it has no
+CLI. They require <code>pyramids-eo</code> to be installed — it is a hard requirement for this group only.</p>
 <table>
 <thead>
 <tr>
 <th>Algorithm</th>
-<th>pyramids-eo API</th>
-<th>Notes</th>
+<th>Processing id</th>
+<th>pyramids API</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Contrast stretch (EO)</td>
-<td><code>enhance.stretch</code></td>
-<td>linear / crude / cira / histogram + gamma, to dtype</td>
+<td><code>pyramids:eo_stretch</code></td>
+<td><code>pyramids_eo.enhance.stretch</code></td>
 </tr>
 <tr>
 <td>Tasseled cap transform</td>
-<td><code>spectral.tasseled_cap</code></td>
-<td>Landsat 5/7/8 reflectance → brightness / greenness / wetness</td>
+<td><code>pyramids:tasseled_cap</code></td>
+<td><code>pyramids_eo.spectral.tasseled_cap</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="fetch"><a class="toclink" href="#fetch">Fetch</a><a class="headerlink" href="#fetch" title="Permanent link">#</a></h2>
+<p>Pull a window (or features) from a remote OGC service straight to a local file.</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Processing id</th>
+<th>pyramids command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fetch OGC API Coverages window</td>
+<td><code>pyramids:fetch_ogc_coverages</code></td>
+<td><code>fetch ogc-coverages</code></td>
+</tr>
+<tr>
+<td>Fetch WCS window</td>
+<td><code>pyramids:fetch_wcs</code></td>
+<td><code>fetch wcs</code></td>
+</tr>
+<tr>
+<td>Fetch WFS features</td>
+<td><code>pyramids:fetch_wfs</code></td>
+<td><code>fetch wfs</code></td>
+</tr>
+<tr>
+<td>Fetch WMS window</td>
+<td><code>pyramids:fetch_wms</code></td>
+<td><code>fetch wms</code></td>
+</tr>
+<tr>
+<td>Fetch WMTS window</td>
+<td><code>pyramids:fetch_wmts</code></td>
+<td><code>fetch wmts</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="stac"><a class="toclink" href="#stac">STAC</a><a class="headerlink" href="#stac" title="Permanent link">#</a></h2>
+<p>Search a STAC catalogue and download the matching assets.</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Processing id</th>
+<th>pyramids command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Download STAC assets</td>
+<td><code>pyramids:stac_download</code></td>
+<td><code>stac download</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="process"><a class="toclink" href="#process">Process</a><a class="headerlink" href="#process" title="Permanent link">#</a></h2>
+<p>Drive pyramids' own processing registry: apply a single tool, or run a whole pipeline.</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Processing id</th>
+<th>pyramids command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apply processing tool</td>
+<td><code>pyramids:process_apply</code></td>
+<td><code>process apply</code></td>
+</tr>
+<tr>
+<td>Run processing pipeline</td>
+<td><code>pyramids:process_run</code></td>
+<td><code>process run</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="cloud-optimized-geotiff"><a class="toclink" href="#cloud-optimized-geotiff">Cloud Optimized GeoTIFF</a><a class="headerlink" href="#cloud-optimized-geotiff" title="Permanent link">#</a></h2>
+<p>A single algorithm, in its own toolbox group.</p>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Processing id</th>
+<th>pyramids command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Create Cloud Optimized GeoTIFF</td>
+<td><code>pyramids:cog_create</code></td>
+<td><code>raster cog create</code></td>
 </tr>
 </tbody>
 </table>
 <h2 id="example-data"><a class="toclink" href="#example-data">Example data</a><a class="headerlink" href="#example-data" title="Permanent link">#</a></h2>
 <p>The repo ships a tiny, self-contained dataset under
 <a href="https://github.com/serapeum-org/pyramids-qgis/tree/main/examples/data"><code>examples/data/</code></a> to try the
-algorithms on: a 32×32 EPSG:4326 DEM (<code>dem.tif</code>) and a polygon AOI (<code>aoi.geojson</code>). The same two files
-back the end-to-end tests in <code>tests/integration/test_example_dataset.py</code>. See
+algorithms on: a 32×32 EPSG:4326 DEM (<code>dem.tif</code>) and a polygon AOI (<code>aoi.geojson</code>). See
 <a href="https://github.com/serapeum-org/pyramids-qgis/blob/main/examples/README.md"><code>examples/README.md</code></a> for
 copy-paste <code>processing.run(...)</code> snippets.</p>
-<h2 id="roadmap"><a class="toclink" href="#roadmap">Roadmap</a><a class="headerlink" href="#roadmap" title="Permanent link">#</a></h2>
-<p>More of the pyramids surface is planned:</p>
+<h2 id="not-covered-yet"><a class="toclink" href="#not-covered-yet">Not covered yet</a><a class="headerlink" href="#not-covered-yet" title="Permanent link">#</a></h2>
 <ul>
-<li>Auto-generate algorithms from pyramids' <code>processing/schema.py</code> registry (slope, aspect, hillshade,
-  resample, sieve, fill, voronoi, quadtree, H3 …).</li>
-<li>Vector-native outputs (GPKG) and multi-band / NetCDF subdataset handling.</li>
-<li>STAC search / download and datacube temporal reductions.</li>
-<li>An optional dock widget for interactive COG preview and STAC browsing.</li>
+<li><strong>Terrain derivatives</strong> — slope, aspect and hillshade have no algorithm yet.</li>
+<li><strong>An interactive dock widget</strong> for COG preview / STAC browsing. The plugin is deliberately
+  Processing-only today: it registers a provider and adds no toolbar, menu or panel.</li>
 </ul>
 
 
