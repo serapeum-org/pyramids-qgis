@@ -65,11 +65,19 @@ class PyramidsPlugin:
         the desktop path. It does no GUI work, so it is safe with no main window.
 
         Registering is guarded because ``QgsProcessingRegistry.addProvider`` takes ownership and
-        **destroys** a provider whose id is already registered, returning ``False``. Keeping that
-        destroyed provider in :attr:`provider` would leave a dangling wrapper whose every later use
-        raises ``RuntimeError: wrapped C/C++ object ... has been deleted`` — including
-        :meth:`unload`, which could then never finish. So a provider is only remembered once the
-        registry has actually accepted it, and a second start is a no-op rather than a corruption.
+        **destroys** a provider whose id is already registered, returning ``False``. Recording that
+        destroyed provider would leave a dangling wrapper whose every later use raises
+        ``RuntimeError: wrapped C/C++ object ... has been deleted``, so a provider is remembered
+        only once the registry has accepted it.
+
+        **Neither failure path is silent.** A start that registers nothing still looks successful to
+        QGIS — the only symptom is an empty Pyramids group in the Processing Toolbox, which is how
+        this plugin's headless breakage went unnoticed in the first place. So both the
+        already-registered case and an ``addProvider`` refusal log a warning to the QGIS message
+        log via :meth:`_log`.
+
+        A no-op start strands nothing: :meth:`unload` removes by id as well as by object, so the
+        surviving registration still goes away when QGIS unloads the plugin it holds.
         """
         registry = QgsApplication.processingRegistry()
         existing = registry.providerById(PyramidsProvider.PROVIDER_ID)
