@@ -35,6 +35,25 @@ def test_plugin_name_slugs_to_the_package_folder():
     assert slugify(_plugin_name(), separator="_") == _PACKAGE_DIR.name == "pyramids_qgis"
 
 
+def test_metadata_declares_a_processing_provider():
+    """``hasProcessingProvider=yes`` is half the headless contract; ``initProcessing`` is the other.
+
+    This flag is what makes QGIS start the plugin through ``qgis.utils.startProcessingPlugin``,
+    which requires an ``initProcessing()`` method and unloads the plugin when it is missing. Drop
+    the flag and the plugin stops being a Processing provider headlessly; drop the method and QGIS
+    refuses to start it. Both are pinned so neither can be removed on its own.
+    """
+    parser = configparser.ConfigParser()
+    parser.read(_PACKAGE_DIR / "metadata.txt", encoding="utf-8")
+    assert parser["general"]["hasProcessingProvider"] == "yes"
+
+    from pyramids_qgis.plugin import PyramidsPlugin
+
+    assert hasattr(PyramidsPlugin(None), "initProcessing"), (
+        "metadata declares hasProcessingProvider=yes, so the plugin must expose initProcessing()"
+    )
+
+
 def test_plugin_folder_does_not_collide_with_the_pyramids_library():
     """The folder must not be ``pyramids`` — that would shadow the imported `pyramids` library."""
     assert slugify(_plugin_name(), separator="_") != "pyramids"
