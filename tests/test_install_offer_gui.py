@@ -4,23 +4,27 @@ The offer is the plugin's most user-visible code and was previously untestable: 
 ``QMessageBox`` (``plugin.py``, ``box.exec()``), and ``exec()`` does not return until something
 clicks a button, so a test could never reach them from its own body.
 
-The way in is to schedule the interaction *before* triggering the modal. A zero-delay ``QTimer``
-fires inside ``exec()``'s own nested event loop, where ``QApplication.activeModalWidget()`` is the
-dialog; the handler clicks a button by its visible text and ``exec()`` returns normally. That needs
-no extra test dependency — only the session ``QgsApplication`` the suite already builds and the
-``QT_QPA_PLATFORM=offscreen`` platform ``conftest`` already sets, so these run headless on both Qt5
-and Qt6.
+The way in is to arm the interaction *before* triggering the modal. :class:`DialogDriver` starts a
+repeating ``QTimer`` which, from inside ``exec()``'s own nested event loop, finds the open dialog
+through ``QApplication.activeModalWidget()`` and clicks a button by its visible text, so ``exec()``
+returns normally. That needs no extra test dependency — only the session ``QgsApplication`` the
+suite already builds and the ``QT_QPA_PLATFORM=offscreen`` platform ``conftest`` already sets, so
+these run headless on both Qt5 and Qt6.
 
-Two details are load-bearing:
+Three details are load-bearing, each of them learned the hard way:
 
+- The driver **polls** rather than scheduling one handler per dialog at a fixed offset. Accepting
+  the offer opens a **second** modal — the outcome dialog — which does not exist until the first is
+  answered, so fixed offsets race it.
 - ``_run_install_offer`` imports ``install_pyramids`` from :mod:`pyramids_qgis.dependencies` *as it
   runs*, so a stub must replace the attribute on that module. Patching it on
   :mod:`pyramids_qgis.plugin` has no effect, and the real installer would run ``pip``.
-- Accepting the offer opens a **second** modal — the outcome dialog — so a clicker has to answer a
-  sequence of dialogs, not one.
+- ``QMessageBox`` has no ``buttonText()`` in PyQt6. Buttons come from ``box.buttons()`` and each
+  one's ``text()``, with ``&`` accelerators stripped before matching.
 
-Every dialog interaction is backed by a rescue timer that rejects whatever is open, so a mismatched
-label can only fail the test, never hang the suite.
+The driver gives up after :data:`RESCUE_MS` and rejects whatever is open, and the ``driver`` fixture
+stops its timer at teardown — otherwise a timer from a failed test keeps polling and answers the
+*next* test's dialog, turning one real failure into a cascade of misleading ones.
 """
 
 from __future__ import annotations
@@ -162,6 +166,7 @@ def installs(monkeypatch):
     calls: list[dict] = []
 
     def fake_install(**kwargs):
+        """Record the call and report success without running pip."""
         calls.append(kwargs)
         return True, "stubbed installer: no pip ran"
 
@@ -184,6 +189,7 @@ def becomes_installed(monkeypatch):
     installed = {"yes": False}
 
     def fake_install(**kwargs):
+        """Record the call, mark pyramids importable, and report success without running pip."""
         calls.append(kwargs)
         installed["yes"] = True
         return True, "stubbed installer: no pip ran"
