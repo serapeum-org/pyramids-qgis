@@ -919,9 +919,11 @@
 
 <h1 id="end-to-end-testing"><a class="toclink" href="#end-to-end-testing">End-to-end testing</a><a class="headerlink" href="#end-to-end-testing" title="Permanent link">#</a></h1>
 <p>The unit / integration suite runs against <strong>real PyQGIS</strong> in CI and exercises every algorithm's
-<code>initAlgorithm</code> / parameter construction. What it does <strong>not</strong> cover is running an algorithm
-end-to-end (<code>processAlgorithm</code>) in a real QGIS session on real data, nor the GUI / dialog behaviour.
-That still has to be done by hand, and it is the gate before a non-experimental release.</p>
+<code>initAlgorithm</code> / parameter construction, and — since the <code>gui</code> tests landed — the <code>pyramids-core</code>
+install dialog itself, clicked offscreen. What it does <strong>not</strong> cover is running an algorithm
+end-to-end (<code>processAlgorithm</code>) in a real QGIS session on real data, nor <em>when</em> the install offer
+appears relative to the main window. That still has to be done by hand, and it is the gate before a
+non-experimental release.</p>
 <p>This page is that by-hand validation guide. Install the plugin first — see
 <a href="../installation/">Installation</a>.</p>
 <h2 id="what-to-run-cover-both-wiring-paths-and-every-group"><a class="toclink" href="#what-to-run-cover-both-wiring-paths-and-every-group">What to run — cover both wiring paths and every group</a><a class="headerlink" href="#what-to-run-cover-both-wiring-paths-and-every-group" title="Permanent link">#</a></h2>
@@ -956,11 +958,13 @@ library directly. Run at least one of each path, and at least one per group:</p>
 <li>[ ] <strong>Dependency guards</strong> — with <code>pyramids-mesh</code> / <code>pyramids-eo</code> absent, the mesh / EO algorithms
       should raise a clear "install ..." message; the vendored-GDAL warning should appear only for a
       vendored build.</li>
-<li>[ ] <strong>The <code>pyramids-core</code> install offer</strong> — no automated test can reach it. With <code>pyramids-core</code>
-      absent (and again with a version below 0.81.0), starting QGIS should show the offer <em>after</em> the
-      main window appears, not block startup. Check all three buttons: <strong>Yes</strong> installs into the
-      interpreter the dialog names and then asks for a restart; <strong>Not now</strong> re-offers on the next
-      start; <strong>Don't ask again</strong> does not. A failed install should show the manual <code>pip</code> command.</li>
+<li>[ ] <strong>The <code>pyramids-core</code> install offer — startup ordering only.</strong> The dialog itself is now
+      automated: <code>pytest -m gui</code> clicks the real <code>QMessageBox</code> offscreen and covers all three
+      buttons, the per-state decline, upgrade-vs-fresh-install and all three outcome dialogs, so
+      none of that needs checking by hand. What no test can reach yet is the <em>ordering</em>: with
+      <code>pyramids-core</code> absent (and again with a version below 0.81.0), starting QGIS should show the
+      offer <strong>after</strong> the main window appears, not block startup. That is the only part to verify
+      here; see issue #46 (tier B) for automating it.</li>
 <li>[ ] <strong>Error surfacing</strong> — a bad CRS / missing file should come back as a clean
       <code>QgsProcessingException</code> in the Processing log, not a raw traceback.</li>
 <li>[ ] <strong>Headless (<code>qgis_process</code>)</strong> — enable it in that profile first
