@@ -296,6 +296,7 @@ def transient_modal():
     created: list[QWidget] = []
 
     def register(widget: QWidget) -> QWidget:
+        """Remember ``widget`` for destruction at teardown and return it unchanged."""
         created.append(widget)
         return widget
 
@@ -670,6 +671,7 @@ def test_an_exception_in_the_timer_slot_is_recorded_not_fatal(driver, monkeypatc
     """
 
     def explode(self, box, label):
+        """Stand in for ``_answer`` and raise, to exercise the slot's own error handling."""
         raise RuntimeError("boom inside the slot")
 
     monkeypatch.setattr(DialogDriver, "_answer", explode)
@@ -789,4 +791,81 @@ def test_clean_dismissal_puts_back_a_value_it_found(clean_dismissal):
         next(generator)
     assert QgsSettings().value(INSTALL_OFFER_DISMISSED_KEY) == "outdated", (
         "teardown must put back what it found, not what the test left"
+    )
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("&Yes", "Yes"),
+        ("Don't ask again", "Don't ask again"),
+        ("Save && Close", "Save & Close"),
+        ("&&", "&"),
+        ("", ""),
+    ],
+)
+def test_plain_strips_mnemonics_but_keeps_literal_ampersands(raw, expected):
+    """`_plain` removes Qt's accelerator marker while leaving an escaped ``&&`` intact.
+
+    Args:
+        raw: A button label as Qt reports it.
+        expected: The label as a user sees it.
+
+    Stripping every ``&`` would turn "Save && Close" into "Save  Close" and silently stop matching
+    a button whose text contains a real ampersand.
+    """
+    assert _plain(raw) == expected, f"_plain({raw!r}) gave {_plain(raw)!r}"
+
+
+def test_a_modal_that_refuses_to_close_is_reported(driver, transient_modal, monkeypatch):
+    """A modal that cannot be closed is reported rather than waited on indefinitely.
+
+    Nothing in Python can force such a dialog away, so the only useful behaviour is to say so: the
+    alternative is an unexplained hang, which is what ``pytest-timeout`` would then have to catch.
+    """
+
+    class Stubborn(QDialog):
+        """A dialog that ignores both ``reject()`` and ``close()``."""
+
+        def reject(self) -> None:
+            """Refuse to be rejected."""
+
+        def closeEvent(self, event) -> None:  # noqa: N802  (Qt-mandated method name)
+            """Refuse to be closed.
+
+            Args:
+                event: The close event, which is ignored so the dialog stays visible.
+            """
+            event.ignore()
+
+    dialog = transient_modal(Stubborn())
+    dialog.setModal(True)
+    dialog.show()
+    driver.expect()
+    driver._tick()
+    driver._force_close()
+
+    assert any("refused to close" in error for error in driver.errors), (
+        f"a stubborn modal was not reported: {driver.errors!r}"
+    )
+    monkeypatch.setattr(Stubborn, "closeEvent", lambda self, event: event.accept())
+    dialog.close()
+
+
+def test_a_failure_while_force_closing_is_recorded_not_raised(driver, monkeypatch):
+    """An exception inside the rescue is recorded, because raising there kills the process too.
+
+    The rescue runs from the timer slot, so it is subject to the same rule as everything else
+    there: it may fail, but it may not propagate.
+    """
+
+    def explode(self) -> None:
+        """Stand in for ``_force_close`` and raise."""
+        raise RuntimeError("rescue exploded")
+
+    monkeypatch.setattr(DialogDriver, "_force_close", explode)
+    driver._safe_force_close()
+
+    assert any("RuntimeError while force-closing" in error for error in driver.errors), (
+        f"the rescue failure was not recorded: {driver.errors!r}"
     )
