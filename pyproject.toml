@@ -122,6 +122,13 @@ markers = [
     # these heavier tests but is NOT QGIS-free: every test module imports qgis.core, so the whole
     # suite requires a real QGIS env.
     "integration: exercises the plugin against a real QGIS install",
+    # Tests that drive real Qt dialogs (the pyramids-core install offer). They need the session
+    # QgsApplication and QT_QPA_PLATFORM=offscreen that conftest already provides, and no extra
+    # dependency: a repeating QTimer polls from inside QMessageBox.exec()'s own event loop for the
+    # open dialog and clicks a button. It polls rather than firing once because accepting the offer
+    # opens a second dialog that does not exist until the first is answered. Select with `-m gui`
+    # (there is a `test-gui` task), or skip with `-m "not gui"`.
+    "gui: drives real Qt dialogs offscreen (the install offer)",
 ]
 
 [tool.pixi.workspace]
@@ -164,6 +171,7 @@ test = { cmd = "pytest -q --cov=pyramids_qgis --cov-report=term-missing", descri
 lint = { cmd = "ruff check .", description = "Lint with ruff" }
 format = { cmd = "ruff format .", description = "Format with ruff" }
 compile = { cmd = "python -m compileall -q src/pyramids_qgis scripts", description = "Byte-compile every module" }
+test-gui = { cmd = "pytest -m gui -q", description = "Run only the tests that drive real Qt dialogs (the install offer)" }
 build-dist = { cmd = "python -m build", description = "Build the sdist and wheel" }
 cz-bump = { cmd = "cz bump", description = "Bump the version with commitizen" }
 

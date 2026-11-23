@@ -1,9 +1,11 @@
 # End-to-end testing
 
 The unit / integration suite runs against **real PyQGIS** in CI and exercises every algorithm's
-`initAlgorithm` / parameter construction. What it does **not** cover is running an algorithm
-end-to-end (`processAlgorithm`) in a real QGIS session on real data, nor the GUI / dialog behaviour.
-That still has to be done by hand, and it is the gate before a non-experimental release.
+`initAlgorithm` / parameter construction, and — since the `gui` tests landed — the `pyramids-core`
+install dialog itself, clicked offscreen. What it does **not** cover is running an algorithm
+end-to-end (`processAlgorithm`) in a real QGIS session on real data, nor *when* the install offer
+appears relative to the main window. That still has to be done by hand, and it is the gate before a
+non-experimental release.
 
 This page is that by-hand validation guide. Install the plugin first — see
 [Installation](installation.md).
@@ -41,11 +43,13 @@ library directly. Run at least one of each path, and at least one per group:
 - [ ] **Dependency guards** — with `pyramids-mesh` / `pyramids-eo` absent, the mesh / EO algorithms
       should raise a clear "install ..." message; the vendored-GDAL warning should appear only for a
       vendored build.
-- [ ] **The `pyramids-core` install offer** — no automated test can reach it. With `pyramids-core`
-      absent (and again with a version below 0.81.0), starting QGIS should show the offer *after* the
-      main window appears, not block startup. Check all three buttons: **Yes** installs into the
-      interpreter the dialog names and then asks for a restart; **Not now** re-offers on the next
-      start; **Don't ask again** does not. A failed install should show the manual `pip` command.
+- [ ] **The `pyramids-core` install offer — startup ordering only.** The dialog itself is now
+      automated: `pytest -m gui` clicks the real `QMessageBox` offscreen and covers all three
+      buttons, the per-state decline, upgrade-vs-fresh-install and all three outcome dialogs, so
+      none of that needs checking by hand. What no test can reach yet is the *ordering*: with
+      `pyramids-core` absent (and again with a version below 0.81.0), starting QGIS should show the
+      offer **after** the main window appears, not block startup. That is the only part to verify
+      here; see issue #46 (tier B) for automating it.
 - [ ] **Error surfacing** — a bad CRS / missing file should come back as a clean
       `QgsProcessingException` in the Processing log, not a raw traceback.
 - [ ] **Headless (`qgis_process`)** — enable it in that profile first

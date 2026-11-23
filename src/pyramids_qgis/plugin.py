@@ -20,6 +20,11 @@ from qgis.core import QgsApplication
 
 from .provider import PyramidsProvider
 
+#: Where a declined install offer is recorded, keyed by the state that was declined
+#: (``"missing"`` or ``"outdated"``). Exported so tests assert against the same string the plugin
+#: writes: a literal in both places would let a rename pass the negative tests vacuously.
+INSTALL_OFFER_DISMISSED_KEY = "pyramids/install_offer_dismissed_for"
+
 
 class PyramidsPlugin:
     """Thin lifecycle wrapper that owns the Processing provider.
@@ -153,9 +158,10 @@ class PyramidsPlugin:
         Note:
             The install runs synchronously on the GUI thread, so QGIS is frozen for its duration; a
             background ``QgsTask`` installer with progress is the intended follow-up (needs in-QGIS
-            validation, issue #3). This whole method is only reachable in a running QGIS and is not
-            exercised by the unit tests, which build parameters and check the dependency
-            helpers but never open a dialog.
+            validation, issue #3). The dialog and all three outcomes *are* covered, by
+            ``tests/test_install_offer_gui.py``, which clicks the real ``QMessageBox`` offscreen —
+            what is still unproven is the startup ordering, i.e. that the offer appears after the
+            main window rather than blocking it (issue #46, tier B).
         """
         import importlib
 
@@ -178,7 +184,7 @@ class PyramidsPlugin:
 
         state = "missing" if missing else "outdated"
         settings = QgsSettings()
-        dismissed_key = "pyramids/install_offer_dismissed_for"
+        dismissed_key = INSTALL_OFFER_DISMISSED_KEY
         if settings.value(dismissed_key, "") == state:
             return  # declined for this exact state already; re-offer only if the state changes
 
