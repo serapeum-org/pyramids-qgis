@@ -1,9 +1,11 @@
 # End-to-end testing
 
 The unit / integration suite runs against **real PyQGIS** in CI and exercises every algorithm's
-`initAlgorithm` / parameter construction. What it does **not** cover is running an algorithm
-end-to-end (`processAlgorithm`) in a real QGIS session on real data, nor the GUI / dialog behaviour.
-That still has to be done by hand, and it is the gate before a non-experimental release.
+`initAlgorithm` / parameter construction, and — since the `gui` tests landed — the `pyramids-core`
+install dialog itself, clicked offscreen. What it does **not** cover is running an algorithm
+end-to-end (`processAlgorithm`) in a real QGIS session on real data, nor *when* the install offer
+appears relative to the main window. That still has to be done by hand, and it is the gate before a
+non-experimental release.
 
 This page is that by-hand validation guide. Install the plugin first — see
 [Installation](installation.md).

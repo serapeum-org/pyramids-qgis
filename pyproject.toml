@@ -46,6 +46,10 @@ all = ["pyramids-qgis[eo,mesh]"]
 dev = [
     "pytest >=8.2.2",
     "pytest-cov >=5.0.0",
+    # A hang in a GUI test is not a failure, it is a silent job timeout: a modal that never closes
+    # leaves exec() spinning with no output at all. This bounds every test, so the worst case is a
+    # reported failure instead of a dead 30-minute run.
+    "pytest-timeout >=2.3.1",
     "pre-commit >=3.7.1",
     # Same ruff the pre-commit hooks and the lint workflow pin, so `pixi run -e dev lint` matches CI.
     "ruff ==0.17.3",
@@ -115,6 +119,9 @@ source = ["src/pyramids_qgis"]
 # src layout: the package is importable from src/ without an install; scripts/ carries deploy.py.
 pythonpath = ["src", "scripts"]
 testpaths = ["tests"]
+# No test may run longer than this. GUI tests drive modal dialogs, where the failure mode is a
+# hang rather than an assertion, so the suite needs an upper bound of its own.
+timeout = 120
 markers = [
     # Real-PyQGIS tests under tests/integration/ (the pixi dev env or the wheel-test job): both the
     # instantiation tests (test_real_qgis.py) and the end-to-end tests (test_end_to_end.py), which

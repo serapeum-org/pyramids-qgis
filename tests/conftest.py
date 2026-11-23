@@ -7,6 +7,11 @@ their parameter definitions built against the QGIS runtime.
 
 ``QT_QPA_PLATFORM=offscreen`` is set at import time — before pytest collects the test modules, which
 ``import qgis.core`` at module load — so the Linux CI runner needs no display.
+
+``QGIS_CUSTOM_CONFIG_PATH`` is deliberately **not** set. A ``QgsApplication`` built here is not the
+QGIS desktop app, so ``QgsSettings`` writes to this process's own store rather than a user profile
+(measured: ``%APPDATA%/python/.../python.ini``). The gui tests still save and restore the one key
+they touch, so a developer running the suite locally sees no change to their QGIS configuration.
 """
 
 from __future__ import annotations

@@ -18,14 +18,17 @@ Five details are load-bearing, each of them learned by running it:
 - ``_run_install_offer`` imports ``install_pyramids`` from :mod:`pyramids_qgis.dependencies` *as it
   runs*, so a stub must replace the attribute on that module. Patching it on
   :mod:`pyramids_qgis.plugin` has no effect, and the real installer would run ``pip``. Every test
-  here therefore takes a fixture that stubs it.
+  that reaches the offer therefore takes a fixture that stubs it; the few driver-only tests never
+  get as far as an install.
 - ``QMessageBox`` has no ``buttonText()`` method, and has not since Qt 5.0, so this is not a Qt6
   difference. Buttons come from ``box.buttons()``; a standard button is matched by its
   ``QMessageBox.StandardButton`` enum rather than its text, which Qt translates, and a custom button
   by the exact text the plugin gave it.
 - **Nothing may escape a Qt timer slot.** An exception there does not fail a test, it aborts the
   interpreter — observed as exit ``0xC0000409``, with no traceback and no pytest summary. Every tick
-  is wrapped, and any dialog the driver cannot answer is force-closed so ``exec()`` always returns.
+  is wrapped, and a dialog the driver cannot answer is force-closed. A modal that refuses to close
+  is reported rather than waited on, and ``timeout = 120`` in ``pyproject.toml`` bounds the rest:
+  the worst case is a named failing test, not a job that dies without output.
 - ``QApplication.activeModalWidget()`` can be ``None`` while a modal really is open, so
   :func:`_open_modal` falls back to scanning ``topLevelWidgets()``. This matters more than it looks:
   a driver that gives up *without closing* the dialog leaves ``exec()`` spinning, so the test body
@@ -33,8 +36,11 @@ Five details are load-bearing, each of them learned by running it:
   :meth:`DialogDriver._force_close` walks the widget list itself instead of reusing that lookup —
   the last resort must not depend on the thing that failed.
 
-:attr:`DialogDriver.ticks` and :attr:`DialogDriver.pending` exist so a test can prove the driver was
-alive: asserting only "no dialog appeared" would pass just as well against a driver that never ran.
+:attr:`DialogDriver.ticks` and :attr:`DialogDriver.pending` exist so a test can show the driver was
+armed and polling: asserting only "no dialog appeared" would pass just as well against a driver that
+never ran. ``ticks`` counts from the most recent :meth:`DialogDriver.expect`, and the queue is
+answered strictly in order, which assumes the dialogs appear one at a time — true of this plugin,
+where the outcome dialog only opens after the offer is answered.
 """
 
 from __future__ import annotations
@@ -43,20 +49,26 @@ import html
 
 import pytest
 from qgis.core import QgsSettings
-from qgis.PyQt.QtCore import QTimer
-from qgis.PyQt.QtWidgets import QApplication, QDialog, QMessageBox
+from qgis.PyQt.QtCore import QEventLoop, Qt, QTimer
+from qgis.PyQt.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 
 from pyramids_qgis import dependencies as deps
 from pyramids_qgis.plugin import INSTALL_OFFER_DISMISSED_KEY, PyramidsPlugin
 
-pytestmark = pytest.mark.gui
+#: ``gui`` selects these specifically; ``integration`` is also applied because they need a real
+#: QGIS install, so ``-m "not integration"`` skips them along with the other heavy tests.
+pytestmark = [pytest.mark.gui, pytest.mark.integration]
 
-#: How many poll ticks to wait for an expected dialog before forcing it closed. Counted in ticks,
-#: not wall clock: the nested ``exec()`` loop advances them, so a slow runner cannot trip it.
+#: How many poll ticks to wait for the whole queue before giving up and closing what is open. It is
+#: one budget for the arming, not one per dialog. Counted in ticks rather than wall clock, because
+#: only a running event loop advances them, so a slow runner cannot trip it early.
 RESCUE_TICKS = 160
 
 #: How often to look for an open dialog while a queue is outstanding, in milliseconds.
 POLL_MS = 25
+
+#: How many close passes to make before reporting that a modal will not go away.
+ROUNDS_TO_CLOSE = 5
 
 #: The standard buttons the plugin uses, keyed by the label a test asks for. Matching by enum keeps
 #: these tests working under a translated Qt, where "Yes" and "OK" are localised.
@@ -66,23 +78,53 @@ STANDARD_BUTTONS = {
 }
 
 
+def _plain(text: str) -> str:
+    """Return ``text`` without Qt's mnemonic markers.
+
+    A single ``&`` marks the next character as the accelerator; a doubled ``&&`` is how Qt escapes a
+    literal ampersand, so the two cases cannot both be handled by stripping every ``&``.
+
+    Args:
+        text: A button's label as Qt reports it.
+
+    Returns:
+        str: The label as a user sees it.
+    """
+    return text.replace("&&", "\x00").replace("&", "").replace("\x00", "&")
+
+
+def _modal_widgets() -> list[QWidget]:
+    """Return every visible modal top-level widget, most recently shown first.
+
+    Not just ``QDialog``: a ``QMenu`` also runs its own modal loop, and anything with a modal loop
+    can block ``exec()`` from returning. Only *modal* widgets are included — a non-modal dialog may
+    belong to QGIS or another fixture, and closing it is not this driver's business.
+
+    Returns:
+        list[QWidget]: The open modal widgets, with ``activeModalWidget()`` first when it has one.
+    """
+    found: list[QWidget] = []
+    active = QApplication.activeModalWidget()
+    if active is not None:
+        found.append(active)
+    for widget in QApplication.topLevelWidgets():
+        if widget not in found and widget.isVisible() and widget.isModal():
+            found.append(widget)
+    return found
+
+
 def _open_modal():
-    """Return the modal dialog currently on screen, or ``None``.
+    """Return the modal widget to answer next, or ``None``.
 
     ``QApplication.activeModalWidget()`` is the normal answer, but it can be ``None`` while a modal
     is genuinely open; the top-level scan is the fallback that keeps the driver — and therefore the
     whole run — from waiting forever on a dialog it cannot see.
 
     Returns:
-        QDialog | None: The open modal dialog, preferring the active one.
+        QWidget | None: The open modal widget, preferring the active one.
     """
-    active = QApplication.activeModalWidget()
-    if active is not None:
-        return active
-    for widget in QApplication.topLevelWidgets():
-        if isinstance(widget, QDialog) and widget.isVisible() and widget.isModal():
-            return widget
-    return None
+    widgets = _modal_widgets()
+    return widgets[0] if widgets else None
 
 
 class DialogDriver:
@@ -90,8 +132,8 @@ class DialogDriver:
 
     Attributes:
         seen: One record per dialog answered, holding its ``title``, the visible ``buttons``, the
-            full ``text``, the label that was ``requested`` and the ``clicked`` button's own text,
-            so a lenient match cannot hide which button was really pressed.
+            full ``text``, its ``format`` (rich or plain), the label that was ``requested`` and the
+            ``clicked`` button's own text, so a lenient match cannot hide which button was pressed.
         errors: Why a dialog could not be answered as scripted, including rescues and anything
             raised inside the timer slot.
         ticks: How many times the poll timer ran. A test asserting that no dialog appeared uses this
@@ -147,19 +189,28 @@ class DialogDriver:
                 self._answer(box, self._queue.pop(0))
             if not self._queue:
                 self.stop()
+                if _modal_widgets():
+                    # A dialog the queue did not account for, or one that ignored its own close:
+                    # leaving it open means exec() never returns and the run dies by job timeout.
+                    self.errors.append("a modal was still open once the queue drained")
+                    self._safe_force_close()
                 return
             if self.ticks >= RESCUE_TICKS:
                 self.errors.append(f"gave up waiting for dialogs; still expecting {self._queue}")
                 self._queue.clear()
                 self.stop()
-                self._force_close()
-        except Exception as error:  # a raise here would abort the interpreter, not fail the test
-            self.errors.append(f"{type(error).__name__} in the timer slot: {error}")
-            self._queue.clear()
-            self.stop()
-            self._force_close()
+                self._safe_force_close()
+        except BaseException as error:  # noqa: BLE001  (a raise here aborts the interpreter)
+            # Even recording the failure has to be defensive: an exception escaping this handler is
+            # not a failed test, it is a dead process with no traceback and no pytest summary.
+            try:
+                self.errors.append(f"{type(error).__name__} in the timer slot: {error}")
+                self._queue.clear()
+                self.stop()
+            finally:
+                self._safe_force_close()
 
-    def _answer(self, box, label: str) -> None:
+    def _answer(self, box: QWidget, label: str) -> None:
         """Click the button of ``box`` matching ``label``.
 
         Args:
@@ -168,52 +219,90 @@ class DialogDriver:
             label: A key of :data:`STANDARD_BUTTONS`, or the exact text of a custom button.
         """
         if not isinstance(box, QMessageBox):
-            self.errors.append(f"expected a QMessageBox for {label!r}, got {type(box).__name__}")
-            box.reject()
+            self.errors.append(
+                f"not a message box: expected buttons for {label!r}, got {type(box).__name__}"
+            )
+            if isinstance(box, QDialog):
+                box.reject()
+            box.close()
             return
         buttons = list(box.buttons())
-        labels = sorted(button.text().replace("&", "") for button in buttons)
-        if label in STANDARD_BUTTONS:
+        labels = [_plain(button.text()) for button in buttons]
+        target = next((b for b in buttons if _plain(b.text()) == label), None)
+        if target is None and label in STANDARD_BUTTONS:
             wanted = STANDARD_BUTTONS[label]
             target = next((b for b in buttons if box.standardButton(b) == wanted), None)
-        else:
-            target = next((b for b in buttons if b.text().replace("&", "") == label), None)
         self.seen.append(
             {
                 "title": box.windowTitle(),
                 "buttons": labels,
                 "text": box.text(),
+                "format": box.textFormat(),
                 "requested": label,
-                "clicked": target.text().replace("&", "") if target is not None else None,
+                "clicked": _plain(target.text()) if target is not None else None,
             }
         )
         if target is None:
-            self.errors.append(f"no button {label!r} among {labels}")
+            self.errors.append(f"no button {label!r} among {sorted(labels)}")
             box.reject()
             return
         target.click()
+
+    def _safe_force_close(self) -> None:
+        """Run :meth:`_force_close` without letting it raise into the timer slot."""
+        try:
+            self._force_close()
+        except BaseException as error:  # noqa: BLE001  (see _tick: a raise here kills the process)
+            self.errors.append(f"{type(error).__name__} while force-closing: {error}")
 
     def _force_close(self) -> None:
         """Close every open modal, so ``exec()`` returns and the test body is reached.
 
         Rejecting only ``activeModalWidget()`` is not enough: it is ``None`` in exactly the case the
         rescue exists for, and skipping the close leaves ``exec()`` spinning until the CI job's own
-        timeout kills the run with no output at all.
+        timeout kills the run with no output at all. It therefore scans for modal widgets itself
+        rather than reusing the lookup that may have failed.
 
-        It walks ``topLevelWidgets()`` itself rather than going through :func:`_open_modal`, so the
-        last resort does not depend on the same lookup that may have failed.
+        Only *modal* widgets are closed: a visible non-modal dialog can belong to QGIS or another
+        fixture, and rejecting it would fire its ``rejected`` signal behind its owner's back.
         """
-        for _ in range(5):
-            open_dialogs = [
-                widget
-                for widget in QApplication.topLevelWidgets()
-                if isinstance(widget, QDialog) and widget.isVisible()
-            ]
-            if not open_dialogs:
+        for _ in range(ROUNDS_TO_CLOSE):
+            widgets = _modal_widgets()
+            if not widgets:
                 return
-            for dialog in open_dialogs:
-                dialog.reject()
-                dialog.close()
+            for widget in widgets:
+                if isinstance(widget, QDialog):
+                    widget.reject()
+                widget.close()
+        remaining = [type(widget).__name__ for widget in _modal_widgets()]
+        if remaining:
+            # Nothing else can be done from Python; say so, because the alternative is a silent
+            # hang that only shows up as a job timeout with no output.
+            self.errors.append(
+                f"modal(s) refused to close after {ROUNDS_TO_CLOSE} rounds: {remaining}"
+            )
+
+
+@pytest.fixture
+def transient_modal():
+    """Return a factory for modal widgets that are destroyed when the test ends.
+
+    A parentless widget otherwise stays in ``QApplication.topLevelWidgets()`` for the rest of the
+    session, where the driver's own scan would keep finding it.
+
+    Returns:
+        Callable[[QWidget], QWidget]: Registers the widget for cleanup and hands it back.
+    """
+    created: list[QWidget] = []
+
+    def register(widget: QWidget) -> QWidget:
+        created.append(widget)
+        return widget
+
+    yield register
+    for widget in created:
+        widget.close()
+        widget.deleteLater()
 
 
 @pytest.fixture
@@ -315,7 +404,10 @@ def test_the_offer_shows_three_buttons_and_states_what_it_needs(
     assert driver.pending == [], "the queued dialog never appeared"
     assert driver.titles == ["Pyramids: install pyramids-core"]
     dialog = driver.seen[0]
-    assert dialog["buttons"] == ["Don't ask again", "Not now", "Yes"]
+    assert dialog["buttons"] == ["Not now", "Don't ask again", "Yes"], (
+        "the order is asserted, not just the set: it is the order the user sees, and Qt assigns "
+        "roles from it"
+    )
     assert dialog["clicked"] == "Not now", f"clicked {dialog['clicked']!r}"
     text = str(dialog["text"])
     assert html.escape(deps.PYRAMIDS_REQUIREMENT) in text, (
@@ -368,7 +460,11 @@ def test_a_recorded_decline_shows_no_dialog(driver, clean_dismissal, installs, m
 
 
 def test_pyramids_present_and_current_is_silent(driver, clean_dismissal, installs, monkeypatch):
-    """A satisfied state offers nothing: no dialog, no install, nothing recorded."""
+    """A satisfied state offers nothing: no dialog, no install, nothing recorded.
+
+    As with the recorded-decline test, the driver is then re-armed against a state that *does*
+    offer, because "no dialog appeared" is indistinguishable from "the driver never ran".
+    """
     monkeypatch.setattr(deps, "pyramids_installed", lambda: True)
     monkeypatch.setattr(deps, "pyramids_outdated", lambda: False)
     driver.expect("Not now")
@@ -377,6 +473,14 @@ def test_pyramids_present_and_current_is_silent(driver, clean_dismissal, install
     assert driver.seen == [], "nothing should be offered when pyramids is present and current"
     assert installs == []
     assert QgsSettings().value(INSTALL_OFFER_DISMISSED_KEY, "") == ""
+    assert driver.pending == ["Not now"], "the queue should still be waiting, unanswered"
+
+    monkeypatch.setattr(deps, "pyramids_installed", lambda: False)
+    driver.expect("Not now")
+    PyramidsPlugin(None)._run_install_offer()
+
+    assert driver.ticks > 0, "the poll timer never ran, so the silence above proved nothing"
+    assert driver.titles == ["Pyramids: install pyramids-core"]
 
 
 def test_accepting_runs_the_installer_and_reports_success(
@@ -505,7 +609,9 @@ def test_the_driver_reports_a_button_it_cannot_find(
     assert QgsSettings().value(INSTALL_OFFER_DISMISSED_KEY, "") == ""
 
 
-def test_a_modal_the_active_lookup_cannot_see_is_still_answered(driver, monkeypatch):
+def test_a_modal_the_active_lookup_cannot_see_is_still_answered(
+    driver, monkeypatch, transient_modal
+):
     """A modal that ``activeModalWidget()`` reports as absent is still found and closed.
 
     This is the one failure mode that cannot merely fail a test: if the driver gives up without
@@ -514,7 +620,7 @@ def test_a_modal_the_active_lookup_cannot_see_is_still_answered(driver, monkeypa
     prevents it, so blinding the primary lookup is the regression test for it.
     """
     monkeypatch.setattr(QApplication, "activeModalWidget", staticmethod(lambda: None))
-    box = QMessageBox()
+    box = transient_modal(QMessageBox())
     box.setWindowTitle("blinded modal")
     box.setText("activeModalWidget() cannot see me")
     box.addButton(QMessageBox.StandardButton.Yes)
@@ -527,18 +633,160 @@ def test_a_modal_the_active_lookup_cannot_see_is_still_answered(driver, monkeypa
     assert not box.isVisible(), "exec() only returns because the dialog was closed"
 
 
-def test_a_modal_that_is_not_a_message_box_is_closed_not_crashed_into(driver):
+def test_a_modal_that_is_not_a_message_box_is_closed_not_crashed_into(driver, transient_modal):
     """A modal with no buttons is reported and closed, never crashed into.
 
     An exception inside a Qt timer slot aborts the interpreter rather than failing a test, so the
     driver has to survive a dialog that has no ``buttons()`` at all.
     """
-    dialog = QDialog()
+    dialog = transient_modal(QDialog())
     dialog.setWindowTitle("not a message box")
     dialog.setModal(True)
     driver.expect("Yes")
     dialog.exec()
 
     assert driver.errors, "the unexpected modal should have been reported"
-    assert "QDialog" in driver.errors[0], f"errors were {driver.errors}"
+    assert driver.errors[0].startswith("not a message box:"), (
+        f"the isinstance guard should have produced this error, got {driver.errors!r}"
+    )
+    assert driver.seen == [], "a dialog with no buttons must not be recorded as answered"
     assert not dialog.isVisible(), "the dialog must have closed, or exec() would never return"
+
+
+def test_the_persisted_key_is_the_documented_string():
+    """The settings key is a persistence contract, so its literal value is pinned here.
+
+    Everything else refers to :data:`INSTALL_OFFER_DISMISSED_KEY`, which means a rename would keep
+    the whole suite green while silently forgetting every user's recorded decline.
+    """
+    assert INSTALL_OFFER_DISMISSED_KEY == "pyramids/install_offer_dismissed_for"
+
+
+def test_an_exception_in_the_timer_slot_is_recorded_not_fatal(driver, monkeypatch, transient_modal):
+    """A failure inside the Qt slot is caught, recorded, and the modal still closed.
+
+    An exception escaping a timer slot aborts the interpreter rather than failing a test, so this
+    pins the handler that prevents it — including that the rescue still runs afterwards.
+    """
+
+    def explode(self, box, label):
+        raise RuntimeError("boom inside the slot")
+
+    monkeypatch.setattr(DialogDriver, "_answer", explode)
+    box = transient_modal(QMessageBox())
+    box.setWindowTitle("exploding answer")
+    box.setText("the handler will raise while answering me")
+    box.addButton(QMessageBox.StandardButton.Yes)
+
+    driver.expect("Yes")
+    box.exec()
+
+    assert any("RuntimeError in the timer slot" in error for error in driver.errors), (
+        f"the slot exception was not recorded: {driver.errors!r}"
+    )
+    assert not box.isVisible(), "the rescue must still close the modal, or exec() would hang"
+
+
+def test_a_dialog_nobody_answers_is_given_up_on_and_closed(driver, transient_modal):
+    """An unexpected modal is force-closed once the queue drains, with the reason recorded.
+
+    Nothing is queued here, so the driver has no instruction for the dialog that appears. The point
+    is that it still closes it: an open modal means ``exec()`` never returns.
+    """
+    box = transient_modal(QMessageBox())
+    box.setWindowTitle("unexpected")
+    box.setText("nothing queued for me")
+    box.addButton(QMessageBox.StandardButton.Yes)
+
+    driver.expect()  # an empty queue: the driver should notice the modal and close it
+    box.exec()
+
+    assert any("still open once the queue drained" in error for error in driver.errors), (
+        f"the unexpected modal was not reported: {driver.errors!r}"
+    )
+    assert not box.isVisible()
+
+
+def test_expect_stops_a_previous_arming(driver):
+    """Re-arming replaces the previous queue instead of leaving two timers polling.
+
+    Two live timers would answer dialogs twice over and interleave queues, which is the cross-test
+    cascade this driver exists to avoid.
+    """
+    driver.expect("Yes", "OK")
+    assert driver.pending == ["Yes", "OK"]
+    driver.expect("Not now")
+    assert driver.pending == ["Not now"], "the previous queue should have been discarded"
+    driver.stop()
+    assert driver.pending == ["Not now"], "stop() must not change what was queued"
+
+
+def test_accepting_restores_the_override_cursor(driver, clean_dismissal, becomes_installed):
+    """The busy cursor set for the install is always restored, even though a dialog follows it.
+
+    A leaked override cursor leaves the whole QGIS window showing a wait cursor for the rest of the
+    session, which no other assertion here would notice.
+    """
+    driver.expect("Yes", "OK")
+    PyramidsPlugin(None)._run_install_offer()
+
+    assert not driver.errors, driver.errors
+    assert QApplication.overrideCursor() is None, "the wait cursor was left applied"
+
+
+def test_the_offer_is_rendered_as_rich_text(driver, clean_dismissal, installs, missing_pyramids):
+    """The dialog is rich text, because its message is built as HTML.
+
+    Rendering it as plain text would show the user literal ``<b>`` and ``<code>`` tags, which is a
+    visible regression that no text assertion here would catch.
+    """
+    driver.expect("Not now")
+    PyramidsPlugin(None)._run_install_offer()
+
+    assert not driver.errors, driver.errors
+    assert driver.seen[0]["format"] == Qt.TextFormat.RichText, (
+        f"the offer must render as rich text, got {driver.seen[0]['format']!r}"
+    )
+
+
+def test_an_expected_dialog_that_never_appears_hits_the_tick_budget(driver, monkeypatch):
+    """A queued dialog that never opens ends in a reported give-up, not an endless wait.
+
+    No dialog is created at all, so the queue cannot drain and :data:`RESCUE_TICKS` is the only
+    thing that stops the driver polling for the rest of the session. The budget is lowered and a
+    plain event loop is run, because ticks only advance while some loop is spinning.
+    """
+    monkeypatch.setitem(globals(), "RESCUE_TICKS", 4)
+    loop = QEventLoop()
+    QTimer.singleShot(400, loop.quit)
+
+    driver.expect("Yes")
+    loop.exec()
+
+    assert any("gave up waiting" in error for error in driver.errors), (
+        f"the tick budget did not fire: {driver.errors!r}"
+    )
+    assert driver.pending == [], "giving up must clear the queue so nothing keeps polling"
+
+
+def test_clean_dismissal_puts_back_a_value_it_found(clean_dismissal):
+    """The fixture restores a pre-existing decline rather than deleting it.
+
+    Exercised directly, because the only way a test could observe it otherwise is by inspecting the
+    settings of a *different* test. ``QgsSettings`` is shared with whatever profile the suite runs
+    against, so silently dropping a user's recorded decline would be a real side effect.
+    """
+    from tests.test_install_offer_gui import clean_dismissal as fixture
+
+    QgsSettings().setValue(INSTALL_OFFER_DISMISSED_KEY, "outdated")
+    generator = fixture.__wrapped__()
+    next(generator)
+    assert QgsSettings().value(INSTALL_OFFER_DISMISSED_KEY, "") == "", (
+        "setup should clear the key for the duration of a test"
+    )
+    QgsSettings().setValue(INSTALL_OFFER_DISMISSED_KEY, "missing")
+    with pytest.raises(StopIteration):
+        next(generator)
+    assert QgsSettings().value(INSTALL_OFFER_DISMISSED_KEY) == "outdated", (
+        "teardown must put back what it found, not what the test left"
+    )
