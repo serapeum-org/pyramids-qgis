@@ -27,8 +27,11 @@ Five details are load-bearing, each of them learned by running it:
 - **Nothing may escape a Qt timer slot.** An exception there does not fail a test, it aborts the
   interpreter — observed as exit ``0xC0000409``, with no traceback and no pytest summary. Every tick
   is wrapped, and a dialog the driver cannot answer is force-closed. A modal that refuses to close
-  is reported rather than waited on, and ``timeout = 120`` in ``pyproject.toml`` bounds the rest:
-  the worst case is a named failing test, not a job that dies without output.
+  is reported rather than waited on, and the :func:`hang_watchdog` fixture bounds the rest with
+  ``faulthandler``: a stuck test ends the run with exit code 1 within
+  :data:`WATCHDOG_SECONDS` instead of burning the CI job's whole time limit. It uses the standard
+  library on purpose — ``pytest-timeout`` would be a new dependency and therefore a re-locked
+  ``pixi.lock``, which CI installs with ``--locked``.
 - ``QApplication.activeModalWidget()`` can be ``None`` while a modal really is open, so
   :func:`_open_modal` falls back to scanning ``topLevelWidgets()``. This matters more than it looks:
   a driver that gives up *without closing* the dialog leaves ``exec()`` spinning, so the test body
@@ -45,6 +48,7 @@ where the outcome dialog only opens after the offer is answered.
 
 from __future__ import annotations
 
+import faulthandler
 import html
 
 import pytest
@@ -69,6 +73,10 @@ POLL_MS = 25
 
 #: How many close passes to make before reporting that a modal will not go away.
 ROUNDS_TO_CLOSE = 5
+
+#: How long any one test in this module may run before the watchdog dumps a traceback and exits.
+#: Generous: it is a backstop for a hang, not a performance budget (the whole module runs in ~6s).
+WATCHDOG_SECONDS = 90.0
 
 #: The standard buttons the plugin uses, keyed by the label a test asks for. Matching by enum keeps
 #: these tests working under a translated Qt, where "Yes" and "OK" are localised.
@@ -281,6 +289,33 @@ class DialogDriver:
             self.errors.append(
                 f"modal(s) refused to close after {ROUNDS_TO_CLOSE} rounds: {remaining}"
             )
+
+
+@pytest.fixture(autouse=True)
+def hang_watchdog():
+    """Abort with a traceback if a test in this module runs far longer than it should.
+
+    These tests drive modal dialogs, where the failure mode is not an assertion but a hang: a modal
+    that never closes leaves ``exec()`` spinning, the test body is never reached, nothing is
+    reported, and CI eventually kills the job with no output. ``faulthandler`` turns that into a
+    dumped traceback that names the stuck frame.
+
+    It is the standard library rather than ``pytest-timeout`` deliberately: a new dependency would
+    invalidate the committed ``pixi.lock``, which CI installs with ``--locked``.
+
+    What this does and does not buy, measured rather than assumed: with the fallback scan broken on
+    purpose, the run ended at the watchdog with **exit code 1** instead of hanging, so CI reports a
+    failure. The traceback itself did **not** survive — pytest captures at the file-descriptor level
+    and ``os._exit`` discards that buffer — and a two-stage dump-then-exit variant did not change
+    that, so it was dropped rather than kept for show. Attribution therefore comes from the last
+    test to print its dot, plus :attr:`DialogDriver.errors`, which the in-suite rescues populate
+    before any of this is reached.
+    """
+    faulthandler.dump_traceback_later(WATCHDOG_SECONDS, exit=True)
+    try:
+        yield
+    finally:
+        faulthandler.cancel_dump_traceback_later()
 
 
 @pytest.fixture
