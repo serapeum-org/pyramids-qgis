@@ -331,6 +331,24 @@ def _read_all(data) -> str:
     return bytes(data).decode("utf-8", errors="replace")
 
 
+def _failure(reason: str, manual: str, process) -> str:
+    """Build a failure message carrying the manual command and any output pip produced.
+
+    Args:
+        reason: The one-line cause, e.g. a launch error or a timeout.
+        manual: The shell command the user can run by hand.
+        process: The ``QProcess``, read for whatever it buffered before failing.
+
+    Returns:
+        str: ``reason``, the manual-install hint, and the captured output when there is any.
+    """
+    captured = _read_all(process.readAllStandardOutput()) + _read_all(
+        process.readAllStandardError()
+    )
+    message = f"{reason}\n  install manually: {manual}"
+    return f"{message}\n{captured}" if captured.strip() else message
+
+
 def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     """Install (or upgrade) ``pyramids-core`` into the QGIS interpreter with pip.
 
@@ -378,16 +396,19 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     process.start()
 
     if not process.waitForStarted(PIP_START_TIMEOUT_MS):
-        return False, (
-            f"Could not run pip ({executable}): {process.errorString()}\n"
-            f"  install manually: {manual}"
+        return False, _failure(
+            f"Could not run pip ({executable}): {process.errorString()}", manual, process
         )
     if not process.waitForFinished(PIP_TIMEOUT_MS):
         process.kill()
         process.waitForFinished(PIP_KILL_TIMEOUT_MS)
-        return False, (
-            f"pip did not finish within {PIP_TIMEOUT_MS // 1000}s and was stopped.\n"
-            f"  install manually: {manual}"
+        # Read the channels after the kill: whatever pip managed to write is still buffered and is
+        # the only diagnostic a wedged install leaves. Measured on real Qt6 - a child that prints
+        # and then outlives the budget still yields its text here.
+        return False, _failure(
+            f"pip did not finish within {PIP_TIMEOUT_MS // 1000}s and was stopped.",
+            manual,
+            process,
         )
 
     output = _read_all(process.readAllStandardOutput()) + _read_all(process.readAllStandardError())

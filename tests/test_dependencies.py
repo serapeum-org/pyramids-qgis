@@ -574,3 +574,19 @@ class TestInstallPyramids:
         created = _patch_process(monkeypatch)
         deps.install_pyramids()
         assert "--no-input" in created[0].argv, f"missing --no-input: {created[0].argv}"
+
+    def test_timeout_reports_the_partial_output(self, monkeypatch):
+        """A timeout surfaces whatever pip had already written.
+
+        Test scenario:
+            Verified on real Qt6 that output written before a timeout is still readable after the
+            kill: a child printing ``PARTIAL-PROGRESS`` then sleeping past the budget yields that
+            text from ``readAllStandardOutput()``. The 10-minute budget only expires on a wedged
+            install, which is exactly when the partial log ("Downloading GDAL-...whl (90 MB)") is
+            the user's only diagnostic - so it must not be dropped.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        _patch_process(monkeypatch, finished=False, stdout=b"PARTIAL-PROGRESS")
+        ok, output = deps.install_pyramids()
+        assert ok is False, "a timeout is still a failure"
+        assert "PARTIAL-PROGRESS" in output, f"partial pip output must be kept: {output!r}"
