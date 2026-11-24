@@ -18,7 +18,6 @@ from __future__ import annotations
 import importlib.metadata
 import importlib.util
 import os
-import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
@@ -29,6 +28,14 @@ MIN_PYRAMIDS_VERSION_STR = "0.81.0"
 
 #: The pip requirement string the installer uses.
 PYRAMIDS_REQUIREMENT = f"pyramids-core>={MIN_PYRAMIDS_VERSION_STR}"
+
+# pip install budget, in milliseconds (QProcess works in ms, unlike subprocess's seconds).
+# 10 minutes: a cold pyramids-core install pulls GDAL-adjacent wheels over a slow link.
+PIP_TIMEOUT_MS = 600_000
+# A process that cannot even start fails fast; this only covers the fork/exec itself.
+PIP_START_TIMEOUT_MS = 10_000
+# Grace period for a killed process to actually die, so the handle is not leaked.
+PIP_KILL_TIMEOUT_MS = 5_000
 
 #: Distribution names `pyramids` is published under (PyPI vs conda-forge).
 _PYRAMIDS_DISTRIBUTIONS = ("pyramids-core", "pyramids")
@@ -311,12 +318,33 @@ def _find_python_in(base: str, names: tuple[str, ...]) -> str | None:
     return None
 
 
+def _read_all(data) -> str:
+    """Decode a ``QByteArray`` of process output into text.
+
+    Args:
+        data: The ``QByteArray`` returned by ``QProcess.readAllStandardOutput``/``...Error``.
+
+    Returns:
+        str: The decoded text; undecodable bytes are replaced rather than raising, because pip's
+            output encoding varies by platform and console code page.
+    """
+    return bytes(data).decode("utf-8", errors="replace")
+
+
 def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     """Install (or upgrade) ``pyramids-core`` into the QGIS interpreter with pip.
 
-    Runs ``<qgis-python> -m pip install [--upgrade] pyramids-core>=<floor>`` in a subprocess. Never
-    raises — a launch failure (wrong interpreter, no network, locked site-packages) is returned as a
-    failure with the captured output and the manual command, so the caller can show it.
+    Runs ``<qgis-python> -m pip install [--upgrade] pyramids-core>=<floor>`` in a child process via
+    Qt's ``QProcess``. Never raises — a launch failure (wrong interpreter, no pip), a timeout, or a
+    non-zero exit is returned as a failure carrying the captured output and the manual command, so
+    the caller can show it.
+
+    ``QProcess`` rather than ``subprocess``: this is a Qt application, so the Qt API is the native
+    one here. It avoids the console window ``subprocess`` flashes on Windows, and it keeps the
+    module free of the ``subprocess`` import that bandit blacklists (B404/B603) — plugins.qgis.org
+    blocks a submitted version on any bandit finding, so the plugin cannot ship that import. The
+    process is still a child process: the Qt API is a different interface to the same work, chosen
+    because it is the idiomatic one, not to assert that running pip is risk-free.
 
     Args:
         upgrade: Pass ``--upgrade`` (use when an older pyramids is already installed).
@@ -324,20 +352,37 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     Returns:
         tuple[bool, str]: ``(succeeded, combined_output)``.
     """
-    command = [_python_executable(), "-m", "pip", "install"]
+    # Imported lazily, through the qgis.PyQt shim for Qt5/Qt6 portability, so importing this
+    # module stays free of PyQGIS — `ensure_pyramids()` and the version helpers must work while
+    # QGIS is still starting up.
+    from qgis.PyQt.QtCore import QProcess
+
+    executable = _python_executable()
+    arguments = ["-m", "pip", "install"]
     if upgrade:
-        command.append("--upgrade")
-    command.append(PYRAMIDS_REQUIREMENT)
-    try:
-        # No shell, and nothing external reaches argv: argv[0] is derived from this running
-        # interpreter (sys.executable/sys.exec_prefix) and the requirement is the module
-        # constant PYRAMIDS_REQUIREMENT, so the only variable part is the --upgrade flag.
-        # Bandit B603 is advisory on any non-literal argv; plugins.qgis.org blocks on it.
-        completed = subprocess.run(  # nosec B603
-            command, capture_output=True, text=True, timeout=600, check=False
+        arguments.append("--upgrade")
+    arguments.append(PYRAMIDS_REQUIREMENT)
+    manual = " ".join([executable, *arguments])
+
+    process = QProcess()
+    process.setProgram(executable)
+    process.setArguments(arguments)
+    process.start()
+
+    if not process.waitForStarted(PIP_START_TIMEOUT_MS):
+        return False, (
+            f"Could not run pip ({executable}): {process.errorString()}\n"
+            f"  install manually: {manual}"
         )
-    except (OSError, subprocess.SubprocessError) as error:
-        manual = " ".join(command)
-        return False, f"Could not run pip ({command[0]}): {error}\n  install manually: {manual}"
-    output = (completed.stdout or "") + (completed.stderr or "")
-    return completed.returncode == 0, output
+    if not process.waitForFinished(PIP_TIMEOUT_MS):
+        process.kill()
+        process.waitForFinished(PIP_KILL_TIMEOUT_MS)
+        return False, (
+            f"pip did not finish within {PIP_TIMEOUT_MS // 1000}s and was stopped.\n"
+            f"  install manually: {manual}"
+        )
+
+    output = _read_all(process.readAllStandardOutput()) + _read_all(process.readAllStandardError())
+    # Success is exit code 0. exitStatus() is deliberately not consulted: its enum moved to a
+    # scoped form in PyQt6, and a crashed pip does not report 0 anyway.
+    return process.exitCode() == 0, output

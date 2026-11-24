@@ -315,74 +315,222 @@ class TestPythonExecutable:
         assert deps._python_executable() == fake_exe, "fallback is the original executable"
 
 
-class _Completed:
-    """Minimal stand-in for ``subprocess.CompletedProcess``."""
+class _FakeQProcess:
+    """Stand-in for ``QProcess``: records the argv and replays a scripted outcome.
 
-    def __init__(self, returncode, stdout="", stderr=""):
-        """Store the fields ``install_pyramids`` reads."""
-        self.returncode = returncode
-        self.stdout = stdout
-        self.stderr = stderr
+    ``install_pyramids`` imports ``QProcess`` lazily from ``qgis.PyQt.QtCore``, so tests patch the
+    name on that module and get this class instead. Only the handful of methods the function calls
+    are implemented; anything else is a deliberate AttributeError.
+    """
+
+    #: Every instance built since the last patch, so a test can read back the argv.
+    created: list = []
+
+    #: Script applied to each new instance, set by :func:`_patch_process`.
+    script: dict = {}
+
+    def __init__(self):
+        """Apply the current script and register the instance."""
+        self.program = None
+        self.argv = []
+        self.start_called = False
+        self.killed = False
+        self.start_timeout = None
+        self.finish_timeout = None
+        self._started = self.script.get("started", True)
+        self._finished = self.script.get("finished", True)
+        self._exit_code = self.script.get("exit_code", 0)
+        self._stdout = self.script.get("stdout", b"")
+        self._stderr = self.script.get("stderr", b"")
+        type(self).created.append(self)
+
+    def setProgram(self, program):  # noqa: N802 - Qt API name
+        """Record the executable."""
+        self.program = program
+
+    def setArguments(self, arguments):  # noqa: N802 - Qt API name
+        """Record the argument list."""
+        self.argv = list(arguments)
+
+    def start(self):
+        """Note that the process was launched."""
+        self.start_called = True
+
+    def waitForStarted(self, msecs):  # noqa: N802 - Qt API name
+        """Report whether the launch succeeded, per the script."""
+        self.start_timeout = msecs
+        return self._started
+
+    def waitForFinished(self, msecs):  # noqa: N802 - Qt API name
+        """Report whether the run completed in time, per the script."""
+        self.finish_timeout = msecs
+        return self._finished
+
+    def kill(self):
+        """Note that the process was killed."""
+        self.killed = True
+
+    def readAllStandardOutput(self):  # noqa: N802 - Qt API name
+        """Return the scripted stdout bytes."""
+        return self._stdout
+
+    def readAllStandardError(self):  # noqa: N802 - Qt API name
+        """Return the scripted stderr bytes."""
+        return self._stderr
+
+    def exitCode(self):  # noqa: N802 - Qt API name
+        """Return the scripted exit code."""
+        return self._exit_code
+
+    def errorString(self):  # noqa: N802 - Qt API name
+        """Return a fixed Qt-style launch error message."""
+        return "No such file or directory"
+
+
+def _patch_process(monkeypatch, **script):
+    """Replace ``QProcess`` with :class:`_FakeQProcess` for one test.
+
+    Args:
+        monkeypatch: pytest's monkeypatch fixture.
+        **script: Outcome to replay - ``started``, ``finished``, ``exit_code``, ``stdout``,
+            ``stderr``.
+
+    Returns:
+        list: The (initially empty) list each constructed fake appends itself to, so the caller
+            can assert on the argv afterwards.
+    """
+    _FakeQProcess.created = []
+    _FakeQProcess.script = script
+    monkeypatch.setattr("qgis.PyQt.QtCore.QProcess", _FakeQProcess)
+    return _FakeQProcess.created
+
+
+class TestReadAll:
+    """Tests for ``_read_all``."""
+
+    def test_decodes_utf8(self):
+        """Bytes are decoded as UTF-8.
+
+        Test scenario:
+            ``b"installed ok"`` decodes to the same text.
+        """
+        assert deps._read_all(b"installed ok") == "installed ok", "utf-8 should round-trip"
+
+    def test_replaces_undecodable_bytes(self):
+        """Invalid bytes are replaced instead of raising.
+
+        Test scenario:
+            pip output under a non-UTF-8 console code page must not crash the installer.
+        """
+        out = deps._read_all(b"caf\xff")
+        assert out.startswith("caf"), f"prefix should survive: {out!r}"
+        assert "\ufffd" in out, f"bad byte should become U+FFFD: {out!r}"
 
 
 class TestInstallPyramids:
-    """Tests for ``install_pyramids`` (subprocess mocked — no real pip)."""
+    """Tests for ``install_pyramids`` (QProcess faked - no real pip runs)."""
 
     def test_success_returns_true_and_output(self, monkeypatch):
-        """A zero return code yields (True, combined output)."""
+        """Exit code 0 yields (True, combined output).
+
+        Test scenario:
+            A process that starts, finishes and exits 0 with stdout is a success.
+        """
         monkeypatch.setattr(deps, "_python_executable", lambda: "py")
-        monkeypatch.setattr(deps.subprocess, "run", lambda *a, **k: _Completed(0, "installed ok"))
+        _patch_process(monkeypatch, exit_code=0, stdout=b"installed ok")
         ok, output = deps.install_pyramids()
-        assert ok is True, "returncode 0 -> success"
+        assert ok is True, "exit code 0 -> success"
         assert "installed ok" in output, f"stdout should be surfaced: {output}"
 
     def test_failure_returns_false_and_output(self, monkeypatch):
-        """A non-zero return code yields (False, combined output)."""
+        """A non-zero exit code yields (False, combined output).
+
+        Test scenario:
+            pip failing with a message on stderr is reported, not raised.
+        """
         monkeypatch.setattr(deps, "_python_executable", lambda: "py")
-        monkeypatch.setattr(deps.subprocess, "run", lambda *a, **k: _Completed(1, "", "pip boom"))
+        _patch_process(monkeypatch, exit_code=1, stderr=b"pip boom")
         ok, output = deps.install_pyramids()
-        assert ok is False, "non-zero returncode -> failure"
+        assert ok is False, "non-zero exit code -> failure"
         assert "pip boom" in output, f"stderr should be surfaced: {output}"
 
-    def test_upgrade_adds_flag(self, monkeypatch):
-        """``upgrade=True`` puts --upgrade in the pip command."""
-        captured = {}
+    def test_runs_the_interpreter_with_pip_install(self, monkeypatch):
+        """The program is the resolved interpreter and the argv is a pip install.
+
+        Test scenario:
+            argv must not repeat the executable - QProcess takes it via setProgram.
+        """
         monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        created = _patch_process(monkeypatch)
+        deps.install_pyramids()
+        proc = created[0]
+        assert proc.program == "py", f"program should be the interpreter: {proc.program}"
+        assert proc.argv[:3] == ["-m", "pip", "install"], f"unexpected argv: {proc.argv}"
+        assert proc.start_called, "the process must actually be started"
 
-        def fake_run(command, **kwargs):
-            captured["command"] = command
-            return _Completed(0)
+    def test_upgrade_adds_flag(self, monkeypatch):
+        """``upgrade=True`` puts --upgrade in the argv.
 
-        monkeypatch.setattr(deps.subprocess, "run", fake_run)
+        Test scenario:
+            Used when an older pyramids is already installed.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        created = _patch_process(monkeypatch)
         deps.install_pyramids(upgrade=True)
-        assert "--upgrade" in captured["command"], f"missing --upgrade: {captured['command']}"
+        assert "--upgrade" in created[0].argv, f"missing --upgrade: {created[0].argv}"
 
     def test_default_omits_upgrade_flag(self, monkeypatch):
-        """Without ``upgrade`` the command has no --upgrade."""
-        captured = {}
+        """Without ``upgrade`` the argv has no --upgrade but does carry the requirement.
+
+        Test scenario:
+            A fresh install must not pass --upgrade, and must pin the version floor.
+        """
         monkeypatch.setattr(deps, "_python_executable", lambda: "py")
-
-        def fake_run(command, **kwargs):
-            captured["command"] = command
-            return _Completed(0)
-
-        monkeypatch.setattr(deps.subprocess, "run", fake_run)
+        created = _patch_process(monkeypatch)
         deps.install_pyramids()
-        assert "--upgrade" not in captured["command"], (
-            f"unexpected --upgrade: {captured['command']}"
-        )
-        assert deps.PYRAMIDS_REQUIREMENT in captured["command"], (
-            "requirement must be in the command"
-        )
+        argv = created[0].argv
+        assert "--upgrade" not in argv, f"unexpected --upgrade: {argv}"
+        assert deps.PYRAMIDS_REQUIREMENT in argv, f"requirement must be in the argv: {argv}"
 
     def test_never_raises_on_launch_failure(self, monkeypatch):
-        """A subprocess launch error is returned as a failure, never raised."""
+        """A process that never starts is a failure carrying the manual command.
+
+        Test scenario:
+            Wrong interpreter path or missing pip - Qt reports it through waitForStarted() and
+            errorString() rather than an exception, and the user still gets a command to run.
+        """
         monkeypatch.setattr(deps, "_python_executable", lambda: "py")
-
-        def boom(*args, **kwargs):
-            raise OSError("pip not found")
-
-        monkeypatch.setattr(deps.subprocess, "run", boom)
+        _patch_process(monkeypatch, started=False)
         ok, output = deps.install_pyramids()
         assert ok is False, "a launch error is a failure, not an exception"
         assert "install manually" in output.lower(), f"should offer the manual command: {output}"
+        assert "No such file" in output, f"Qt's errorString should be surfaced: {output}"
+
+    def test_timeout_kills_the_process_and_reports(self, monkeypatch):
+        """A run that outlasts the budget is killed and reported as a failure.
+
+        Test scenario:
+            waitForFinished() timing out must not leave the process running, and must still hand
+            the user the manual command.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        created = _patch_process(monkeypatch, finished=False)
+        ok, output = deps.install_pyramids()
+        assert ok is False, "a timeout is a failure"
+        assert created[0].killed, "a timed-out process must be killed, not abandoned"
+        assert "install manually" in output.lower(), f"should offer the manual command: {output}"
+
+    def test_timeouts_are_passed_in_milliseconds(self, monkeypatch):
+        """The Qt waits receive the module's millisecond budgets.
+
+        Test scenario:
+            QProcess takes milliseconds while the old subprocess call took seconds; passing 600
+            instead of 600_000 would cut a ten-minute budget to 0.6s.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        created = _patch_process(monkeypatch)
+        deps.install_pyramids()
+        proc = created[0]
+        assert proc.start_timeout == deps.PIP_START_TIMEOUT_MS, "start budget must be in ms"
+        assert proc.finish_timeout == deps.PIP_TIMEOUT_MS, "install budget must be in ms"
+        assert deps.PIP_TIMEOUT_MS >= 600_000, "the install budget must stay at least 10 minutes"
