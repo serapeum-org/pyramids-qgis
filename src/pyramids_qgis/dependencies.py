@@ -358,7 +358,9 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     from qgis.PyQt.QtCore import QProcess
 
     executable = _python_executable()
-    arguments = ["-m", "pip", "install"]
+    # --no-input makes pip fail with a message instead of waiting on a prompt; its keyring
+    # and proxy-authentication paths both prompt, and this runs on the GUI thread.
+    arguments = ["-m", "pip", "install", "--no-input"]
     if upgrade:
         arguments.append("--upgrade")
     arguments.append(PYRAMIDS_REQUIREMENT)
@@ -367,6 +369,12 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     process = QProcess()
     process.setProgram(executable)
     process.setArguments(arguments)
+    # QProcess.start() opens a pipe to the child's stdin and holds it open until the QProcess is
+    # destroyed, where subprocess left stdin inherited - and QGIS is a console-less GUI process, so
+    # a child's read returned EOF at once. Without this redirect a pip that prompts never finishes:
+    # measured on real Qt6, a stdin-reading child is still Running after 3s (so it would block for
+    # the whole PIP_TIMEOUT_MS with the GUI thread and a wait cursor held), against 0.08s with it.
+    process.setStandardInputFile(QProcess.nullDevice())
     process.start()
 
     if not process.waitForStarted(PIP_START_TIMEOUT_MS):

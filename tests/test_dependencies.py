@@ -334,6 +334,7 @@ class _FakeQProcess:
         self.program = None
         self.argv = []
         self.start_called = False
+        self.stdin_file = None
         self.killed = False
         self.start_timeout = None
         self.finish_timeout = None
@@ -351,6 +352,15 @@ class _FakeQProcess:
     def setArguments(self, arguments):  # noqa: N802 - Qt API name
         """Record the argument list."""
         self.argv = list(arguments)
+
+    def setStandardInputFile(self, path):  # noqa: N802 - Qt API name
+        """Record the file stdin was redirected from."""
+        self.stdin_file = path
+
+    @staticmethod
+    def nullDevice():  # noqa: N802 - Qt API name
+        """Return a sentinel standing in for Qt's platform null device."""
+        return "<null-device>"
 
     def start(self):
         """Note that the process was launched."""
@@ -534,3 +544,33 @@ class TestInstallPyramids:
         assert proc.start_timeout == deps.PIP_START_TIMEOUT_MS, "start budget must be in ms"
         assert proc.finish_timeout == deps.PIP_TIMEOUT_MS, "install budget must be in ms"
         assert deps.PIP_TIMEOUT_MS >= 600_000, "the install budget must stay at least 10 minutes"
+
+    def test_child_stdin_is_closed(self, monkeypatch):
+        """The child's stdin is redirected from the null device before it starts.
+
+        Test scenario:
+            ``QProcess.start()`` opens a pipe to the child's stdin and holds it open, where
+            ``subprocess`` left stdin inherited (and therefore EOF in QGIS's console-less GUI
+            process). Measured on real Qt6: a stdin-reading child launched without this call is
+            still ``Running`` after 3s and would block for the whole budget, freezing the GUI;
+            with it, the child finishes in 0.08s.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        created = _patch_process(monkeypatch)
+        deps.install_pyramids()
+        assert created[0].stdin_file == _FakeQProcess.nullDevice(), (
+            f"stdin must be redirected from the null device, got {created[0].stdin_file!r}"
+        )
+
+    def test_pip_is_told_not_to_prompt(self, monkeypatch):
+        """The argv carries --no-input so pip errors instead of waiting for a prompt.
+
+        Test scenario:
+            Belt and braces alongside the closed stdin: pip's keyring and proxy-auth paths prompt,
+            and ``--no-input`` makes pip fail with a message that reaches the user through the
+            existing output path instead of blocking.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        created = _patch_process(monkeypatch)
+        deps.install_pyramids()
+        assert "--no-input" in created[0].argv, f"missing --no-input: {created[0].argv}"
