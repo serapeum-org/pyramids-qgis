@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://serapeum-org.github.io/pyramids-qgis/0.2.0/testing/">
       
       
-        <link rel="prev" href="../installation/">
+        <link rel="prev" href="../usage/">
       
       
         <link rel="next" href="../algorithms/">
@@ -311,6 +311,8 @@
       
         
       
+        
+      
     
     
     
@@ -371,6 +373,34 @@
     
   
     Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage tutorial
   
 
     
@@ -451,10 +481,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-to-run-cover-both-wiring-paths-and-all-four-groups" class="md-nav__link">
+  <a href="#what-to-run-cover-both-wiring-paths-and-every-group" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What to run — cover both wiring paths and all four groups
+        What to run — cover both wiring paths and every group
       
     </span>
   </a>
@@ -835,10 +865,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-to-run-cover-both-wiring-paths-and-all-four-groups" class="md-nav__link">
+  <a href="#what-to-run-cover-both-wiring-paths-and-every-group" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What to run — cover both wiring paths and all four groups
+        What to run — cover both wiring paths and every group
       
     </span>
   </a>
@@ -889,21 +919,30 @@
 
 <h1 id="end-to-end-testing"><a class="toclink" href="#end-to-end-testing">End-to-end testing</a><a class="headerlink" href="#end-to-end-testing" title="Permanent link">#</a></h1>
 <p>The unit / integration suite runs against <strong>real PyQGIS</strong> in CI and exercises every algorithm's
-<code>initAlgorithm</code> / parameter construction. What it does <strong>not</strong> cover is running an algorithm
-end-to-end (<code>processAlgorithm</code>) in a real QGIS session on real data, nor the GUI / dialog behaviour.
-That still has to be done by hand, and it is the gate before a non-experimental release.</p>
+<code>initAlgorithm</code> / parameter construction, and — since the <code>gui</code> tests landed — the <code>pyramids-core</code>
+install dialog itself, clicked offscreen. What it does <strong>not</strong> cover is running an algorithm
+end-to-end (<code>processAlgorithm</code>) in a real QGIS session on real data, nor <em>when</em> the install offer
+appears relative to the main window. That still has to be done by hand, and it is the gate before a
+non-experimental release.</p>
 <p>This page is that by-hand validation guide. Install the plugin first — see
 <a href="../installation/">Installation</a>.</p>
-<h2 id="what-to-run-cover-both-wiring-paths-and-all-four-groups"><a class="toclink" href="#what-to-run-cover-both-wiring-paths-and-all-four-groups">What to run — cover both wiring paths and all four groups</a><a class="headerlink" href="#what-to-run-cover-both-wiring-paths-and-all-four-groups" title="Permanent link">#</a></h2>
-<p>The raster / conversion algorithms call the pyramids CLI in-process; the mesh / EO ones call the
-library directly. Run at least one of each path:</p>
+<h2 id="what-to-run-cover-both-wiring-paths-and-every-group"><a class="toclink" href="#what-to-run-cover-both-wiring-paths-and-every-group">What to run — cover both wiring paths and every group</a><a class="headerlink" href="#what-to-run-cover-both-wiring-paths-and-every-group" title="Permanent link">#</a></h2>
+<p>88 of the 92 algorithms call the pyramids CLI in-process; only the Mesh and Earth-observation groups call their
+library directly. Run at least one of each path, and at least one per group:</p>
 <ul>
 <li>[ ] <strong>Raster (CLI path):</strong> Reproject (warp) a GeoTIFF to another CRS; confirm the output layer
       loads and looks right.</li>
 <li>[ ] <strong>Raster:</strong> Clip (by mask and by extent), Merge, Raster calculator (e.g. NDVI over two
-      inputs), Assign CRS / NoData.</li>
-<li>[ ] <strong>Conversion:</strong> Rasterize a vector, Polygonize a raster (GeoJSON output), Create COG, Convert
-      format.</li>
+      inputs), Assign CRS / NoData — and the format-conversion ones that also live in this group:
+      Rasterize a vector, Polygonize a raster (GeoJSON output), Convert format.</li>
+<li>[ ] <strong>Cloud Optimized GeoTIFF:</strong> Create COG, and confirm the result validates as a COG.</li>
+<li>[ ] <strong>Vector:</strong> one of each kind — a geometry op (buffer / simplify), an overlay (clip or
+      intersection), and a tessellation (fishnet or Voronoi).</li>
+<li>[ ] <strong>Collection:</strong> one whole-stack operation (align or reduce over time) on a small stack.</li>
+<li>[ ] <strong>NetCDF:</strong> extract a variable to raster, and select a time step.</li>
+<li>[ ] <strong>Fetch:</strong> pull a small window from a public WMS or WFS (needs network).</li>
+<li>[ ] <strong>STAC:</strong> download an asset from a public catalogue (needs network).</li>
+<li>[ ] <strong>Process:</strong> apply a processing tool, and run a short pipeline.</li>
 <li>[ ] <strong>Mesh (library path):</strong> Convert a <code>.2dm</code> / Selafin mesh to UGRID NetCDF, and Mesh → vector
       (needs <code>pyramids-mesh</code>).</li>
 <li>[ ] <strong>EO (library path):</strong> Contrast stretch, and Tasseled cap on a Landsat reflectance stack
@@ -919,8 +958,22 @@ library directly. Run at least one of each path:</p>
 <li>[ ] <strong>Dependency guards</strong> — with <code>pyramids-mesh</code> / <code>pyramids-eo</code> absent, the mesh / EO algorithms
       should raise a clear "install ..." message; the vendored-GDAL warning should appear only for a
       vendored build.</li>
+<li>[ ] <strong>The <code>pyramids-core</code> install offer — startup ordering only.</strong> The dialog itself is now
+      automated: <code>pytest -m gui</code> clicks the real <code>QMessageBox</code> offscreen and covers all three
+      buttons, the per-state decline, upgrade-vs-fresh-install and all three outcome dialogs, so
+      none of that needs checking by hand. What no test can reach yet is the <em>ordering</em>: with
+      <code>pyramids-core</code> absent (and again with a version below 0.81.0), starting QGIS should show the
+      offer <strong>after</strong> the main window appears, not block startup. That is the only part to verify
+      here; see issue #46 (tier B) for automating it.</li>
 <li>[ ] <strong>Error surfacing</strong> — a bad CRS / missing file should come back as a clean
       <code>QgsProcessingException</code> in the Processing log, not a raw traceback.</li>
+<li>[ ] <strong>Headless (<code>qgis_process</code>)</strong> — enable it in that profile first
+      (<code>qgis_process plugins enable pyramids_qgis</code>), or it reports no algorithms for the ordinary
+      reason that it is switched off. Then <code>qgis_process plugins</code> must list <code>* pyramids_qgis</code> (the <code>*</code>
+      means it loaded as a Processing provider) and <code>qgis_process list</code> must show the <code>pyramids:</code>
+      algorithms; then run one to an output file. This path is separate from the GUI: QGIS starts
+      the plugin through <code>initProcessing</code> rather than <code>initGui</code>, so a missing hook shows up here and
+      nowhere else.</li>
 <li>[ ] <strong>Qt5 / Qt6</strong> — ideally smoke-test on a QGIS 3.x (Qt5) and a 4.x (Qt6) build, since the plugin
       uses the <code>qgis.PyQt</code> shim.</li>
 </ul>
@@ -967,7 +1020,7 @@ library directly. Run at least one of each path:</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../installation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Installation">
+          <a href="../usage/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Usage tutorial">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -977,7 +1030,7 @@ library directly. Run at least one of each path:</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Installation
+                Usage tutorial
               </div>
             </div>
           </a>
