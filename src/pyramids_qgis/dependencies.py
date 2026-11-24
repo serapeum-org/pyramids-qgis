@@ -18,7 +18,7 @@ from __future__ import annotations
 import importlib.metadata
 import importlib.util
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
@@ -329,7 +329,11 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
         command.append("--upgrade")
     command.append(PYRAMIDS_REQUIREMENT)
     try:
-        completed = subprocess.run(
+        # No shell, and nothing external reaches argv: argv[0] is derived from this running
+        # interpreter (sys.executable/sys.exec_prefix) and the requirement is the module
+        # constant PYRAMIDS_REQUIREMENT, so the only variable part is the --upgrade flag.
+        # Bandit B603 is advisory on any non-literal argv; plugins.qgis.org blocks on it.
+        completed = subprocess.run(  # nosec B603
             command, capture_output=True, text=True, timeout=600, check=False
         )
     except (OSError, subprocess.SubprocessError) as error:

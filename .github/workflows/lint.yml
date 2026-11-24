@@ -3,7 +3,8 @@ name: CI
 # Static checks for the plugin. Unlike pyramids, pyramids-qgis is not a pip-installable
 # package and has no pixi env: it runs inside QGIS's own Python, which provides PyQGIS and
 # GDAL. So CI cannot import the plugin (PyQGIS is absent on a bare runner) and instead does
-# what it can without QGIS: lint and format with ruff, and byte-compile every module across
+# what it can without QGIS: run the whole pre-commit suite (ruff lint+format, bandit, checkov,
+# shellcheck and the hygiene hooks) and byte-compile every module across
 # the Python versions the plugin supports (those of its pyramids-core dependency, >= 3.11) to
 # catch syntax errors. End-to-end behaviour is verified by running the algorithms inside QGIS,
 # not here.
@@ -21,26 +22,44 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  lint:
+  # Mirrors pyramids-core: one job runs every hook in .pre-commit-config.yaml, so the gates a
+  # contributor gets locally are exactly the gates CI enforces. This replaces the standalone
+  # ruff steps that used to live here - ruff now runs as a hook, from the same pinned rev.
+  pre-commit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
+      # No fetch-depth: `pre-commit run --all-files` scans the working tree, not history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
 
-      # Pin the resolved version for reproducible CI; bump deliberately or via dependabot.
-      # Keep this in step with the [tool.ruff] config in pyproject.toml. --only-binary=:all:
-      # forbids building from sdist, so no package setup script runs during install (sonar S8541).
-      - run: "python -m pip install --only-binary=:all: ruff==0.17.3"
+      # Cache the hook toolchains (each hook repo builds an isolated env on first run).
+      # Keyed on the config so a hook or rev bump rebuilds; restore-keys reuse the rest.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: pre-commit-
 
-      - name: Ruff lint
-        run: ruff check --output-format=github .
+      # Pin the resolved version (reproducible CI, and satisfies the supply-chain
+      # "lock resolved versions" check); bump deliberately or via dependabot.
+      - run: python -m pip install pre-commit==4.5.1
 
-      - name: Ruff format check
-        run: ruff format --check --diff .
+      - name: Run pre-commit hooks
+        # --show-diff-on-failure prints exactly what the auto-fixers (ruff-format,
+        # end-of-file-fixer, ...) would change, so a contributor sees the fix to apply.
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
+        env:
+          # no-commit-to-branch: CI checks out a detached HEAD or the PR merge ref, so the
+          #   branch guard is meaningless here (it is a local-commit guard).
+          # gitleaks: the dedicated job below scans the whole tree with the pinned binary and
+          #   the SHA256 check; running the hook too would duplicate it.
+          # pixi-lock-check: needs pixi installed; tests.yml already installs both envs with
+          #   --locked, which fails on a stale lock.
+          SKIP: no-commit-to-branch,gitleaks,pixi-lock-check
 
   compile:
     runs-on: ubuntu-latest

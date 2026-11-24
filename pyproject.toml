@@ -107,6 +107,12 @@ version_files = [
     "src/pyramids_qgis/metadata.txt:^version",
 ]
 
+[tool.bandit]
+# scripts/ is developer tooling run with fixed commands and is not shipped in the plugin
+# zip; tests/ and docs/ are not shipped either. B101 (assert) is skipped as in pyramids-core.
+exclude_dirs = ["tests", "scripts", "docs", "planning"]
+skips = ["B101"]
+
 [tool.coverage.run]
 branch = true
 source = ["src/pyramids_qgis"]
