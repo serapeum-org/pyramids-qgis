@@ -5,16 +5,6 @@ Commit history on each release (`cz bump`, run by the `github-release` workflow)
 manual changes are overwritten on the next release. The first release (`0.1.0`) populates it from the commit
 history to date.
 
-## 0.3.0 (2026-11-23)
-
-### Feat
-
-- **deps**: offer to auto-install or upgrade pyramids-core on plugin load (#41)
-
-### Fix
-
-- **plugin**: expose initProcessing so the plugin loads headlessly (#45)
-
 ## 0.2.0 (2026-11-15)
 
 ### Fix
