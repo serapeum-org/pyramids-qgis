@@ -33,3 +33,7 @@ examples/data/*.aux.xml
 
 # MkDocs build output (mkdocs build --strict / the docs-strict task)
 site/
+
+# Local secrets (e.g. plugins.qgis.org token) — never commit
+.env
+.env.*
