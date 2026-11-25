@@ -3,8 +3,10 @@ name: CI
 # Static checks for the plugin. Unlike pyramids, pyramids-qgis is not a pip-installable
 # package and has no pixi env: it runs inside QGIS's own Python, which provides PyQGIS and
 # GDAL. So CI cannot import the plugin (PyQGIS is absent on a bare runner) and instead does
-# what it can without QGIS: run the whole pre-commit suite (ruff lint+format, bandit, checkov,
-# shellcheck and the hygiene hooks) and byte-compile every module across
+# what it can without QGIS: run the pre-commit suite (ruff lint+format, bandit and the hygiene
+# hooks are what actually fire here; checkov and shellcheck are carried for future IaC and
+# shell files and currently match none, reporting "no files to check") and byte-compile every
+# module across
 # the Python versions the plugin supports (those of its pyramids-core dependency, >= 3.11) to
 # catch syntax errors. End-to-end behaviour is verified by running the algorithms inside QGIS,
 # not here.
@@ -22,9 +24,16 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Mirrors pyramids-core: one job runs every hook in .pre-commit-config.yaml, so the gates a
-  # contributor gets locally are exactly the gates CI enforces. This replaces the standalone
-  # ruff steps that used to live here - ruff now runs as a hook, from the same pinned rev.
+  # Mirrors pyramids-core: one job runs the pre-commit-stage hooks from
+  # .pre-commit-config.yaml, replacing the standalone ruff steps that used to live here -
+  # ruff now runs as a hook, from the same pinned rev, so its version cannot drift between
+  # local and CI.
+  #
+  # The two gate sets overlap but are NOT identical, in both directions:
+  #   * CI-only: the `compile` matrix below, and the pinned-binary `gitleaks dir` sweep.
+  #   * local-only: the six commit-msg-stage hooks (`pre-commit run --all-files` runs
+  #     pre-commit-stage hooks only, so they never appear in this job's log), plus the three
+  #     hooks SKIPped below.
   pre-commit:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -55,6 +64,11 @@ jobs:
         # end-of-file-fixer, ...) would change, so a contributor sees the fix to apply.
         run: pre-commit run --all-files --show-diff-on-failure --color=always
         env:
+          # Restores the inline PR annotations the deleted `ruff check --output-format=github`
+          # step produced: ruff reads this env var, so findings land on the offending lines in
+          # Files-changed instead of only in this job's log. Set here rather than as a hook
+          # arg so local runs keep ruff's readable default output.
+          RUFF_OUTPUT_FORMAT: github
           # no-commit-to-branch: CI checks out a detached HEAD or the PR merge ref, so the
           #   branch guard is meaningless here (it is a local-commit guard).
           # gitleaks: the dedicated job below scans the whole tree with the pinned binary and

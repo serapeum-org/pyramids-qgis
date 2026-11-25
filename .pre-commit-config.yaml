@@ -1,6 +1,6 @@
 # Pre-commit hooks for pyramids-qgis, aligned with pyramids-core's config so the whole stack
-# gates on the same tools at the same revisions. It is ruff-based (lint + format), matching
-# pyproject.toml and .github/workflows/lint.yml.
+# gates on the same tools at the same revisions. It is ruff-based (lint + format), matching the
+# [tool.ruff] config in pyproject.toml; lint.yml runs these hooks rather than configuring ruff.
 #
 # Why bandit is here: plugins.qgis.org blocks a submitted plugin version on two gates, "Bandit
 # Security Analysis" and "Secrets Detection". This repo mirrored only the second (gitleaks), so
@@ -62,7 +62,8 @@ repos:
         name: "[yaml -  check] validate yaml"
         exclude: mkdocs\.yml
 
-  # Keep this rev in step with the ruff== pin in pyproject.toml and .github/workflows/lint.yml.
+  # Keep this rev in step with the ruff== pin in pyproject.toml. lint.yml no longer pins ruff:
+  # it runs ruff through this hook, so these two files are the only places the version lives.
   # The hook id is `ruff-check`; the bare `ruff` id is the deprecated alias.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.3
