@@ -584,6 +584,47 @@ class TestInstallPyramids:
         deps.install_pyramids()
         assert "--no-input" in created[0].argv, f"missing --no-input: {created[0].argv}"
 
+    def test_every_failure_path_carries_the_manual_command(self, monkeypatch):
+        """All four failure modes hand back the manual-install command.
+
+        Test scenario:
+            The docstring promises it for every failure, and two paths used not to: a non-zero exit
+            and a crash returned pip's output alone. A caller that trusts the contract would show
+            the user nothing actionable.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        cases = {
+            "non-zero exit": {"exit_code": 1, "stderr": b"ERROR: no matching distribution"},
+            "crash": {
+                "exit_code": 0,
+                "exit_status": _FakeQProcess.CrashExit,
+                "stdout": b"half a log",
+            },
+            "timeout": {"finished": False, "stdout": b"partial"},
+            "launch failure": {"started": False},
+        }
+        for label, script in cases.items():
+            _patch_process(monkeypatch, **script)
+            ok, output = deps.install_pyramids()
+            assert ok is False, f"{label} must be a failure"
+            assert "install manually" in output, (
+                f"{label} must carry the manual command, got {output!r}"
+            )
+
+    def test_a_crash_with_no_output_still_says_something(self, monkeypatch):
+        """A crash that produced no output does not return an empty message.
+
+        Test scenario:
+            Measured before the fix: a crash with empty channels returned ``(False, '')``, so the
+            install-failed dialog had no diagnostic at all to show.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        _patch_process(monkeypatch, exit_code=0, exit_status=_FakeQProcess.CrashExit)
+        ok, output = deps.install_pyramids()
+        assert ok is False, "a crash is a failure"
+        assert output.strip(), "an empty failure message leaves the dialog with nothing to show"
+        assert "install manually" in output, f"should offer the manual command: {output!r}"
+
     def test_timeout_reports_the_partial_output(self, monkeypatch):
         """A timeout surfaces whatever pip had already written.
 

@@ -339,20 +339,33 @@ def _read_all(data: "QByteArray") -> str:
     return bytes(data).decode("utf-8", errors="replace")
 
 
-def _failure(reason: str, manual: str, process) -> str:
-    """Build a failure message carrying the manual command and any output pip produced.
+def _drain(process) -> str:
+    """Read and decode both of a process's output channels.
 
     Args:
-        reason: The one-line cause, e.g. a launch error or a timeout.
+        process: The ``QProcess`` to drain. Both channels are consumed, so call this once.
+
+    Returns:
+        str: stdout followed by stderr, decoded with replacement.
+    """
+    return _read_all(process.readAllStandardOutput()) + _read_all(process.readAllStandardError())
+
+
+def _failure(reason: str, manual: str, captured: str = "") -> str:
+    """Build a failure message carrying the manual command and any output pip produced.
+
+    Takes the captured text rather than the ``QProcess`` so each caller decides what to
+    read: the launch-failure path has nothing to read (measured - a never-started process
+    returns 0 bytes on both channels), while the other paths have already drained them.
+
+    Args:
+        reason: The one-line cause, e.g. a launch error, a timeout, or a non-zero exit.
         manual: The shell command the user can run by hand.
-        process: The ``QProcess``, read for whatever it buffered before failing.
+        captured: Whatever pip wrote, if anything.
 
     Returns:
         str: ``reason``, the manual-install hint, and the captured output when there is any.
     """
-    captured = _read_all(process.readAllStandardOutput()) + _read_all(
-        process.readAllStandardError()
-    )
     message = f"{reason}\n  install manually: {manual}"
     return f"{message}\n{captured}" if captured.strip() else message
 
@@ -414,9 +427,8 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     process.start()
 
     if not process.waitForStarted(PIP_START_TIMEOUT_MS):
-        return False, _failure(
-            f"Could not run pip ({executable}): {process.errorString()}", manual, process
-        )
+        # Nothing to capture: a process that never started has written nothing (measured).
+        return False, _failure(f"Could not run pip ({executable}): {process.errorString()}", manual)
     if not process.waitForFinished(PIP_TIMEOUT_MS):
         process.kill()
         process.waitForFinished(PIP_KILL_TIMEOUT_MS)
@@ -426,14 +438,21 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
         return False, _failure(
             f"pip did not finish within {PIP_TIMEOUT_MS // 1000}s and was stopped.",
             manual,
-            process,
+            _drain(process),
         )
 
-    output = _read_all(process.readAllStandardOutput()) + _read_all(process.readAllStandardError())
+    output = _drain(process)
     # Qt documents exitCode() as meaningless unless exitStatus() is NormalExit, so both are
     # checked. The enum is resolved with getattr because PyQt6 exposes it only scoped
     # (QProcess.ExitStatus.NormalExit) while PyQt5 exposes it only flat, and this plugin spans
     # QGIS 3.22 through 4.x. Comparing int(exitStatus()) does NOT work - measured on PyQt6,
     # int() on that enum raises TypeError - so the members are compared directly.
     normal_exit = getattr(QProcess, "ExitStatus", QProcess).NormalExit
-    return process.exitStatus() == normal_exit and process.exitCode() == 0, output
+    if process.exitStatus() == normal_exit and process.exitCode() == 0:
+        return True, output
+    reason = (
+        f"pip exited with code {process.exitCode()}."
+        if process.exitStatus() == normal_exit
+        else f"pip crashed (exit code {process.exitCode()})."
+    )
+    return False, _failure(reason, manual, output)
