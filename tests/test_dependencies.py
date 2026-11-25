@@ -645,7 +645,7 @@ class TestInstallPyramids:
         """The manual command double-quotes the requirement and the interpreter path.
 
         Test scenario:
-            ``>`` is a redirection operator in both cmd.exe and PowerShell, so an unquoted
+            ``>`` is a redirection operator in cmd.exe (and in PowerShell), so an unquoted
             ``pyramids-core>=0.81.0`` pasted into a Windows shell runs ``pip install
             pyramids-core`` and writes stdout to a file - installing with **no version floor**,
             the one thing this module exists to enforce. Measured: cmd.exe created a file named

@@ -282,7 +282,7 @@ def vendored_gdal_warning() -> str | None:
         "The installed pyramids build vendors its own GDAL and is older than "
         f"{MIN_PYRAMIDS_VERSION_STR} (or its version could not be read), so it does not honour the "
         "PYRAMIDS_MANAGE_GDAL_ENV opt-out and can conflict with QGIS's GDAL. Upgrade it: "
-        f'<qgis-python> -m pip install --upgrade "{PYRAMIDS_REQUIREMENT}".'
+        f'<qgis-python> -m pip install --upgrade "{PYRAMIDS_REQUIREMENT}"'
     )
 
 
@@ -408,12 +408,22 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     if upgrade:
         arguments.append("--upgrade")
     arguments.append(PYRAMIDS_REQUIREMENT)
-    # Double quotes, not single: `>` is a redirection operator in cmd.exe and PowerShell, and
-    # single quotes are not quoting characters in cmd at all (measured: the bare form created a
-    # file named 0.81.0 and the single-quoted form one named 0.81.0', both installing with no
-    # version floor). The interpreter path needs quoting too - it normally contains a space.
-    quoted = " ".join(f'"{arg}"' if arg.startswith("pyramids-") else arg for arg in arguments)
-    manual = f'"{executable}" {quoted}'
+    # Built for a human to paste, which is why it is not just " ".join(arguments): --no-input
+    # is dropped, since a prompt pip could not answer automatically (keyring, proxy auth) may be
+    # exactly why this failed, and by hand the user can answer it.
+    #
+    # Quoting: `>` is a redirection operator in cmd.exe, and single quotes are not quoting
+    # characters there at all - measured, the bare form created a file named 0.81.0 and the
+    # single-quoted form one named 0.81.0', both installing with no version floor. Double quotes
+    # are correct for cmd.exe and for POSIX shells. They are NOT sufficient for PowerShell,
+    # which needs a leading `&` before a quoted executable path (measured on pwsh 7.6.10:
+    # ParserError, "Unexpected token '-m'"), so the message says so rather than pretending one
+    # string serves every shell.
+    upgrade_flag = "--upgrade " if upgrade else ""
+    manual = (
+        f'"{executable}" -m pip install {upgrade_flag}"{PYRAMIDS_REQUIREMENT}"'
+        "   (in PowerShell, prefix the line with & )"
+    )
 
     process = QProcess()
     process.setProgram(executable)
