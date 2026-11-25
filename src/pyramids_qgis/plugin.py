@@ -190,7 +190,9 @@ class PyramidsPlugin:
 
         parent = self.iface.mainWindow() if self.iface is not None else None
         target = _python_executable()
-        manual = f"<code>pip install '{html.escape(PYRAMIDS_REQUIREMENT)}'</code>"
+        # Double-quoted: `>` redirects in cmd.exe and PowerShell, and single quotes do not
+        # protect it there, so a pasted hint would install with no version floor.
+        manual = f'<code>pip install "{html.escape(PYRAMIDS_REQUIREMENT)}"</code>'
         verb = "is not installed" if missing else "is older than the supported version"
         req = html.escape(PYRAMIDS_REQUIREMENT)
         question = (

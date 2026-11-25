@@ -590,3 +590,56 @@ class TestInstallPyramids:
         ok, output = deps.install_pyramids()
         assert ok is False, "a timeout is still a failure"
         assert "PARTIAL-PROGRESS" in output, f"partial pip output must be kept: {output!r}"
+
+    def test_manual_command_quotes_the_requirement(self, monkeypatch):
+        """The manual command double-quotes the requirement and the interpreter path.
+
+        Test scenario:
+            ``>`` is a redirection operator in both cmd.exe and PowerShell, so an unquoted
+            ``pyramids-core>=0.81.0`` pasted into a Windows shell runs ``pip install
+            pyramids-core`` and writes stdout to a file - installing with **no version floor**,
+            the one thing this module exists to enforce. Measured: cmd.exe created a file named
+            ``0.81.0``. Single quotes do not help either (cmd created ``0.81.0'``); only double
+            quotes do. The interpreter path needs them too - it is normally
+            ``C:/Program Files/QGIS 4.2.2/...`` (a path that contains a space).
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: r"C:\Program Files\QGIS\py.exe")
+        _patch_process(monkeypatch, started=False)
+        _, output = deps.install_pyramids()
+        assert f'"{deps.PYRAMIDS_REQUIREMENT}"' in output, (
+            f"the requirement must be double-quoted: {output!r}"
+        )
+        assert '"C:\\Program Files\\QGIS\\py.exe"' in output, (
+            f"the interpreter path must be double-quoted: {output!r}"
+        )
+
+
+class TestInstallHintsAreShellSafe:
+    """The module's other copy-paste install hints must survive a Windows shell too."""
+
+    def test_install_hint_double_quotes_the_requirement(self):
+        """``_INSTALL_HINT`` double-quotes the requirement.
+
+        Test scenario:
+            This is the string raised at users when pyramids-core is missing, so it is the most
+            likely of all of them to be pasted into a shell.
+        """
+        assert f'"{deps.PYRAMIDS_REQUIREMENT}"' in deps._INSTALL_HINT, (
+            f"single quotes do not protect >= in cmd.exe: {deps._INSTALL_HINT!r}"
+        )
+
+    def test_vendored_gdal_warning_double_quotes_the_requirement(self, monkeypatch):
+        """The vendored-GDAL upgrade hint double-quotes the requirement.
+
+        Test scenario:
+            Same defect class as ``_INSTALL_HINT``. This hint tells the user to upgrade away from a
+            GDAL-vendoring build that can clobber QGIS's GDAL, so a paste that drops the floor
+            reinstalls the very build being warned about.
+        """
+        monkeypatch.setattr(deps, "_vendors_gdal", lambda: True)
+        monkeypatch.setattr(deps, "pyramids_version", lambda: (0, 1, 0))
+        message = deps.vendored_gdal_warning()
+        assert message is not None, "an old vendored build must produce a warning"
+        assert f'"{deps.PYRAMIDS_REQUIREMENT}"' in message, (
+            f"single quotes do not protect >= in cmd.exe: {message!r}"
+        )

@@ -43,7 +43,7 @@ _PYRAMIDS_DISTRIBUTIONS = ("pyramids-core", "pyramids")
 _INSTALL_HINT = (
     "The 'pyramids-core' package is not importable from the QGIS Python environment.\n"
     f"Install it (>= {MIN_PYRAMIDS_VERSION_STR}) into the interpreter QGIS runs:\n"
-    f"  - any QGIS (from PyPI):  <qgis-python> -m pip install '{PYRAMIDS_REQUIREMENT}'\n"
+    f'  - any QGIS (from PyPI):  <qgis-python> -m pip install "{PYRAMIDS_REQUIREMENT}"\n'
     "  - conda-based QGIS: conda install -c conda-forge pyramids (must satisfy the floor;\n"
     "    conda-forge can lag PyPI, so prefer the pip line until it catches up)\n"
     "When QGIS starts with a window, the plugin offers to install it for you; running headlessly "
@@ -274,7 +274,7 @@ def vendored_gdal_warning() -> str | None:
         "The installed pyramids build vendors its own GDAL and is older than "
         f"{MIN_PYRAMIDS_VERSION_STR} (or its version could not be read), so it does not honour the "
         "PYRAMIDS_MANAGE_GDAL_ENV opt-out and can conflict with QGIS's GDAL. Upgrade it: "
-        f"<qgis-python> -m pip install --upgrade '{PYRAMIDS_REQUIREMENT}'."
+        f'<qgis-python> -m pip install --upgrade "{PYRAMIDS_REQUIREMENT}".'
     )
 
 
@@ -382,7 +382,12 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     if upgrade:
         arguments.append("--upgrade")
     arguments.append(PYRAMIDS_REQUIREMENT)
-    manual = " ".join([executable, *arguments])
+    # Double quotes, not single: `>` is a redirection operator in cmd.exe and PowerShell, and
+    # single quotes are not quoting characters in cmd at all (measured: the bare form created a
+    # file named 0.81.0 and the single-quoted form one named 0.81.0', both installing with no
+    # version floor). The interpreter path needs quoting too - it normally contains a space.
+    quoted = " ".join(f'"{arg}"' if arg.startswith("pyramids-") else arg for arg in arguments)
+    manual = f'"{executable}" {quoted}'
 
     process = QProcess()
     process.setProgram(executable)
