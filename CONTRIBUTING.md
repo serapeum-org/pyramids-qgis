@@ -28,8 +28,8 @@ Processing Toolbox.
 
 ## Before you open a pull request
 
-- **Lint and format** with ruff (the version is pinned in `.pre-commit-config.yaml` and the CI
-  workflow):
+- **Lint and format** with ruff (the version is pinned in `.pre-commit-config.yaml` and
+  `pyproject.toml`; CI runs ruff through those hooks rather than pinning it again):
 
   ```bash
   ruff check .

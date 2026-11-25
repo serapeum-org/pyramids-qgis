@@ -15,8 +15,13 @@
 #                     runs them on both Qt majors, and pyramids-core SKIPs these three in CI too.
 #   * notebook-check - this repo ships no notebooks (nbstripout is kept for when it does).
 #
-# Install once with `pre-commit install`, and `pre-commit install --hook-type commit-msg` for the
-# commit-message hooks below.
+# Install once with `pre-commit install`. Do NOT add `--hook-type commit-msg`: the six
+# commit-message hooks below are kept only to stay aligned with pyramids-core, and they reject
+# every Conventional Commit subject this repo produces - the first token is `ci:` /
+# `refactor(deps):` / `bump:`, never a capitalized imperative verb - including the message
+# `cz bump` writes, so installing that stage blocks both committing and releasing. Measured on
+# pyramids-core's own history: 25 of its last 25 commits would be rejected. Tracked upstream as
+# serapeum-org/pyramids-core#1633; they stay inert here until it is resolved.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
