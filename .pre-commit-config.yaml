@@ -128,6 +128,11 @@ repos:
     hooks:
       - id: gitleaks
         name: "[cred -   sec] gitleaks"
+        # Load-bearing: gitleaks only auto-discovers a root `.gitleaks.toml` (or GITLEAKS_CONFIG),
+        # and this repo keeps its config under .github/, so without this the hook would run
+        # gitleaks' defaults and ignore the allowlist for planning/ and pr-diff-review-*.md.
+        # pyramids-core passes its own config the same way.
+        args: ["--config", ".github/gitleaks.toml"]
 
   - repo: https://github.com/bridgecrewio/checkov
     rev: 3.3.8
