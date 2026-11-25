@@ -360,10 +360,15 @@ def _failure(reason: str, manual: str, process) -> str:
 def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     """Install (or upgrade) ``pyramids-core`` into the QGIS interpreter with pip.
 
-    Runs ``<qgis-python> -m pip install [--upgrade] pyramids-core>=<floor>`` in a child process via
-    Qt's ``QProcess``. Never raises — a launch failure (wrong interpreter, no pip), a timeout, or a
-    non-zero exit is returned as a failure carrying the captured output and the manual command, so
-    the caller can show it.
+    Runs ``<qgis-python> -m pip install --no-input [--upgrade] "pyramids-core>=<floor>"`` in a child
+    process via Qt's ``QProcess``, with the child's stdin redirected from the null device. Both are
+    deliberate: pip prompts through its keyring and proxy-authentication paths, and this call blocks
+    the GUI thread, so a prompt must become an error rather than a wait.
+
+    Never raises. All four failure modes — a launch failure (wrong interpreter, no pip), a timeout
+    (the process is killed), a crash, and a non-zero exit — are returned as a failure carrying
+    whatever output pip produced and a manual command the user can paste, so the caller can show
+    both.
 
     ``QProcess`` rather than ``subprocess``: this is a Qt application, so the Qt API is the native
     one here, and it keeps the module free of the ``subprocess`` import that bandit blacklists
