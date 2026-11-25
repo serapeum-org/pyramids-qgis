@@ -105,21 +105,31 @@ repos:
         # build scripts), SC2012 (ls vs find) and SC2001 (sed vs ${//}) are intentional.
         args: ["--exclude=SC2218,SC2012,SC2001"]
 
+  # `stages: [manual]` on each hook is what actually keeps these from firing - the header's
+  # warning is only documentation, and the command it warns against is the one commitizen's
+  # own docs tell you to run. With this, even `pre-commit install --hook-type commit-msg`
+  # leaves them dormant; `pre-commit run --hook-stage manual <id>` still runs one on purpose.
   - repo: https://github.com/rlindsgaard/pre-commit-commit-msg-hooks
     rev: 0.1.0
     hooks:
       - id: check-description-max-length
         name: "[bash -   format] check-description-max-length"
+        stages: [manual]
       - id: check-second-line-empty
         name: "[bash -   format] check-second-line-empty"
+        stages: [manual]
       - id: check-summary-capitalized
         name: "[bash -   format] check-summary-capitalized"
+        stages: [manual]
       - id: check-summary-imperative
         name: "[bash -   format] check-summary-imperative"
+        stages: [manual]
       - id: check-summary-max-length
         name: "[bash -   format] check-summary-max-length"
+        stages: [manual]
       - id: check-summary-punctuation
         name: "[bash -   format] check-summary-punctuation"
+        stages: [manual]
 
   # The gate plugins.qgis.org blocks on. Config (exclude_dirs, skips) lives in [tool.bandit].
   - repo: https://github.com/PyCQA/bandit

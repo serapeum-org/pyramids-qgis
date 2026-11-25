@@ -67,9 +67,15 @@ jobs:
         run: pre-commit run --all-files --show-diff-on-failure --color=always
         env:
           # Restores the inline PR annotations the deleted `ruff check --output-format=github`
-          # step produced: ruff reads this env var, so findings land on the offending lines in
-          # Files-changed instead of only in this job's log. Set here rather than as a hook
-          # arg so local runs keep ruff's readable default output.
+          # step produced: ruff reads this env var (honoured by `check`; `format` ignores it),
+          # so findings can land on the offending lines in Files-changed. Set here rather than
+          # as a hook arg so local runs keep ruff's readable default output.
+          #
+          # The trade, measured locally: the github format drops the source snippet and the
+          # fixable-count summary from the log and emits an absolute `file=` path. No lint
+          # failure has occurred on this repo since the var was added, so the annotations
+          # themselves are still UNOBSERVED here - if a future failure shows them missing,
+          # restore a thin annotation-only ruff step instead.
           RUFF_OUTPUT_FORMAT: github
           # no-commit-to-branch: CI checks out a detached HEAD or the PR merge ref, so the
           #   branch guard is meaningless here (it is a local-commit guard).

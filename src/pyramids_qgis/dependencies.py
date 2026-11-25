@@ -326,7 +326,7 @@ def _find_python_in(base: str, names: tuple[str, ...]) -> str | None:
     return None
 
 
-def _read_all(data: "QByteArray") -> str:
+def _read_all(data: QByteArray) -> str:
     """Decode a ``QByteArray`` of process output into text.
 
     Args:

@@ -1,9 +1,13 @@
-"""Unit tests for the QGIS-free dependency probes in ``pyramids_qgis.dependencies``.
+"""Unit tests for the dependency probes in ``pyramids_qgis.dependencies``.
 
-These functions are importable on a bare interpreter because ``dependencies.py`` imports PyQGIS
-only inside the functions that raise, never at module load. The probes themselves use
-``importlib.util.find_spec`` and the filesystem, both of which are monkeypatched here so the tests
-are deterministic and need neither pyramids nor QGIS installed.
+``dependencies.py`` imports PyQGIS only inside the functions that need it, never at module load,
+so the probes are importable on a bare interpreter. They use ``importlib.util.find_spec`` and the
+filesystem, both monkeypatched here, so no test needs ``pyramids`` installed.
+
+PyQGIS, however, IS required to run this file: ``install_pyramids`` resolves ``QProcess`` from
+``qgis.PyQt.QtCore``, which is also the target the fake is monkeypatched onto, and
+:class:`TestAgainstRealQt` uses the real ``QByteArray`` and ``QProcess`` deliberately. No test
+starts a process or touches the network.
 """
 
 from __future__ import annotations
@@ -421,8 +425,8 @@ def _patch_process(monkeypatch, **script):
 
     Args:
         monkeypatch: pytest's monkeypatch fixture.
-        **script: Outcome to replay - ``started``, ``finished``, ``exit_code``, ``stdout``,
-            ``stderr``.
+        **script: Outcome to replay - ``started``, ``finished``, ``exit_code``,
+            ``exit_status``, ``stdout``, ``stderr``.
 
     Returns:
         list: The (initially empty) list each constructed fake appends itself to, so the caller

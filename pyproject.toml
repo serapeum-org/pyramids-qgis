@@ -109,8 +109,9 @@ version_files = [
 ]
 
 [tool.bandit]
-# scripts/ is developer tooling run with fixed commands and is not shipped in the plugin
-# zip; tests/ and docs/ are not shipped either. B101 (assert) is skipped as in pyramids-core.
+# None of these ship in the plugin zip: scripts/ is developer tooling run with fixed commands,
+# tests/ and docs/ are build-time only, and planning/ and examples/ are working notes and
+# sample data. B101 (assert) is skipped as in pyramids-core.
 exclude_dirs = ["tests", "scripts", "docs", "planning", "examples"]
 skips = ["B101"]
 
