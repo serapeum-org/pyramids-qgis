@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - for the annotation only; never imported at runtime
-    from qgis.PyQt.QtCore import QByteArray
+    from qgis.PyQt.QtCore import QByteArray, QProcess
 
 #: Lowest pyramids-core that honours ``PYRAMIDS_MANAGE_GDAL_ENV`` (#1588) — the opt-out that makes
 #: the GDAL-vendoring wheel safe inside QGIS. The plugin requires at least this.
@@ -339,7 +339,7 @@ def _read_all(data: QByteArray) -> str:
     return bytes(data).decode("utf-8", errors="replace")
 
 
-def _drain(process) -> str:
+def _drain(process: QProcess) -> str:
     """Read and decode both of a process's output channels.
 
     Args:
