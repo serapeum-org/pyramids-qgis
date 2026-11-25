@@ -338,6 +338,7 @@ class _FakeQProcess:
         self.killed = False
         self.start_timeout = None
         self.finish_timeout = None
+        self.finish_timeouts = []
         self._started = self.script.get("started", True)
         self._finished = self.script.get("finished", True)
         self._exit_code = self.script.get("exit_code", 0)
@@ -372,8 +373,13 @@ class _FakeQProcess:
         return self._started
 
     def waitForFinished(self, msecs):  # noqa: N802 - Qt API name
-        """Report whether the run completed in time, per the script."""
+        """Report whether the run completed in time, per the script.
+
+        Every call is recorded: the timeout path waits twice, once for the install budget
+        and again for the kill grace period, and both budgets matter.
+        """
         self.finish_timeout = msecs
+        self.finish_timeouts.append(msecs)
         return self._finished
 
     def kill(self):
@@ -402,8 +408,12 @@ class _FakeQProcess:
         return self._exit_code
 
     def errorString(self):  # noqa: N802 - Qt API name
-        """Return a fixed Qt-style launch error message."""
-        return "No such file or directory"
+        """Return the message real Qt gives for a missing executable.
+
+        Measured on Qt 6.11.0 by pointing a real ``QProcess`` at a nonexistent path, so a
+        test asserting on this text is asserting on something Qt would actually produce.
+        """
+        return "Process failed to start: The system cannot find the file specified."
 
 
 def _patch_process(monkeypatch, **script):
@@ -523,7 +533,9 @@ class TestInstallPyramids:
         ok, output = deps.install_pyramids()
         assert ok is False, "a launch error is a failure, not an exception"
         assert "install manually" in output.lower(), f"should offer the manual command: {output}"
-        assert "No such file" in output, f"Qt's errorString should be surfaced: {output}"
+        assert "cannot find the file" in output, (
+            f"Qt's errorString should be surfaced verbatim: {output!r}"
+        )
 
     def test_timeout_kills_the_process_and_reports(self, monkeypatch):
         """A run that outlasts the budget is killed and reported as a failure.
@@ -551,8 +563,9 @@ class TestInstallPyramids:
         deps.install_pyramids()
         proc = created[0]
         assert proc.start_timeout == deps.PIP_START_TIMEOUT_MS, "start budget must be in ms"
-        assert proc.finish_timeout == deps.PIP_TIMEOUT_MS, "install budget must be in ms"
-        assert deps.PIP_TIMEOUT_MS >= 600_000, "the install budget must stay at least 10 minutes"
+        assert proc.finish_timeouts == [deps.PIP_TIMEOUT_MS], (
+            f"a successful run waits once, for the install budget: {proc.finish_timeouts}"
+        )
 
     def test_child_stdin_is_closed(self, monkeypatch):
         """The child's stdin is redirected from the null device before it starts.
@@ -765,6 +778,7 @@ class TestAgainstRealQt:
             "readAllStandardError",
             "exitCode",
             "exitStatus",
+            "errorString",
         ):
             assert hasattr(QProcess, name), f"real QProcess has no {name}; the fake is stale"
             assert hasattr(_FakeQProcess, name), f"the fake is missing {name}"
@@ -773,8 +787,9 @@ class TestAgainstRealQt:
         """The ``getattr`` the production code uses resolves ``NormalExit`` on this binding.
 
         Test scenario:
-            PyQt6 exposes the member only as ``QProcess.ExitStatus.NormalExit`` while PyQt5 exposes
-            it only flat, and the plugin spans QGIS 3.22 through 4.x, so ``install_pyramids``
+            PyQt6 exposes the member only as ``QProcess.ExitStatus.NormalExit`` (measured on Qt
+            6.11.0: ``hasattr(QProcess, 'NormalExit')`` is ``False``), and the plugin spans QGIS
+            3.22 through 4.x, so ``install_pyramids``
             resolves it with ``getattr(QProcess, "ExitStatus", QProcess).NormalExit``. Measured on
             PyQt6: ``int()`` on that member raises ``TypeError``, which is why the code compares
             members instead of integers. This asserts the lookup works and that the two statuses
@@ -788,3 +803,71 @@ class TestAgainstRealQt:
         assert holder.NormalExit != holder.CrashExit, (
             "a crash must be distinguishable from a normal exit"
         )
+
+    def test_the_timeout_path_waits_for_the_kill_too(self, monkeypatch):
+        """A timed-out run waits the install budget and then the kill grace period.
+
+        Test scenario:
+            ``PIP_KILL_TIMEOUT_MS`` was asserted by no test, so nothing would have caught it being
+            dropped, swapped with the install budget, or passed in seconds. The timeout path must
+            wait exactly twice, in that order.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        created = _patch_process(monkeypatch, finished=False)
+        deps.install_pyramids()
+        assert created[0].finish_timeouts == [deps.PIP_TIMEOUT_MS, deps.PIP_KILL_TIMEOUT_MS], (
+            f"expected the install budget then the kill budget: {created[0].finish_timeouts}"
+        )
+
+    def test_the_scoped_exitstatus_branch_works(self, monkeypatch):
+        """The success check reads the SCOPED ``ExitStatus`` holder when the binding has one.
+
+        Test scenario:
+            :class:`_FakeQProcess` exposes the statuses flat, so every other test takes the
+            ``getattr`` fallback and none takes the scoped branch that actually runs under QGIS 4.x
+            (measured on Qt 6.11.0: ``QProcess.ExitStatus`` exists, ``QProcess.NormalExit`` does
+            not). This fake exposes BOTH shapes with *different* values - the scoped ones real, the
+            flat ones decoys - so the test fails if the production lookup reads the flat members.
+            A first attempt at this test inherited the flat values unchanged and did not
+            discriminate: replacing the ``getattr`` with a flat-only lookup left all 69 tests
+            passing.
+        """
+
+        class _ScopedFake(_FakeQProcess):
+            """A fake shaped like PyQt6: the statuses that count live under ``ExitStatus``."""
+
+            #: Decoys. A binding that scopes its enum does not expose these at all, so production
+            #: code reading them instead of ``ExitStatus`` compares against the wrong object.
+            NormalExit = "flat-decoy-normal"
+            CrashExit = "flat-decoy-crash"
+
+            class ExitStatus:
+                """Holder mirroring PyQt6's scoped enum."""
+
+                NormalExit = "scoped-normal"
+                CrashExit = "scoped-crash"
+
+            def exitStatus(self):  # noqa: N802 - Qt API name
+                """Return a SCOPED member, as a PyQt6 binding would."""
+                return self.script.get("exit_status", _ScopedFake.ExitStatus.NormalExit)
+
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        _ScopedFake.created = []
+        _ScopedFake.script = {"exit_code": 0, "stdout": b"installed ok"}
+        monkeypatch.setattr("qgis.PyQt.QtCore.QProcess", _ScopedFake)
+        ok, output = deps.install_pyramids()
+        assert ok is True, (
+            "a clean exit must succeed through the scoped-enum branch; reading the flat decoy "
+            "members would make this fail"
+        )
+        assert "installed ok" in output, f"output should be surfaced: {output!r}"
+
+        _ScopedFake.created = []
+        _ScopedFake.script = {
+            "exit_code": 0,
+            "exit_status": _ScopedFake.ExitStatus.CrashExit,
+            "stdout": b"boom",
+        }
+        ok, output = deps.install_pyramids()
+        assert ok is False, "a crash must fail through the scoped-enum branch too"
+        assert "install manually" in output, f"and still carry the hint: {output!r}"

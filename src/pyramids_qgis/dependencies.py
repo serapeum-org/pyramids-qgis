@@ -453,10 +453,10 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
 
     output = _drain(process)
     # Qt documents exitCode() as meaningless unless exitStatus() is NormalExit, so both are
-    # checked. The enum is resolved with getattr because PyQt6 exposes it only scoped
-    # (QProcess.ExitStatus.NormalExit) while PyQt5 exposes it only flat, and this plugin spans
-    # QGIS 3.22 through 4.x. Comparing int(exitStatus()) does NOT work - measured on PyQt6,
-    # int() on that enum raises TypeError - so the members are compared directly.
+    # checked. The enum is resolved with getattr so the lookup works whichever shape the
+    # binding uses: measured on Qt 6.11.0, QProcess.ExitStatus exists and QProcess.NormalExit
+    # does not, and this plugin spans QGIS 3.22 through 4.x. Comparing int(exitStatus()) does
+    # NOT work - int() on that enum raises TypeError - so the members are compared directly.
     normal_exit = getattr(QProcess, "ExitStatus", QProcess).NormalExit
     if process.exitStatus() == normal_exit and process.exitCode() == 0:
         return True, output

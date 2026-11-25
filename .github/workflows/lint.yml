@@ -4,10 +4,9 @@ name: CI
 # package and has no pixi env: it runs inside QGIS's own Python, which provides PyQGIS and
 # GDAL. So CI cannot import the plugin (PyQGIS is absent on a bare runner) and instead does
 # what it can without QGIS: run the pre-commit suite (ruff lint+format, bandit and the hygiene
-# hooks are what actually fire here; checkov and shellcheck are carried for future IaC and
-# shell files and currently match none, reporting "no files to check") and byte-compile every
-# module across
-# the Python versions the plugin supports (those of its pyramids-core dependency, >= 3.11) to
+# hooks are what actually fire here; checkov, shellcheck, nbstripout, beautysh and
+# requirements-txt-fixer are carried for future files and match none today, reporting "no
+# files to check") and byte-compile every module across the Python versions the plugin supports (those of its pyramids-core dependency, >= 3.11) to
 # catch syntax errors. End-to-end behaviour is verified by running the algorithms inside QGIS,
 # not here.
 
@@ -31,9 +30,12 @@ jobs:
   #
   # The two gate sets overlap but are NOT identical, in both directions:
   #   * CI-only: the `compile` matrix below, and the pinned-binary `gitleaks dir` sweep.
-  #   * local-only: the six commit-msg-stage hooks (`pre-commit run --all-files` runs
-  #     pre-commit-stage hooks only, so they never appear in this job's log), plus the three
-  #     hooks SKIPped below.
+  #   * local-only: the three hooks SKIPped below.
+  #   * neither: the six commit-msg-stage hooks run NOWHERE. `pre-commit run --all-files` runs
+  #     pre-commit-stage hooks only, so they never appear in this job's log, and
+  #     .pre-commit-config.yaml tells contributors not to install that stage - they reject every
+  #     Conventional Commit this repo writes. They are kept only to stay aligned with
+  #     pyramids-core; see serapeum-org/pyramids-core#1633.
   pre-commit:
     runs-on: ubuntu-latest
     timeout-minutes: 20
