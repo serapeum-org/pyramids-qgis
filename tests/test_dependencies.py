@@ -670,3 +670,80 @@ class TestInstallHintsAreShellSafe:
         ok, output = deps.install_pyramids()
         assert ok is False, "a crash must not be reported as a successful install"
         assert "partial" in output, f"output should still be surfaced: {output!r}"
+
+
+class TestAgainstRealQt:
+    """Tests that use the real Qt types rather than :class:`_FakeQProcess`.
+
+    The rest of this module fakes ``QProcess``, which is what makes the install paths testable at
+    all - but it means a fake that drifts from the real API would keep passing while production
+    broke. These tests touch the real classes: no process is started, so they stay fast and
+    offline, and they run wherever PyQGIS does (both CI legs).
+    """
+
+    def test_read_all_decodes_a_real_qbytearray(self):
+        """``_read_all`` decodes the real ``QByteArray`` Qt hands it, not just ``bytes``.
+
+        Test scenario:
+            Every other test feeds ``_read_all`` plain ``bytes`` through the fake, so the
+            ``bytes(data)`` conversion against Qt's own type is otherwise unexercised. A real
+            ``QByteArray`` carrying invalid UTF-8 must decode with replacement rather than raise,
+            because pip's output encoding follows the console code page.
+        """
+        from qgis.PyQt.QtCore import QByteArray
+
+        assert deps._read_all(QByteArray(b"installed ok")) == "installed ok", (
+            "a real QByteArray should decode to the same text"
+        )
+        out = deps._read_all(QByteArray(b"caf\xff"))
+        assert out.startswith("caf"), f"prefix should survive: {out!r}"
+        assert "\ufffd" in out, f"the bad byte should become U+FFFD: {out!r}"
+        assert deps._read_all(QByteArray()) == "", "an empty QByteArray should decode to empty"
+
+    def test_fake_matches_the_real_qprocess_api(self):
+        """Every method the production code calls exists on the real ``QProcess``.
+
+        Test scenario:
+            :class:`_FakeQProcess` implements only what ``install_pyramids`` calls. If a name were
+            misspelled, or Qt renamed one, the fake would happily keep answering while the real run
+            raised ``AttributeError`` - and coverage would still read 100%. This pins the fake to
+            the real surface.
+        """
+        from qgis.PyQt.QtCore import QProcess
+
+        for name in (
+            "setProgram",
+            "setArguments",
+            "setStandardInputFile",
+            "nullDevice",
+            "start",
+            "waitForStarted",
+            "waitForFinished",
+            "kill",
+            "readAllStandardOutput",
+            "readAllStandardError",
+            "exitCode",
+            "exitStatus",
+        ):
+            assert hasattr(QProcess, name), f"real QProcess has no {name}; the fake is stale"
+            assert hasattr(_FakeQProcess, name), f"the fake is missing {name}"
+
+    def test_normal_exit_resolves_on_this_qt_binding(self):
+        """The ``getattr`` the production code uses resolves ``NormalExit`` on this binding.
+
+        Test scenario:
+            PyQt6 exposes the member only as ``QProcess.ExitStatus.NormalExit`` while PyQt5 exposes
+            it only flat, and the plugin spans QGIS 3.22 through 4.x, so ``install_pyramids``
+            resolves it with ``getattr(QProcess, "ExitStatus", QProcess).NormalExit``. Measured on
+            PyQt6: ``int()`` on that member raises ``TypeError``, which is why the code compares
+            members instead of integers. This asserts the lookup works and that the two statuses
+            are distinguishable here.
+        """
+        from qgis.PyQt.QtCore import QProcess
+
+        holder = getattr(QProcess, "ExitStatus", QProcess)
+        assert hasattr(holder, "NormalExit"), "NormalExit must resolve on this binding"
+        assert hasattr(holder, "CrashExit"), "CrashExit must resolve on this binding"
+        assert holder.NormalExit != holder.CrashExit, (
+            "a crash must be distinguishable from a normal exit"
+        )
