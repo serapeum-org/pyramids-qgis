@@ -366,11 +366,11 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
     the caller can show it.
 
     ``QProcess`` rather than ``subprocess``: this is a Qt application, so the Qt API is the native
-    one here. It avoids the console window ``subprocess`` flashes on Windows, and it keeps the
-    module free of the ``subprocess`` import that bandit blacklists (B404/B603) — plugins.qgis.org
-    blocks a submitted version on any bandit finding, so the plugin cannot ship that import. The
-    process is still a child process: the Qt API is a different interface to the same work, chosen
-    because it is the idiomatic one, not to assert that running pip is risk-free.
+    one here, and it keeps the module free of the ``subprocess`` import that bandit blacklists
+    (B404/B603) — plugins.qgis.org blocks a submitted version on any bandit finding, so the plugin
+    cannot ship that import. The process is still a child process: the Qt API is a different
+    interface to the same work, chosen because it is the idiomatic one, not to assert that running
+    pip is risk-free or that it changed anything about the security of running it.
 
     Args:
         upgrade: Pass ``--upgrade`` (use when an older pyramids is already installed).
