@@ -1,51 +1,183 @@
-# Pre-commit hooks for pyramids-qgis. Adapted from pyramids-mesh's config to this repo's
-# toolchain: it is ruff-based (lint + format), matching pyproject.toml and the CI workflow,
-# rather than the black / flake8 / pydocstyle stack. There is no pytest hook — the plugin is
-# not pip-installable and its behaviour is verified inside QGIS, not on a bare interpreter;
-# the local hook byte-compiles instead, mirroring the CI `compile` job.
+# Pre-commit hooks for pyramids-qgis, aligned with pyramids-core's config so the whole stack
+# gates on the same tools at the same revisions. It is ruff-based (lint + format), matching the
+# [tool.ruff] config in pyproject.toml; lint.yml runs these hooks rather than configuring ruff.
 #
-# Install once with `pre-commit install`.
+# Why bandit is here: plugins.qgis.org blocks a submitted plugin version on two gates, "Bandit
+# Security Analysis" and "Secrets Detection". This repo mirrored only the second (gitleaks), so
+# bandit first ran at upload time — after the version was tagged, released and published — and
+# blocked it. Both gates now run at commit time and in CI, as they do in pyramids-core.
+#
+# Deliberately NOT taken from pyramids-core, because this repo cannot run them:
+#   * mypy          - no mypy dependency or [tool.mypy] config here, and PyQGIS ships no stubs;
+#                     adding it is a typing pass, not a hook change.
+#   * pytest-check  - there is no bare-interpreter suite: PyQGIS cannot be imported outside QGIS,
+#     doctest         so the tests need the pixi `dev`/`qt5` envs (a real QGIS). tests.yml already
+#                     runs them on both Qt majors, and pyramids-core SKIPs these three in CI too.
+#   * notebook-check - this repo ships no notebooks (nbstripout is kept for when it does).
+#
+# Install once with `pre-commit install`. Do NOT add `--hook-type commit-msg`: the six
+# commit-message hooks below are kept only to stay aligned with pyramids-core, and they reject
+# every Conventional Commit subject this repo produces - the first token is `ci:` /
+# `refactor(deps):` / `bump:`, never a capitalized imperative verb - including the message
+# `cz bump` writes, so installing that stage blocks both committing and releasing. Measured on
+# pyramids-core's own history: 25 of its last 25 commits would be rejected. Tracked upstream as
+# serapeum-org/pyramids-core#1633; they stay inert here until it is resolved.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
+      - id: check-toml
+        name: "[py -  check] check toml"
       - id: end-of-file-fixer
-        name: "[file - format] fix end of files"
+        name: "[file - format] end of file"
+      - id: no-commit-to-branch
+        name: "[git -  check] no commit to branch"
+        # No args on purpose: the hook's default protected set is ('master', 'main'), and
+        # --branch=main would REPLACE it, dropping the master guard the repo rule also covers.
       - id: trailing-whitespace
         name: "[file - format] trim trailing whitespace"
         args: [--markdown-linebreak-ext=md]
       - id: check-added-large-files
         name: "[file -  check] large file"
         args: [--maxkb=2000]
-      - id: check-merge-conflict
-        name: "[git  -  check] merge conflict"
-      - id: check-yaml
-        name: "[yaml -  check] validate yaml"
+      - id: check-docstring-first
+        name: "[py   -  check] docstring first"
+        # pyramids-core scopes this to files: /examples; here it covers all Python, which is
+        # the stricter and more useful rule. `python` already implies a file.
       - id: check-json
         name: "[json -  check] validate json"
+      - id: check-merge-conflict
+        name: "[git  -  check] merge conflict"
+      - id: debug-statements
+        name: "[py   -  check] debug statements"
       - id: detect-private-key
         name: "[cred -  check] private keys"
       - id: mixed-line-ending
         name: "[file - format] mixed line ending"
         args: [--fix=auto]
-      - id: debug-statements
-        name: "[py   -  check] debug statements"
+      - id: pretty-format-json
+        name: "[json - format] pretty json"
+        # Exclude notebooks (jupyter/nbformat owns their serialization) and, unlike
+        # pyramids-core, the example DATA: examples/data holds GIS fixtures written by
+        # GDAL/OGR in its own compact layout. Re-indenting aoi.geojson turned 8 lines into
+        # 45 and would churn on every regeneration; fixtures stay byte-for-byte as produced.
+        exclude: (\.ipynb$|^examples/data/|^conda-pypi-map\.json$)
+        args: [--autofix, --indent=4, --no-sort-keys]
+      - id: requirements-txt-fixer
+        name: "[reqs - format] fix requirements.txt"
+      - id: check-yaml
+        name: "[yaml -  check] validate yaml"
+        exclude: mkdocs\.yml
 
-  # Keep this rev in step with the ruff== pin in pyproject.toml and .github/workflows/lint.yml.
+  # Keep this rev in step with the ruff== pin in pyproject.toml. lint.yml no longer pins ruff:
+  # it runs ruff through this hook, so these two files are the only places the version lives.
+  # The hook id is `ruff-check`; the bare `ruff` id is the deprecated alias.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.3
     hooks:
-      - id: ruff
+      - id: ruff-check
         name: "[py   -   lint] ruff"
         args: [--fix]
       - id: ruff-format
-        name: "[py   - format] ruff"
+        name: "[py   - format] ruff-format"
+
+  # No notebooks ship here yet; kept so the invariant holds the day one does.
+  # --keep-id: keep original cell ids instead of renumbering them, which is pure diff churn.
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+        name: "[ipynb - format] nbstripout"
+        args: [--keep-id]
+
+  - repo: https://github.com/lovesegfault/beautysh
+    rev: v6.4.3
+    hooks:
+      - id: beautysh
+        name: "[bash - format] beautysh"
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        name: "[bash -   lint] shellcheck"
+        # Same inline exclusions as pyramids-core: SC2218 (false positive on define-then-dispatch
+        # build scripts), SC2012 (ls vs find) and SC2001 (sed vs ${//}) are intentional.
+        args: ["--exclude=SC2218,SC2012,SC2001"]
+
+  # `stages: [manual]` on each hook is what actually keeps these from firing - the header's
+  # warning is only documentation, and the command it warns against is the one commitizen's
+  # own docs tell you to run. With this, even `pre-commit install --hook-type commit-msg`
+  # leaves them dormant; `pre-commit run --hook-stage manual <id>` still runs one on purpose.
+  - repo: https://github.com/rlindsgaard/pre-commit-commit-msg-hooks
+    rev: 0.1.0
+    hooks:
+      - id: check-description-max-length
+        name: "[bash -   format] check-description-max-length"
+        stages: [manual]
+      - id: check-second-line-empty
+        name: "[bash -   format] check-second-line-empty"
+        stages: [manual]
+      - id: check-summary-capitalized
+        name: "[bash -   format] check-summary-capitalized"
+        stages: [manual]
+      - id: check-summary-imperative
+        name: "[bash -   format] check-summary-imperative"
+        stages: [manual]
+      - id: check-summary-max-length
+        name: "[bash -   format] check-summary-max-length"
+        stages: [manual]
+      - id: check-summary-punctuation
+        name: "[bash -   format] check-summary-punctuation"
+        stages: [manual]
+
+  # The gate plugins.qgis.org blocks on. Config (exclude_dirs, skips) lives in [tool.bandit].
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        name: "[py   -   sec] bandit"
+        args: ["-c", "pyproject.toml"]
+
+  # Secret gate, matching the lint.yml `gitleaks` job. This hook scans staged changes at commit
+  # time; CI runs a full-tree `gitleaks dir`. Both share the .github/gitleaks.toml allowlist.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+        name: "[cred -   sec] gitleaks"
+        # Load-bearing: gitleaks only auto-discovers a root `.gitleaks.toml` (or GITLEAKS_CONFIG),
+        # and this repo keeps its config under .github/, so without this the hook would run
+        # gitleaks' defaults and ignore the allowlist for planning/ and pr-diff-review-*.md.
+        # pyramids-core passes its own config the same way.
+        args: ["--config", ".github/gitleaks.toml"]
+
+  - repo: https://github.com/bridgecrewio/checkov
+    rev: 3.3.8
+    hooks:
+      - id: checkov
+        name: "[iac  -  check] checkov"
 
   - repo: local
     hooks:
+      # Mirrors the CI `compile` job: parse every module without importing PyQGIS.
       - id: compileall
         name: "[py   -  check] byte-compile"
         entry: python -m compileall -q src/pyramids_qgis scripts
         language: system
         pass_filenames: false
         always_run: true
+
+  - repo: local
+    hooks:
+      # Fail the commit if pixi.lock is stale relative to pyproject.toml. `pixi lock --check`
+      # re-solves from the manifest and exits non-zero if the lockfile would change — the exact
+      # failure that reached CI when a dev dependency was added without re-locking. Only fires
+      # when pyproject.toml or pixi.lock is staged, so unrelated commits skip the round-trip;
+      # skip locally with `SKIP=pixi-lock-check git commit ...`.
+      - id: pixi-lock-check
+        name: "[pixi -  check] pixi.lock up to date"
+        entry: pixi lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|pixi\.lock)$

@@ -190,7 +190,13 @@ class PyramidsPlugin:
 
         parent = self.iface.mainWindow() if self.iface is not None else None
         target = _python_executable()
-        manual = f"<code>pip install '{html.escape(PYRAMIDS_REQUIREMENT)}'</code>"
+        # Names the interpreter, because the sentence around this hint promises an install
+        # "into QGIS's Python" and a bare `pip` would hit whatever is first on PATH. Double
+        # quotes because `>` redirects in cmd.exe and single quotes do not protect it there.
+        manual = (
+            f'<code>"{html.escape(target)}" -m pip install '
+            f'"{html.escape(PYRAMIDS_REQUIREMENT)}"</code>'
+        )
         verb = "is not installed" if missing else "is older than the supported version"
         req = html.escape(PYRAMIDS_REQUIREMENT)
         question = (

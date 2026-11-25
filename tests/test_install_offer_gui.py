@@ -904,3 +904,33 @@ def test_a_failure_while_force_closing_is_recorded_not_raised(driver, monkeypatc
     assert any("RuntimeError while force-closing" in error for error in driver.errors), (
         f"the rescue failure was not recorded: {driver.errors!r}"
     )
+
+
+def test_the_failure_hint_names_the_interpreter_and_quotes_the_requirement(
+    driver, clean_dismissal, missing_pyramids, monkeypatch
+):
+    """The failed-install hint invokes pip through QGIS's interpreter, with the requirement quoted.
+
+    Test scenario:
+        A bare ``pip install`` hits whatever is first on PATH, which on Windows is routinely not
+        the interpreter QGIS runs - the exact confusion this dialog exists to prevent, and it sat
+        directly under a sentence promising an install "into QGIS's Python". The requirement must
+        also be double-quoted, or pasting into cmd.exe redirects on ``>`` and installs with no
+        version floor. Both were already true of the code and asserted by nothing: reverting
+        either left all 54 tests green, because the neighbouring assertion only looks for the
+        substring ``pip install``.
+    """
+    monkeypatch.setattr(deps, "install_pyramids", lambda **kw: (False, "pip exploded"))
+    driver.expect("Yes", "OK")
+    PyramidsPlugin(None)._run_install_offer()
+
+    assert not driver.errors, driver.errors
+    text = str(driver.seen[1]["text"])
+    assert "-m pip install" in text, (
+        f"the hint must invoke pip through an interpreter, not bare: {text!r}"
+    )
+    assert "python" in text.lower(), f"the hint must name QGIS's interpreter: {text!r}"
+    quoted = f'"{html.escape(deps.PYRAMIDS_REQUIREMENT)}"'
+    assert quoted in text, (
+        f"the requirement must be double-quoted so a paste keeps the version floor: {text!r}"
+    )

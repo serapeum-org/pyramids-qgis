@@ -1,9 +1,9 @@
-# Gitleaks configuration for the CI secret scan (`gitleaks dir` in
-# .github/workflows/lint.yml). gitleaks is the repo's single secret scanner,
-# matching pyramids, pyramids-mesh and pyramids-eo. There is no local gitleaks
-# pre-commit hook here, so this file is read only by that job. It keeps gitleaks'
-# full built-in ruleset and only allowlists paths that are working notes rather
-# than source secrets.
+# Gitleaks configuration, shared by both secret scans: the `gitleaks dir` sweep in
+# .github/workflows/lint.yml and the local `gitleaks` pre-commit hook, which passes
+# `--config .github/gitleaks.toml` because gitleaks only auto-discovers a config at
+# the scan root. gitleaks is the repo's single secret scanner, matching pyramids,
+# pyramids-mesh and pyramids-eo. It keeps gitleaks' full built-in ruleset and only
+# allowlists paths that are working notes rather than source secrets.
 title = "pyramids-qgis"
 
 [extend]
