@@ -20,6 +20,10 @@ import importlib.util
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - for the annotation only; never imported at runtime
+    from qgis.PyQt.QtCore import QByteArray
 
 #: Lowest pyramids-core that honours ``PYRAMIDS_MANAGE_GDAL_ENV`` (#1588) — the opt-out that makes
 #: the GDAL-vendoring wheel safe inside QGIS. The plugin requires at least this.
@@ -32,9 +36,13 @@ PYRAMIDS_REQUIREMENT = f"pyramids-core>={MIN_PYRAMIDS_VERSION_STR}"
 # pip install budget, in milliseconds (QProcess works in ms, unlike subprocess's seconds).
 # 10 minutes: a cold pyramids-core install pulls GDAL-adjacent wheels over a slow link.
 PIP_TIMEOUT_MS = 600_000
-# A process that cannot even start fails fast; this only covers the fork/exec itself.
-PIP_START_TIMEOUT_MS = 10_000
-# Grace period for a killed process to actually die, so the handle is not leaked.
+# Covers only the fork/exec, not the install, and matches Qt's own waitForStarted default of
+# 30s. Shortening it buys nothing: a wrong interpreter path fails in milliseconds anyway, while
+# a cold, antivirus-scanned CreateProcess on Windows can take seconds - and a spurious
+# 'could not run pip' would send the user chasing an error that does not exist.
+PIP_START_TIMEOUT_MS = 30_000
+# Reaped synchronously after kill() so the exit code and the buffered output are readable
+# below; a survivor would be killed and reaped by the QProcess destructor regardless.
 PIP_KILL_TIMEOUT_MS = 5_000
 
 #: Distribution names `pyramids` is published under (PyPI vs conda-forge).
@@ -318,7 +326,7 @@ def _find_python_in(base: str, names: tuple[str, ...]) -> str | None:
     return None
 
 
-def _read_all(data) -> str:
+def _read_all(data: "QByteArray") -> str:
     """Decode a ``QByteArray`` of process output into text.
 
     Args:
@@ -417,6 +425,10 @@ def install_pyramids(*, upgrade: bool = False) -> tuple[bool, str]:
         )
 
     output = _read_all(process.readAllStandardOutput()) + _read_all(process.readAllStandardError())
-    # Success is exit code 0. exitStatus() is deliberately not consulted: its enum moved to a
-    # scoped form in PyQt6, and a crashed pip does not report 0 anyway.
-    return process.exitCode() == 0, output
+    # Qt documents exitCode() as meaningless unless exitStatus() is NormalExit, so both are
+    # checked. The enum is resolved with getattr because PyQt6 exposes it only scoped
+    # (QProcess.ExitStatus.NormalExit) while PyQt5 exposes it only flat, and this plugin spans
+    # QGIS 3.22 through 4.x. Comparing int(exitStatus()) does NOT work - measured on PyQt6,
+    # int() on that enum raises TypeError - so the members are compared directly.
+    normal_exit = getattr(QProcess, "ExitStatus", QProcess).NormalExit
+    return process.exitStatus() == normal_exit and process.exitCode() == 0, output

@@ -27,7 +27,8 @@ repos:
         name: "[file - format] end of file"
       - id: no-commit-to-branch
         name: "[git -  check] no commit to branch"
-        args: [--branch=main]
+        # No args on purpose: the hook's default protected set is ('master', 'main'), and
+        # --branch=main would REPLACE it, dropping the master guard the repo rule also covers.
       - id: trailing-whitespace
         name: "[file - format] trim trailing whitespace"
         args: [--markdown-linebreak-ext=md]
@@ -36,7 +37,8 @@ repos:
         args: [--maxkb=2000]
       - id: check-docstring-first
         name: "[py   -  check] docstring first"
-        types: [file, python]
+        # pyramids-core scopes this to files: /examples; here it covers all Python, which is
+        # the stricter and more useful rule. `python` already implies a file.
       - id: check-json
         name: "[json -  check] validate json"
       - id: check-merge-conflict
@@ -54,7 +56,7 @@ repos:
         # pyramids-core, the example DATA: examples/data holds GIS fixtures written by
         # GDAL/OGR in its own compact layout. Re-indenting aoi.geojson turned 8 lines into
         # 45 and would churn on every regeneration; fixtures stay byte-for-byte as produced.
-        exclude: (\.ipynb$|^examples/data/)
+        exclude: (\.ipynb$|^examples/data/|^conda-pypi-map\.json$)
         args: [--autofix, --indent=4, --no-sort-keys]
       - id: requirements-txt-fixer
         name: "[reqs - format] fix requirements.txt"

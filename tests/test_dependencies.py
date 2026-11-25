@@ -388,6 +388,15 @@ class _FakeQProcess:
         """Return the scripted stderr bytes."""
         return self._stderr
 
+    #: Stand-ins for Qt's ExitStatus members. PyQt5 exposes them flat on QProcess like this;
+    #: PyQt6 only under QProcess.ExitStatus, which the production getattr resolves either way.
+    NormalExit = "normal-exit"
+    CrashExit = "crash-exit"
+
+    def exitStatus(self):  # noqa: N802 - Qt API name
+        """Return the scripted exit status, defaulting to a normal exit."""
+        return self.script.get("exit_status", type(self).NormalExit)
+
     def exitCode(self):  # noqa: N802 - Qt API name
         """Return the scripted exit code."""
         return self._exit_code
@@ -643,3 +652,21 @@ class TestInstallHintsAreShellSafe:
         assert f'"{deps.PYRAMIDS_REQUIREMENT}"' in message, (
             f"single quotes do not protect >= in cmd.exe: {message!r}"
         )
+
+    def test_a_crash_is_a_failure_even_with_exit_code_zero(self, monkeypatch):
+        """A crashed pip is reported as a failure regardless of its exit code.
+
+        Test scenario:
+            Qt documents ``exitCode()`` as meaningless unless ``exitStatus()`` is ``NormalExit``,
+            so a crash that happens to leave the code at 0 must not read as success. Measured on
+            real Qt6: an aborting child gives ``ExitStatus.CrashExit`` with code -1073740791, while
+            a clean child gives ``NormalExit`` with 0 - this pins the status check rather than
+            relying on the code alone.
+        """
+        monkeypatch.setattr(deps, "_python_executable", lambda: "py")
+        _patch_process(
+            monkeypatch, exit_code=0, exit_status=_FakeQProcess.CrashExit, stdout=b"partial"
+        )
+        ok, output = deps.install_pyramids()
+        assert ok is False, "a crash must not be reported as a successful install"
+        assert "partial" in output, f"output should still be surfaced: {output!r}"
