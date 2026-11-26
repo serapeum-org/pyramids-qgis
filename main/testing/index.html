@@ -922,8 +922,7 @@
 <code>initAlgorithm</code> / parameter construction, and — since the <code>gui</code> tests landed — the <code>pyramids-core</code>
 install dialog itself, clicked offscreen. What it does <strong>not</strong> cover is running an algorithm
 end-to-end (<code>processAlgorithm</code>) in a real QGIS session on real data, nor <em>when</em> the install offer
-appears relative to the main window. That still has to be done by hand, and it is the gate before a
-non-experimental release.</p>
+appears relative to the main window. That still has to be done by hand.</p>
 <p>This page is that by-hand validation guide. Install the plugin first — see
 <a href="../installation/">Installation</a>.</p>
 <h2 id="what-to-run-cover-both-wiring-paths-and-every-group"><a class="toclink" href="#what-to-run-cover-both-wiring-paths-and-every-group">What to run — cover both wiring paths and every group</a><a class="headerlink" href="#what-to-run-cover-both-wiring-paths-and-every-group" title="Permanent link">#</a></h2>
@@ -982,8 +981,7 @@ library directly. Run at least one of each path, and at least one per group:</p>
 <li>[ ] At least one algorithm per group runs successfully on real data and loads a correct output
       layer.</li>
 <li>[ ] The dependency-guard and error-surfacing behaviour is confirmed.</li>
-<li>[ ] Any bugs found are filed as their own issues (and fixed) before flipping <code>experimental=False</code>
-      in <code>metadata.txt</code>.</li>
+<li>[ ] Any bugs found are filed as their own issues, and fixed before the next release.</li>
 </ul>
 
 
