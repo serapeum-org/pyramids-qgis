@@ -91,7 +91,22 @@ jobs:
 
           # Compute the next tag first, failing loudly if commitizen's wording ever changes instead of
           # letting `pipefail` kill the step with an empty NEXT (review L4).
-          DRY=$(cz bump --dry-run --yes --increment "${INCREMENT}")
+          #
+          # --check-consistency guards against the version in [project] and the ones in
+          # version_files drifting apart. commitizen updates a version_files entry by replacing the
+          # OLD version string inside a line its pattern matches, so a file left behind is skipped
+          # in silence: measured with cz 4.8.4, pyproject at 0.3.0 and metadata.txt still at 0.2.0
+          # gave `cz bump --increment patch` -> pyproject 0.3.1, metadata.txt 0.2.0, no warning.
+          # publish.yml reads the version from metadata.txt, so that ships a zip declaring the wrong
+          # version and then fails attaching an asset that already exists.
+          #
+          # It is the REAL bump below that enforces this. Measured: on a drift the real bump exits
+          # 17 ("Current version ... is not found in ...") having written no version file, made no
+          # commit and created no tag, so `set -e` fails the step before anything is pushed. The
+          # same flag on the --dry-run above is a no-op today (it still exits 0 on the same drift);
+          # it is passed anyway so the two invocations cannot disagree if commitizen starts
+          # honouring it.
+          DRY=$(cz bump --dry-run --yes --increment "${INCREMENT}" --check-consistency)
           NEXT=$(printf '%s\n' "${DRY}" | awk '/tag to create/ {print $NF}')
           if [ -z "${NEXT}" ]; then
             echo "::error::could not parse the next tag from 'cz bump --dry-run':"
@@ -104,7 +119,7 @@ jobs:
           # version (and metadata.txt via version_files), regenerates CHANGELOG.md, commits, and tags.
           # No first-release special-casing: cz 4.8.4 handles a tagless repo directly — the old
           # "exits 16" premise was false (review M2), so the toggle/amend/tag -f dance is gone.
-          cz bump --yes --increment "${INCREMENT}"
+          cz bump --yes --increment "${INCREMENT}" --check-consistency
 
           echo "new_version=${NEXT}" >> "$GITHUB_OUTPUT"
           echo "changelog_file=CHANGELOG.md" >> "$GITHUB_OUTPUT"
