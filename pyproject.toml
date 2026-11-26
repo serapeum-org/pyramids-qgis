@@ -106,6 +106,10 @@ major_version_zero = true
 # Keep the QGIS plugin metadata version in step with the [project] version on every bump.
 version_files = [
     "src/pyramids_qgis/metadata.txt:^version",
+    # The README's status line quotes the shipped version ("v0.2.0"); commitizen rewrites the
+    # version inside any line the pattern matches, so the `v` prefix is preserved. Without this the
+    # README silently advertises the previous release after every bump.
+    "README.md:^> Status:",
 ]
 
 [tool.bandit]
