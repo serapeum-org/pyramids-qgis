@@ -3,9 +3,7 @@
 Pyramids QGIS is on the official QGIS plugin repository, so you install it from inside QGIS:
 
 1. **Plugins → Manage and Install Plugins…**
-2. On the **Settings** tab, tick **"Show also experimental plugins"** (the plugin is published as experimental, so
-   it is hidden otherwise).
-3. On the **All** tab, search for **Pyramids QGIS** and click **Install Plugin**.
+2. On the **All** tab, search for **Pyramids QGIS** and click **Install Plugin**.
 
 The algorithms then appear in the **Processing Toolbox** under **Pyramids** — see the [Usage tutorial](usage.md).
 
