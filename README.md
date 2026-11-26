@@ -6,8 +6,8 @@ Toolbox under **Pyramids**, so they work in the toolbox, the graphical modeler, 
 Python `processing.run(...)` API, and the `qgis_process` command line — the same as any native QGIS
 algorithm.
 
-> Status: **experimental**, v0.2.0. Installable from the official QGIS plugin repository (tick *Show also
-> experimental plugins*). File-in / file-out algorithms that mirror the `pyramids` command-line interface.
+> Status: v0.2.0, installable from the official QGIS plugin repository. File-in / file-out algorithms that
+> mirror the `pyramids` command-line interface.
 
 ## How it works
 
@@ -85,9 +85,7 @@ clear message when it is absent.
 From inside QGIS:
 
 1. **Plugins → Manage and Install Plugins…**
-2. On the **Settings** tab, tick **"Show also experimental plugins"** — the plugin is published as experimental,
-   so it is hidden otherwise.
-3. On the **All** tab, search for **Pyramids QGIS** and click **Install Plugin**.
+2. On the **All** tab, search for **Pyramids QGIS** and click **Install Plugin**.
 
 For development, deploy the working tree instead: copy (or symlink) `src/pyramids_qgis/` into your QGIS profile's
 plugin directory (as `pyramids_qgis`) and enable **Pyramids QGIS**. The deploy helper does this:
@@ -123,9 +121,8 @@ Plugin Manager. This is **off until a maintainer configures it** (one-time):
 
 1. Sign in to [plugins.qgis.org](https://plugins.qgis.org/) (a GitHub, GitLab, Google, or OSGeo account works).
 2. Do the **first upload by hand** at [plugins.qgis.org/plugins/add/](https://plugins.qgis.org/plugins/add/) — the
-   first submission of a new plugin is staff-approved. Keep `experimental=True` (the current default) so the build
-   is shown only to users who opt into experimental plugins. (The API token in step 3 can only *add a version* to
-   an already-existing plugin, so it cannot perform this first submission.)
+   first submission of a new plugin is staff-approved. (The API token in step 3 can only *add a version* to an
+   already-existing plugin, so it cannot perform this first submission.)
 3. Generate a plugins.qgis.org **API token** (your profile → API tokens) and add it as the repository secret
    **`QGIS_TOKEN`** (*Settings → Secrets and variables → Actions*).
 
