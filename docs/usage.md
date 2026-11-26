@@ -137,4 +137,4 @@ Because these are standard Processing algorithms, they also run:
 ## Where to go next
 
 - [Algorithms reference](algorithms.md) — every algorithm, grouped by theme, with the pyramids command it maps to.
-- [Installation](installation.md) — plugin install, the experimental-plugins toggle, and the `pyramids-core` setup.
+- [Installation](installation.md) — plugin install and the `pyramids-core` setup.

@@ -4,8 +4,7 @@ The unit / integration suite runs against **real PyQGIS** in CI and exercises ev
 `initAlgorithm` / parameter construction, and — since the `gui` tests landed — the `pyramids-core`
 install dialog itself, clicked offscreen. What it does **not** cover is running an algorithm
 end-to-end (`processAlgorithm`) in a real QGIS session on real data, nor *when* the install offer
-appears relative to the main window. That still has to be done by hand, and it is the gate before a
-non-experimental release.
+appears relative to the main window. That still has to be done by hand.
 
 This page is that by-hand validation guide. Install the plugin first — see
 [Installation](installation.md).
@@ -67,5 +66,4 @@ library directly. Run at least one of each path, and at least one per group:
 - [ ] At least one algorithm per group runs successfully on real data and loads a correct output
       layer.
 - [ ] The dependency-guard and error-surfacing behaviour is confirmed.
-- [ ] Any bugs found are filed as their own issues (and fixed) before flipping `experimental=False`
-      in `metadata.txt`.
+- [ ] Any bugs found are filed as their own issues, and fixed before the next release.

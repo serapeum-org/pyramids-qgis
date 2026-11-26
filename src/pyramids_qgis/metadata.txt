@@ -22,7 +22,7 @@ homepage=https://serapeum-org.github.io/pyramids-qgis/
 category=Raster
 icon=resources/icon.png
 
-experimental=True
+experimental=False
 deprecated=False
 
 tags=raster,vector,gdal,cog,reproject,rasterize,polygonize,processing,pyramids

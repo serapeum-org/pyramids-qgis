@@ -150,6 +150,5 @@ jobs:
           body: ${{ steps.notes.outputs.body }}
           draft: ${{ inputs.draft }}
           # No prereleases: QGIS plugin versions must be x.y.z, and a PEP440 prerelease like 0.1.0rc0
-          # would be written to metadata.txt and likely break qgis-plugin-ci (review M1/L5). The
-          # experimental=True flag in metadata.txt is the pre-release signal instead.
+          # would be written to metadata.txt and likely break qgis-plugin-ci (review M1/L5).
           prerelease: false
