@@ -4,11 +4,14 @@ QGIS moved its enums under ``Qgis`` (``Qgis.ProcessingNumberParameterType.Double
 class-level spellings (``QgsProcessingParameterNumber.Double``) as deprecated aliases. **Both
 spellings currently resolve on both bindings**, which is exactly why this check has to exist:
 
-* on PyQt6, ``python/PyQt6/core/auto_additions/qgis.py`` defines each alias explicitly — e.g.
-  ``QgsProcessingParameterNumber.Integer = Qgis.ProcessingNumberParameterType.Integer`` — and marks
-  it ``is_monkey_patched``;
-* on PyQt5, ``python/core/auto_additions/qgis.py`` needs no such line, because sip exposes an
-  unscoped C++ enum's members at class scope natively.
+* both bindings spell the ``Qgs*`` aliases out, and in identical numbers: release-3_40's
+  ``python/PyQt6/core/auto_additions/qgis.py`` and ``python/core/auto_additions/qgis.py`` each
+  carry 983 member aliases — e.g.
+  ``QgsProcessingParameterNumber.Integer = Qgis.ProcessingNumberParameterType.Integer``, marked
+  ``is_monkey_patched`` — plus 172 enum-*type* aliases such as ``QgsProcessing.SourceType``;
+* only what hangs off ``Qgis`` itself differs: ``Qgis.Info`` … ``Qgis.NoLevel`` (PyQt6 file, lines
+  72-76) and the 86 ``lambda flags=0:`` flag-type aliases are in the PyQt6 file and not the PyQt5
+  one, because there sip exposes an unscoped C++ enum's members at class scope natively.
 
 So nothing in the runtime suite can tell a scoped read from an unscoped one: ``tests.yml`` was green
 on ``main@7c6aa41``, which carried 97 unscoped aliases, on *both* the ``dev`` leg (qgis 4.2.3,
@@ -20,8 +23,9 @@ Detection is structural rather than a list of known enums: any ``QgsFoo.CapWords
 ``Qgis.CapWordsAttribute``) that is not itself the base of a further attribute access is an unscoped
 read, because the scoped form always has the enum type in between. That covers every alias family
 reachable from the classes this package imports — not just the four it happens to use today — and
-needs no vendored copy of QGIS's table. ``_SCOPED_FORMS`` only makes the message more specific for
-the families in use; detection does not depend on it.
+needs no vendored copy of QGIS's table. ``_SCOPED_FORMS`` only makes the message more specific, and
+for three of the four families in use at that; detection does not depend on it — emptying the table
+and rescanning ``main@7c6aa41`` still reports all 97.
 
 Being structural and purely lexical, the rule has three known gaps, each pinned by a test below so
 it is recorded rather than mistaken for coverage:
@@ -37,11 +41,11 @@ it is recorded rather than mistaken for coverage:
   variable, ``getattr``, a dotted ``qgis.core.Qgis`` owner — slips, and the dynamic forms are
   undecidable for any AST rule (``test_an_alias_reached_indirectly_is_a_known_blind_spot``).
 
-It over-reports in one known shape, pinned the same way: a CapWords *nested class* on a ``Qgs``
-owner, e.g. ``QgsVectorLayer.LayerOptions()``, is not an enum alias at all but matches the rule
-(``test_a_capwords_nested_class_is_a_known_over_report``). Narrowing either direction would need a
-vendored copy of QGIS's alias table, which is what the structural rule exists to avoid; issue #58's
-``pyqgis4-checker`` is the gate that carries that table.
+It over-reports in one known shape, pinned the same way: a CapWords *nested class* or un-moved enum
+*type* on a ``Qgs`` owner, e.g. ``QgsVectorLayer.LayerOptions()``, is not an alias at all but
+matches the rule (``test_a_capwords_nested_class_is_a_known_over_report``). Narrowing either
+direction would need a vendored copy of QGIS's alias table, which is what the structural rule exists
+to avoid; issue #58's ``pyqgis4-checker`` is the gate that carries that table.
 
 One narrowing looks free and is not: skipping an attribute that is *called*, on the reasoning that
 an enum member is never invoked. It would silence ``QgsVectorLayer.LayerOptions()`` — but QGIS's
@@ -96,8 +100,9 @@ _OWNER = re.compile(r"^(Qgis|Qgs[A-Z]\w*)$")
 #: ``QgsProcessing.TEMPORARY_OUTPUT``, dunders, and QGIS's camelCase methods.
 _MEMBER = re.compile(r"^[A-Z][A-Za-z0-9]*$")
 
-#: ``(owner, member)`` -> the exact scoped spelling, for the families this package uses. Only
-#: sharpens the message; detection is structural and does not consult this table.
+#: ``(owner, member)`` -> the exact scoped spelling, for three of the four families this package
+#: uses — ``Qgis.ProcessingSourceType`` has no entry. Only sharpens the message; detection is
+#: structural and does not consult this table.
 _SCOPED_FORMS = {
     ("QgsProcessingParameterNumber", "Integer"): "Qgis.ProcessingNumberParameterType.Integer",
     ("QgsProcessingParameterNumber", "Double"): "Qgis.ProcessingNumberParameterType.Double",
@@ -172,15 +177,17 @@ def test_no_module_uses_a_deprecated_unscoped_qgis_enum_alias():
 @pytest.mark.parametrize(
     ("snippet", "expected"),
     [
-        # the four families this package actually uses
+        # the three families ``_SCOPED_FORMS`` names, so the message carries the exact spelling
         ("QgsProcessingParameterNumber.Integer", "Qgis.ProcessingNumberParameterType.Integer"),
         ("QgsProcessingParameterNumber.Double", "Qgis.ProcessingNumberParameterType.Double"),
         ("QgsProcessingParameterFile.File", "Qgis.ProcessingFileParameterBehavior.File"),
         ("QgsProcessingParameterFile.Folder", "Qgis.ProcessingFileParameterBehavior.Folder"),
         ("Qgis.Warning", "Qgis.MessageLevel.Warning"),
         ("Qgis.Critical", "Qgis.MessageLevel.Critical"),
-        # families a hard-coded list missed: every one is reachable from a class this package
-        # imports, and QgsProcessingParameterField is already constructed in conversion/rasterize.py
+        # families a hard-coded list misses. ``QgsProcessing.TypeRaster`` is not hypothetical:
+        # ``main@7c6aa41`` used it twice (raster/calc.py, raster/merge.py) and ``_SCOPED_FORMS``
+        # still has no entry for it. The others are reachable from classes this package imports,
+        # and QgsProcessingParameterField is already constructed in conversion/rasterize.py.
         ("QgsProcessing.TypeRaster", "Qgis.<Enum>.TypeRaster"),
         ("QgsProcessingParameterField.String", "Qgis.<Enum>.String"),
         ("QgsProcessingAlgorithm.FlagNoThreading", "Qgis.<Enum>.FlagNoThreading"),
@@ -283,8 +290,11 @@ def test_an_alias_reached_indirectly_is_a_known_blind_spot(source):
 @pytest.mark.parametrize(
     "snippet",
     [
-        # None of these is in QGIS's alias table: they are nested classes, and the spelling shown
-        # is the correct, current one. Flagging them is the price of needing no vendored table.
+        # None of these is an alias. The first three are nested classes (qgsvectorlayer.h:424,
+        # qgsrasterlayer.h:113, qgsprocessingcontext.h:247); ``QgsTask.SubTaskDependency`` is an
+        # unscoped enum QGIS never moved onto ``Qgis`` (qgstaskmanager.h:167 — only its *members*
+        # are aliased). Every spelling shown is the correct, current one, so flagging them is the
+        # price of needing no vendored table.
         "QgsVectorLayer.LayerOptions()",
         "QgsRasterLayer.LayerOptions()",
         "QgsProcessingContext.LayerDetails",
@@ -292,7 +302,7 @@ def test_an_alias_reached_indirectly_is_a_known_blind_spot(source):
     ],
 )
 def test_a_capwords_nested_class_is_a_known_over_report(snippet):
-    """A CapWords nested class matches the rule, so the guard over-reports on this one shape."""
+    """A CapWords nested class or un-moved enum type matches the rule, so the guard over-reports."""
     assert len(_unscoped_aliases(f"value = {snippet}\n", "probe.py")) == 1, (
         f"{snippet} is a recorded over-report, not a real finding; if it is now silent, "
         "delete this pin"
