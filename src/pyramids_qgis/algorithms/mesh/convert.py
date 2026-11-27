@@ -53,7 +53,9 @@ class MeshConvert(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(
             QgsProcessingParameterFile(
-                self.INPUT, "Input mesh file", behavior=Qgis.ProcessingFileParameterBehavior.File
+                self.INPUT,
+                "Input mesh file",
+                behavior=Qgis.ProcessingFileParameterBehavior.File,
             )
         )
         self.addParameter(
