@@ -23,10 +23,25 @@ reachable from the classes this package imports — not just the four it happens
 needs no vendored copy of QGIS's table. ``_SCOPED_FORMS`` only makes the message more specific for
 the families in use; detection does not depend on it.
 
-Known limitation: the nested spelling ``QgsProcessing.SourceType.TypeRaster`` is *not* flagged,
-since ``QgsProcessing.SourceType`` is then the base of a further access and so looks scoped. It is
-deprecated too; ``test_the_nested_type_level_spelling_is_a_known_blind_spot`` pins that gap so it is
-recorded rather than mistaken for coverage.
+Being structural and purely lexical, the rule has three known gaps, each pinned by a test below so
+it is recorded rather than mistaken for coverage:
+
+* the nested spelling ``QgsProcessing.SourceType.TypeRaster`` slips, because the alias is then the
+  base of a further access and so looks scoped
+  (``test_the_nested_type_level_spelling_is_a_known_blind_spot``);
+* an underscored alias such as ``QgsCoordinateReferenceSystem.WKT_PREFERRED`` slips, because
+  ``_MEMBER`` excludes ``SCREAMING_SNAKE`` to leave genuine constants like
+  ``QgsProcessing.TEMPORARY_OUTPUT`` and ``Qgis.QGIS_VERSION`` alone
+  (``test_an_underscored_alias_is_a_known_blind_spot``);
+* an alias reached other than through a literal ``Qgs``/``Qgis`` name — an aliased import, a
+  variable, ``getattr``, a dotted ``qgis.core.Qgis`` owner — slips, and the dynamic forms are
+  undecidable for any AST rule (``test_an_alias_reached_indirectly_is_a_known_blind_spot``).
+
+It over-reports in one known shape, pinned the same way: a CapWords *nested class* on a ``Qgs``
+owner, e.g. ``QgsVectorLayer.LayerOptions()``, is not an enum alias at all but matches the rule
+(``test_a_capwords_nested_class_is_a_known_over_report``). Narrowing either direction would need a
+vendored copy of QGIS's alias table, which is what the structural rule exists to avoid; issue #58's
+``pyqgis4-checker`` is the gate that carries that table.
 
 This module parses source with ``ast`` and imports no PyQGIS, the same shape ``test_packaging.py``
 takes of reading the source tree instead of importing it, so the check cannot be fooled by which
@@ -90,10 +105,15 @@ _SCOPED_FORMS = {
 
 
 def _unscoped_aliases(source: str, where: str) -> list[str]:
-    """Return one complaint per deprecated unscoped enum alias used in ``source``."""
+    """Return one complaint per deprecated unscoped enum alias used in ``source``, in source order.
+
+    ``ast.walk`` yields breadth-first, so the complaints are sorted back into ``(line, column)``
+    order: the failure message is the whole point of this guard, and a 97-offence run that jumps
+    about the file is far harder to work through than one that reads top to bottom.
+    """
     tree = ast.parse(source, filename=where)
     bases = {id(node.value) for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
-    found: list[str] = []
+    found: list[tuple[int, int, str]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Attribute) or not isinstance(node.value, ast.Name):
             continue
@@ -104,8 +124,9 @@ def _unscoped_aliases(source: str, where: str) -> list[str]:
             # ``Qgis.MessageLevel.Warning``.
             continue
         scoped = _SCOPED_FORMS.get((node.value.id, node.attr), "Qgis.<Enum>." + node.attr)
-        found.append(f"{where}:{node.lineno}: {node.value.id}.{node.attr} -> {scoped}")
-    return found
+        complaint = f"{where}:{node.lineno}: {node.value.id}.{node.attr} -> {scoped}"
+        found.append((node.lineno, node.col_offset, complaint))
+    return [complaint for _, _, complaint in sorted(found)]
 
 
 def _package_sources() -> list[Path]:
@@ -192,6 +213,80 @@ def test_the_guard_leaves_scoped_and_unrelated_attributes_alone(snippet):
     )
 
 
-def test_the_nested_type_level_spelling_is_a_known_blind_spot():
-    """``QgsProcessing.SourceType.TypeRaster`` is deprecated but reads as scoped, so it slips."""
-    assert _unscoped_aliases("value = QgsProcessing.SourceType.TypeRaster\n", "probe.py") == []
+def test_complaints_are_reported_in_source_order():
+    """``ast.walk`` is breadth-first, so pin that a deeply nested offence still sorts by line."""
+    source = "def f():\n    if True:\n        x = Qgis.Warning\ny = Qgis.Critical\n"
+    assert _unscoped_aliases(source, "probe.py") == [
+        "probe.py:3: Qgis.Warning -> Qgis.MessageLevel.Warning",
+        "probe.py:4: Qgis.Critical -> Qgis.MessageLevel.Critical",
+    ], "a nested offence must not be reported after a later top-level one"
+
+
+@pytest.mark.parametrize(
+    "snippet",
+    [
+        # Every owner.member pair here is a real alias in QGIS's PyQt6 ``auto_additions/qgis.py``:
+        # ``QgsProcessing.SourceType``, ``QgsProcessingParameterNumber.Type`` and
+        # ``QgsMapLayer.LayerType`` each alias a ``Qgis`` enum type, so the read is deprecated.
+        "QgsProcessing.SourceType.TypeRaster",
+        "QgsProcessingParameterNumber.Type.Integer",
+        "QgsMapLayer.LayerType.Vector",
+    ],
+)
+def test_the_nested_type_level_spelling_is_a_known_blind_spot(snippet):
+    """Reaching a member through the aliased enum *type* reads as scoped, so it slips through."""
+    assert _unscoped_aliases(f"value = {snippet}\n", "probe.py") == [], (
+        f"{snippet} is a recorded blind spot; if it now reports, delete this pin"
+    )
+
+
+@pytest.mark.parametrize(
+    "snippet",
+    [
+        # ``QgsCoordinateReferenceSystem.WKT_PREFERRED = Qgis.CrsWktVariant.Preferred`` and its
+        # ``WKT1_GDAL``/``WKT2_2019`` siblings are real aliases, and ``base.py`` already calls
+        # ``crs.toWkt()`` one argument away from using one.
+        "crs.toWkt(QgsCoordinateReferenceSystem.WKT_PREFERRED)",
+        "QgsCoordinateReferenceSystem.WKT1_GDAL",
+    ],
+)
+def test_an_underscored_alias_is_a_known_blind_spot(snippet):
+    """``_MEMBER`` excludes ``SCREAMING_SNAKE``, so underscored aliases slip with the constants."""
+    assert _unscoped_aliases(f"value = {snippet}\n", "probe.py") == [], (
+        f"{snippet} is a recorded blind spot; if it now reports, delete this pin"
+    )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from qgis.core import QgsProcessingParameterNumber as P\nvalue = P.Integer\n",
+        "owner = QgsProcessingParameterNumber\nvalue = owner.Integer\n",
+        "value = getattr(QgsProcessingParameterNumber, 'Integer')\n",
+        "import qgis.core\nvalue = qgis.core.Qgis.Warning\n",
+    ],
+)
+def test_an_alias_reached_indirectly_is_a_known_blind_spot(source):
+    """The owner must be a literal ``Qgs``/``Qgis`` name, so indirection hides the alias."""
+    assert _unscoped_aliases(source, "probe.py") == [], (
+        "indirect alias reads are a recorded blind spot; if this now reports, delete this pin"
+    )
+
+
+@pytest.mark.parametrize(
+    "snippet",
+    [
+        # None of these is in QGIS's alias table: they are nested classes, and the spelling shown
+        # is the correct, current one. Flagging them is the price of needing no vendored table.
+        "QgsVectorLayer.LayerOptions()",
+        "QgsRasterLayer.LayerOptions()",
+        "QgsProcessingContext.LayerDetails",
+        "QgsTask.SubTaskDependency",
+    ],
+)
+def test_a_capwords_nested_class_is_a_known_over_report(snippet):
+    """A CapWords nested class matches the rule, so the guard over-reports on this one shape."""
+    assert len(_unscoped_aliases(f"value = {snippet}\n", "probe.py")) == 1, (
+        f"{snippet} is a recorded over-report, not a real finding; if it is now silent, "
+        "delete this pin"
+    )
