@@ -43,6 +43,13 @@ owner, e.g. ``QgsVectorLayer.LayerOptions()``, is not an enum alias at all but m
 vendored copy of QGIS's alias table, which is what the structural rule exists to avoid; issue #58's
 ``pyqgis4-checker`` is the gate that carries that table.
 
+One narrowing looks free and is not: skipping an attribute that is *called*, on the reasoning that
+an enum member is never invoked. It would silence ``QgsVectorLayer.LayerOptions()`` — but QGIS's
+flag aliases are callable, e.g. ``Qgis.LoadStyleFlags = lambda flags=0: Qgis.LoadStyleFlag(flags)``
+and ``QgsProcessingAlgorithm.Flags = Qgis.ProcessingAlgorithmFlags``, so it would also blind the
+guard to ``QgsProcessingAlgorithm.Flags(...)`` — precisely the shape a ``flags()`` override uses.
+Trading a recorded over-report for a silent miss is the wrong direction; do not make that change.
+
 This module parses source with ``ast`` and imports no PyQGIS, the same shape ``test_packaging.py``
 takes of reading the source tree instead of importing it, so the check cannot be fooled by which
 bindings happen to be installed. It is still not runnable without QGIS: ``conftest``'s session-wide
