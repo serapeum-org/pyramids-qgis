@@ -115,10 +115,6 @@ class PyramidsPlugin:
         """
         from qgis.core import Qgis, QgsMessageLog
 
-        # MessageLevel is a plain unscoped C++ enum, so unlike the Processing enums it carries no
-        # SIP_MONKEYPATCH_SCOPEENUM_UNNEST and the generated PyQt6 alias table does not cover it.
-        # The scoped form is used anyway because it resolves on BOTH bindings: the qt5 CI leg
-        # (conda qgis >=3.40,<4, i.e. PyQt 5.15) executes this line, with plugin.py at 100%.
         QgsMessageLog.logMessage(message, "Pyramids", level=Qgis.MessageLevel.Warning)
 
     def _init_gui(self) -> None:
