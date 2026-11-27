@@ -10,8 +10,10 @@ Nothing else in the toolchain covers this. Ruff's ``F821`` catches a missing ``Q
 selected rule knows an unscoped alias from a scoped one, and the runtime suite cannot tell them
 apart on PyQt5. So the invariant is checked here, against the source text.
 
-This module parses source with ``ast`` and never imports PyQGIS, keeping it runnable wherever the
-sources are readable - the same reason ``test_packaging.py`` stays a layout check.
+This module parses source with ``ast`` and never imports PyQGIS, the same shape
+``test_packaging.py`` takes, so the check itself is independent of which bindings are installed. It
+is still not runnable without QGIS: ``conftest``'s session-wide ``qgis_app`` fixture is autouse and
+builds a real ``QgsApplication``, so a bare interpreter errors all 18 tests at ``conftest.py:56``.
 """
 
 from __future__ import annotations
