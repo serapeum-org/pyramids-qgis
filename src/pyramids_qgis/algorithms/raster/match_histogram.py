@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -45,7 +46,7 @@ class RasterMatchHistogram(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Input band index (0-based)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
                 defaultValue=0,
@@ -55,7 +56,7 @@ class RasterMatchHistogram(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.REFERENCE_BAND,
                 "Reference band index (optional; default: same as input band)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )
@@ -64,7 +65,7 @@ class RasterMatchHistogram(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BINS,
                 "Quantile levels sampled (optional; default: 256)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )

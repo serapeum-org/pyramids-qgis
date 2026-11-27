@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
@@ -59,7 +60,7 @@ class VectorOverlaySjoinNearest(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.MAX_DISTANCE,
                 "Maximum join distance (optional; source CRS units)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0,
             )

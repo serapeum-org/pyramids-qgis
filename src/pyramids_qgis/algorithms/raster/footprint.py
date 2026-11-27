@@ -7,6 +7,7 @@ vector. Output is written as GeoJSON regardless of the chosen file extension.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterLayer,
@@ -47,7 +48,7 @@ class RasterFootprint(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band index (0-based; default 0)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )
@@ -56,7 +57,7 @@ class RasterFootprint(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.MAX_SAMPLES,
                 "Max samples (optional; approximate footprint)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )

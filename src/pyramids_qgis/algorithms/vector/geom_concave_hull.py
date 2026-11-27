@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterNumber,
@@ -49,7 +50,7 @@ class VectorGeomConcaveHull(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.RATIO,
                 "Hull tightness ratio [0, 1]",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=0.0,
                 minValue=0.0,
                 maxValue=1.0,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
@@ -71,7 +72,7 @@ class VectorOverlayFilter(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.DISTANCE,
                 "Distance (optional; required for 'dwithin', source CRS units)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0,
             )

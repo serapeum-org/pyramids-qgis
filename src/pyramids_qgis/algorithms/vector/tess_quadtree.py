@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterString,
@@ -65,7 +66,7 @@ class VectorTessQuadtree(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NMAX,
                 "Max points in a cell before it splits (optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )
@@ -74,7 +75,7 @@ class VectorTessQuadtree(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NMIN,
                 "Drop cells with fewer than this many points (optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )

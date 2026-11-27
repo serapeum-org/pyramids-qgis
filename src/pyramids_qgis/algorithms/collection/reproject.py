@@ -7,6 +7,7 @@ holding one file per timestep.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterCrs,
@@ -54,7 +55,7 @@ class CollectionReproject(PyramidsAlgorithm):
             QgsProcessingParameterFile(
                 self.INPUT,
                 "Input raster collection (directory)",
-                behavior=QgsProcessingParameterFile.Folder,
+                behavior=Qgis.ProcessingFileParameterBehavior.Folder,
             )
         )
         self.addParameter(QgsProcessingParameterCrs(self.CRS, "Target CRS"))

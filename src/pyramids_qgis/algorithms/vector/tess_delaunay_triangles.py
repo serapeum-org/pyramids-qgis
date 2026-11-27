@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterNumber,
@@ -50,7 +51,7 @@ class VectorTessDelaunayTriangles(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.TOLERANCE,
                 "Snap tolerance (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )

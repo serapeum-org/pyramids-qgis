@@ -8,6 +8,7 @@ single raster.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsProcessingException,
     QgsProcessingParameterExtent,
@@ -79,7 +80,7 @@ class StacDownload(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.MAX_ITEMS,
                 "Maximum item count (optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )

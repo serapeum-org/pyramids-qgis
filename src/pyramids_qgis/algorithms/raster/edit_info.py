@@ -8,6 +8,7 @@ is written to the output and the metadata is edited on that copy, so the input f
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterCrs,
     QgsProcessingParameterNumber,
@@ -56,7 +57,7 @@ class EditRasterInfo(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NODATA,
                 "NoData value (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

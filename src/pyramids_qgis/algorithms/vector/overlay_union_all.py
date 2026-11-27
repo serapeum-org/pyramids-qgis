@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
@@ -57,7 +58,7 @@ class VectorOverlayUnionAll(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.GRID_SIZE,
                 "Snapping grid size (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0,
             )

@@ -7,6 +7,7 @@ is a *directory* holding one file per timestep.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterFile,
@@ -53,7 +54,7 @@ class CollectionAlign(PyramidsAlgorithm):
             QgsProcessingParameterFile(
                 self.INPUT,
                 "Input raster collection (directory)",
-                behavior=QgsProcessingParameterFile.Folder,
+                behavior=Qgis.ProcessingFileParameterBehavior.Folder,
             )
         )
         self.addParameter(

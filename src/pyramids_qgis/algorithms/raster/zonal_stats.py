@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
@@ -63,7 +64,7 @@ class RasterZonalStats(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band index (0-based)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
                 defaultValue=0,

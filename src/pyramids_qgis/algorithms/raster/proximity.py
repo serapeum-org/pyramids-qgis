@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
@@ -52,7 +53,7 @@ class RasterProximity(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band index (0-based)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
                 defaultValue=0,
@@ -74,7 +75,7 @@ class RasterProximity(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.MAX_DISTANCE,
                 "Maximum search distance (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )
@@ -83,7 +84,7 @@ class RasterProximity(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NODATA,
                 "No-data value (also fills beyond max distance; optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -40,12 +41,12 @@ class RasterCluster(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterLayer(self.INPUT, "Input raster"))
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.LOWER, "Lower bound", type=QgsProcessingParameterNumber.Double
+                self.LOWER, "Lower bound", type=Qgis.ProcessingNumberParameterType.Double
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.UPPER, "Upper bound", type=QgsProcessingParameterNumber.Double
+                self.UPPER, "Upper bound", type=Qgis.ProcessingNumberParameterType.Double
             )
         )
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Label raster"))

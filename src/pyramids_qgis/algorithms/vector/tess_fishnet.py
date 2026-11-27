@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterCrs,
     QgsProcessingParameterExtent,
@@ -48,7 +49,7 @@ class VectorTessFishnet(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.CELL_SIZE,
                 "Cell size (CRS units)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=1.0,
                 minValue=0.0,
             )

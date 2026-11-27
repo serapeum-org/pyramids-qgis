@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterNumber,
@@ -50,7 +51,7 @@ class VectorGeomSimplify(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.TOLERANCE,
                 "Simplify tolerance",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )

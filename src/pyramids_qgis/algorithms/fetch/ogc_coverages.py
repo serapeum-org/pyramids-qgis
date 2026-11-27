@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsProcessingException,
     QgsProcessingParameterCrs,
@@ -59,7 +60,7 @@ class FetchOgcCoverages(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
                 "Approximate pixel size in the coverage's native CRS units (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0,
             )

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterExtent,
     QgsProcessingParameterNumber,
@@ -64,7 +65,7 @@ class VectorTessInterpolateToRaster(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.CELL_SIZE,
                 "Output pixel size (CRS units, optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )
@@ -76,7 +77,7 @@ class VectorTessInterpolateToRaster(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.POWER,
                 "IDW distance exponent (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )
@@ -84,7 +85,7 @@ class VectorTessInterpolateToRaster(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.N_NEIGHBORS,
                 "Nearest-neighbour count (optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )
@@ -93,7 +94,7 @@ class VectorTessInterpolateToRaster(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NODATA,
                 "NoData value for un-interpolable cells (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

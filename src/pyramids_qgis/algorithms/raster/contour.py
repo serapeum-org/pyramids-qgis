@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterNumber,
@@ -49,7 +50,7 @@ class RasterContour(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.INTERVAL,
                 "Interval between levels (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )
@@ -65,7 +66,7 @@ class RasterContour(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BASE,
                 "Base level the interval is anchored to (optional; default: 0)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )
@@ -73,7 +74,7 @@ class RasterContour(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band index (0-based)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
                 defaultValue=0,

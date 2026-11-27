@@ -7,6 +7,7 @@ chosen ``--method``. The output is one raster.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingParameterEnum,
     QgsProcessingParameterExtent,
     QgsProcessingParameterFile,
@@ -55,7 +56,7 @@ class CollectionMerge(PyramidsAlgorithm):
             QgsProcessingParameterFile(
                 self.INPUT,
                 "Input raster collection (directory)",
-                behavior=QgsProcessingParameterFile.Folder,
+                behavior=Qgis.ProcessingFileParameterBehavior.Folder,
             )
         )
         self.addParameter(
@@ -67,7 +68,7 @@ class CollectionMerge(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NODATA,
                 "No-data value for the mosaic (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

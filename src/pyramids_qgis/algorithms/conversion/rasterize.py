@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterField,
     QgsProcessingParameterNumber,
@@ -47,7 +48,7 @@ class Rasterize(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.CELL_SIZE,
                 "Cell size (output units)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )

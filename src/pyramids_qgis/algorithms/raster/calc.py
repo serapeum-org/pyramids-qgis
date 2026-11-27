@@ -9,7 +9,7 @@ arithmetic over the bands, comparisons, and a small set of ``np.<func>`` calls.
 from __future__ import annotations
 
 from qgis.core import (
-    QgsProcessing,
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterRasterDestination,
@@ -48,7 +48,9 @@ class RasterCalc(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(
             QgsProcessingParameterMultipleLayers(
-                self.INPUT, "Input rasters (A, B, C ...)", layerType=QgsProcessing.TypeRaster
+                self.INPUT,
+                "Input rasters (A, B, C ...)",
+                layerType=Qgis.ProcessingSourceType.Raster,
             )
         )
         self.addParameter(

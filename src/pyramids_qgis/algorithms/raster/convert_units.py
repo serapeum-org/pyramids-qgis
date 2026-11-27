@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -46,7 +47,7 @@ class RasterConvertUnits(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band to convert (optional; default: every band)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )
