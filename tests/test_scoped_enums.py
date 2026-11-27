@@ -32,8 +32,8 @@ This module parses source with ``ast`` and imports no PyQGIS, the same shape ``t
 takes of reading the source tree instead of importing it, so the check cannot be fooled by which
 bindings happen to be installed. It is still not runnable without QGIS: ``conftest``'s session-wide
 ``qgis_app`` fixture is autouse and builds a real ``QgsApplication``, so a bare interpreter errors
-every test in this file at ``conftest.py:56``. That also means this guard runs only in ``tests.yml``,
-which supplies conda QGIS, and never in ``lint.yml``.
+every test in this file at ``conftest.py:56``. That also means this guard runs only in
+``tests.yml``, which supplies conda QGIS, and never in ``lint.yml``.
 
 Scope against issue #58, which wires upstream's ``pyqgis4-checker`` into ``lint.yml``: that job is a
 strict superset, reporting the checker's other rules too (``PyQt5`` imports, ``exec_``, ``QRegExp``,
