@@ -10,10 +10,12 @@ Nothing else in the toolchain covers this. Ruff's ``F821`` catches a missing ``Q
 selected rule knows an unscoped alias from a scoped one, and the runtime suite cannot tell them
 apart on PyQt5. So the invariant is checked here, against the source text.
 
-This module parses source with ``ast`` and never imports PyQGIS, the same shape
-``test_packaging.py`` takes, so the check itself is independent of which bindings are installed. It
-is still not runnable without QGIS: ``conftest``'s session-wide ``qgis_app`` fixture is autouse and
-builds a real ``QgsApplication``, so a bare interpreter errors all 18 tests at ``conftest.py:56``.
+This module parses source with ``ast`` and never imports PyQGIS, so the check itself is independent
+of which bindings are installed. Inspecting the source tree instead of importing it is the shape
+``test_packaging.py`` already takes, though that module reads text with ``configparser``/``re``
+rather than an AST. It is still not runnable without QGIS: ``conftest``'s session-wide ``qgis_app``
+fixture is autouse and builds a real ``QgsApplication``, so a bare interpreter errors all 18 tests
+at ``conftest.py:56``.
 """
 
 from __future__ import annotations
@@ -75,7 +77,12 @@ def test_the_scan_covers_the_whole_plugin_package():
 
 
 def test_no_module_reads_a_deprecated_unscoped_qgis_enum_alias():
-    """Every enum value in the package is reached through a scoped ``Qgis.<Enum>.<Member>``."""
+    """No module reads one of the deprecated alias families ``_scoped_replacement`` knows.
+
+    That is narrower than "every enum is scoped": the package also reads Qt enums
+    (``Qt.CursorShape.WaitCursor``, ``QMessageBox.StandardButton.Yes``), which are scoped under
+    their own classes rather than under ``Qgis`` and are not inspected here.
+    """
     offences = [
         complaint
         for path in _package_sources()
