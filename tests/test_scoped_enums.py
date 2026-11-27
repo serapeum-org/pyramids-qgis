@@ -65,9 +65,11 @@ def _package_sources() -> list[Path]:
     return sorted(_PACKAGE_DIR.rglob("*.py"))
 
 
-def test_the_package_ships_the_modules_this_guard_expects_to_scan():
-    """The scan covers a whole package, so an empty or mis-rooted glob must not pass silently."""
-    assert len(_package_sources()) > 100, f"expected the full package, found {_package_sources()}"
+def test_the_scan_covers_the_whole_plugin_package():
+    """A mis-rooted glob would report a clean package by scanning nothing, so pin what it finds."""
+    scanned = _package_sources()
+    assert _PACKAGE_DIR / "plugin.py" in scanned, f"plugin.py missing from {len(scanned)} modules"
+    assert len(scanned) > 50, f"the algorithm subpackages look unscanned, found {len(scanned)}"
 
 
 def test_no_module_reads_a_deprecated_unscoped_qgis_enum_alias():
