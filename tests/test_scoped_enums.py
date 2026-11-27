@@ -32,7 +32,14 @@ This module parses source with ``ast`` and imports no PyQGIS, the same shape ``t
 takes of reading the source tree instead of importing it, so the check cannot be fooled by which
 bindings happen to be installed. It is still not runnable without QGIS: ``conftest``'s session-wide
 ``qgis_app`` fixture is autouse and builds a real ``QgsApplication``, so a bare interpreter errors
-every test in this file at ``conftest.py:56``.
+every test in this file at ``conftest.py:56``. That also means this guard runs only in ``tests.yml``,
+which supplies conda QGIS, and never in ``lint.yml``.
+
+Scope against issue #58, which wires upstream's ``pyqgis4-checker`` into ``lint.yml``: that job is a
+strict superset, reporting the checker's other rules too (``PyQt5`` imports, ``exec_``, ``QRegExp``,
+``QDesktopWidget``, bare ``QVariant()``). It stays the broader gate. This file is deliberately the
+narrow one: it needs no 3 GB container, and it covers the single rule all 97 renames in this change
+depend on.
 """
 
 from __future__ import annotations
