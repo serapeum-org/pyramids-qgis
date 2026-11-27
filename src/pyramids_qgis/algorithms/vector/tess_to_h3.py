@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterString,
@@ -47,7 +48,7 @@ class VectorTessToH3(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
                 "H3 resolution (0 coarsest – 15 finest)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 defaultValue=8,
                 minValue=0,
                 maxValue=15,

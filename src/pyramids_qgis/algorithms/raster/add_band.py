@@ -7,6 +7,7 @@ stacked result to a new file.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -52,7 +53,7 @@ class RasterAddBand(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.SOURCE_BAND,
                 "Source band index (0-based; default 0)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )

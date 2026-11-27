@@ -7,6 +7,7 @@ optionally overriding the dtype, band count and no-data value.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -54,7 +55,7 @@ class RasterEmptyLike(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BANDS,
                 "Bands (optional; default: the template's)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )
@@ -63,7 +64,7 @@ class RasterEmptyLike(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NODATA,
                 "No-data value (optional; default: inherit)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

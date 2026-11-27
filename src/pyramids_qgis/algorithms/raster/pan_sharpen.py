@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -79,7 +80,7 @@ class RasterPanSharpen(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NODATA,
                 "No-data value set on the output (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

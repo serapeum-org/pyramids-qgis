@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterString,
@@ -46,17 +47,26 @@ class VectorGeomTranslate(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterVectorLayer(self.INPUT, "Input vector"))
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.XOFF, "X offset", type=QgsProcessingParameterNumber.Double, defaultValue=0.0
+                self.XOFF,
+                "X offset",
+                type=Qgis.ProcessingNumberParameterType.Double,
+                defaultValue=0.0,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.YOFF, "Y offset", type=QgsProcessingParameterNumber.Double, defaultValue=0.0
+                self.YOFF,
+                "Y offset",
+                type=Qgis.ProcessingNumberParameterType.Double,
+                defaultValue=0.0,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.ZOFF, "Z offset", type=QgsProcessingParameterNumber.Double, defaultValue=0.0
+                self.ZOFF,
+                "Z offset",
+                type=Qgis.ProcessingNumberParameterType.Double,
+                defaultValue=0.0,
             )
         )
         self.addParameter(

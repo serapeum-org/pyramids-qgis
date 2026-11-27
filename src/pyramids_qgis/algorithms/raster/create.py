@@ -8,6 +8,7 @@ top-left corner plus a square cell size (a north-up grid); the full six-paramete
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterPoint,
@@ -54,7 +55,7 @@ class RasterCreate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.ROWS,
                 "Rows",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 defaultValue=1,
                 minValue=1,
             )
@@ -63,7 +64,7 @@ class RasterCreate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.COLUMNS,
                 "Columns",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 defaultValue=1,
                 minValue=1,
             )
@@ -77,7 +78,7 @@ class RasterCreate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BANDS,
                 "Bands",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 defaultValue=1,
                 minValue=1,
             )
@@ -86,7 +87,7 @@ class RasterCreate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.CELL_SIZE,
                 "Cell size (square pixel, optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )
@@ -98,7 +99,7 @@ class RasterCreate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.EPSG,
                 "EPSG code of the CRS (optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )
@@ -107,7 +108,7 @@ class RasterCreate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.NODATA,
                 "No-data value (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

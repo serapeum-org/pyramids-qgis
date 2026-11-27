@@ -7,6 +7,7 @@ The ramp is defined either by two hex endpoint colours or by a named matplotlib 
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -52,7 +53,7 @@ class RasterSetColorRamp(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band to colour (1-based; default 1)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )
@@ -61,7 +62,7 @@ class RasterSetColorRamp(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.START_VALUE,
                 "Ramp start value (>= 0)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -70,7 +71,7 @@ class RasterSetColorRamp(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.END_VALUE,
                 "Ramp end value (must exceed the start value)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=255.0,
             )
         )

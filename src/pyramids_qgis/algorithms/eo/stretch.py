@@ -7,6 +7,7 @@ pyramids-eo has no CLI, so this calls the library directly: read the raster into
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
@@ -62,7 +63,7 @@ class EoStretch(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.GAMMA,
                 "Gamma (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )

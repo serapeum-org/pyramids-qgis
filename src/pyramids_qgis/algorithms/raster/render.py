@@ -7,6 +7,7 @@ file destination rather than a raster layer.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
@@ -49,7 +50,7 @@ class RasterRender(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band to render (0-based; optional; default: auto)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )
@@ -61,7 +62,7 @@ class RasterRender(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.DPI,
                 "Output DPI (optional; default 150)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )

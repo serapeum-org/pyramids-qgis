@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -36,7 +37,7 @@ class RasterFillna(PyramidsAlgorithm):
         self.addParameter(QgsProcessingParameterRasterLayer(self.INPUT, "Input raster"))
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.VALUE, "Fill value", type=QgsProcessingParameterNumber.Double
+                self.VALUE, "Fill value", type=Qgis.ProcessingNumberParameterType.Double
             )
         )
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Filled raster"))

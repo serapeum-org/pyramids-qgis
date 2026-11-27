@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
-    QgsProcessing,
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterRasterDestination,
@@ -34,7 +34,9 @@ class MergeRasters(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(
             QgsProcessingParameterMultipleLayers(
-                self.INPUT, "Input rasters (two or more)", layerType=QgsProcessing.TypeRaster
+                self.INPUT,
+                "Input rasters (two or more)",
+                layerType=Qgis.ProcessingSourceType.Raster,
             )
         )
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, "Merged raster"))

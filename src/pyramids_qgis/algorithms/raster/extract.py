@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
@@ -45,7 +46,7 @@ class RasterExtract(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band index (0-based; optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )
@@ -54,7 +55,7 @@ class RasterExtract(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.EXCLUDE_VALUE,
                 "Value to drop from the extracted values (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

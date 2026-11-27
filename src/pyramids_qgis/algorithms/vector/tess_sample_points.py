@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterString,
@@ -49,7 +50,7 @@ class VectorTessSamplePoints(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.SIZE,
                 "Points per geometry",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 defaultValue=100,
                 minValue=1,
             )
@@ -61,7 +62,7 @@ class VectorTessSamplePoints(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.SEED,
                 "Random seed (optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
             )
         )

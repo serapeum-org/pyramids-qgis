@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -56,7 +57,7 @@ class CreateCog(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BLOCKSIZE,
                 "Internal tile size (optional)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=16,
             )

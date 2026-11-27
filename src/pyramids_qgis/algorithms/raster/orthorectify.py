@@ -7,6 +7,7 @@ Removes sensor/terrain distortion from an RPC-tagged raster, optionally draping 
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterCrs,
     QgsProcessingParameterEnum,
@@ -57,7 +58,7 @@ class RasterOrthorectify(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.RPC_HEIGHT,
                 "Constant RPC height (map units, used when no DEM)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

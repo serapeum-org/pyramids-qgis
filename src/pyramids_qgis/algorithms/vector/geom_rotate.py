@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
@@ -56,7 +57,7 @@ class VectorGeomRotate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANGLE,
                 "Rotation angle",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=0.0,
             )
         )

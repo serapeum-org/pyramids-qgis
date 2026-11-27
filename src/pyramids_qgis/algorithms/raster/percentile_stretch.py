@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
@@ -43,7 +44,7 @@ class RasterPercentileStretch(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.LOWER,
                 "Lower percentile (optional; default: 2)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
                 maxValue=100.0,
@@ -53,7 +54,7 @@ class RasterPercentileStretch(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.UPPER,
                 "Upper percentile (optional; default: 98)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
                 maxValue=100.0,
@@ -63,7 +64,7 @@ class RasterPercentileStretch(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band index (0-based)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
                 defaultValue=0,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
@@ -52,7 +53,7 @@ class RasterAnimate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.INTERVAL,
                 "Milliseconds between frames (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0.0,
             )
@@ -61,7 +62,7 @@ class RasterAnimate(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.DPI,
                 "Output DPI (optional; default: 100)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )

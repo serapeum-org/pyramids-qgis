@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsProcessingException,
     QgsProcessingParameterCrs,
@@ -61,7 +62,7 @@ class FetchWms(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.WIDTH,
                 "Output width in pixels (with height)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )
@@ -70,7 +71,7 @@ class FetchWms(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.HEIGHT,
                 "Output height in pixels (with width)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=1,
             )
@@ -79,7 +80,7 @@ class FetchWms(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
                 "Output cell size in CRS units (instead of width/height)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0,
             )

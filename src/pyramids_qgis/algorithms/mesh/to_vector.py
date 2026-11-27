@@ -9,6 +9,7 @@ how a mesh in a format QGIS cannot open natively becomes visible on the map.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterFile,
@@ -56,7 +57,9 @@ class MeshToVector(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(
             QgsProcessingParameterFile(
-                self.INPUT, "Input mesh file", behavior=QgsProcessingParameterFile.File
+                self.INPUT,
+                "Input mesh file",
+                behavior=Qgis.ProcessingFileParameterBehavior.File,
             )
         )
         self.addParameter(

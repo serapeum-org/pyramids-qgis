@@ -7,6 +7,7 @@ reduced with ``--op``. One raster is written per window, so the output is a *dir
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
@@ -74,7 +75,7 @@ class CollectionResample(PyramidsAlgorithm):
             QgsProcessingParameterFile(
                 self.INPUT,
                 "Input raster collection (directory)",
-                behavior=QgsProcessingParameterFile.Folder,
+                behavior=Qgis.ProcessingFileParameterBehavior.Folder,
             )
         )
         self.addParameter(
@@ -87,7 +88,7 @@ class CollectionResample(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.Q,
                 "Quantile/percentile level (for quantile/percentile op)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
             )
         )

@@ -115,7 +115,7 @@ class PyramidsPlugin:
         """
         from qgis.core import Qgis, QgsMessageLog
 
-        QgsMessageLog.logMessage(message, "Pyramids", level=Qgis.Warning)
+        QgsMessageLog.logMessage(message, "Pyramids", level=Qgis.MessageLevel.Warning)
 
     def _init_gui(self) -> None:
         """Enable the plugin: register the Processing provider, then offer to install pyramids.
@@ -145,7 +145,9 @@ class PyramidsPlugin:
         except Exception:  # plugin load must never fail because of the offer
             from qgis.core import Qgis, QgsMessageLog
 
-            QgsMessageLog.logMessage(traceback.format_exc(), "Pyramids", level=Qgis.Warning)
+            QgsMessageLog.logMessage(
+                traceback.format_exc(), "Pyramids", level=Qgis.MessageLevel.Warning
+            )
 
     def _run_install_offer(self) -> None:
         """Prompt and, on confirmation, pip-install pyramids-core into QGIS's interpreter.

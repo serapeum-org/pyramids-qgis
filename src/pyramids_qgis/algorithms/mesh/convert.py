@@ -9,6 +9,7 @@ every other format — 2DM, Selafin, DFSU, XMDF, PLY, ... — through a pyramids
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterFile,
     QgsProcessingParameterFileDestination,
@@ -52,7 +53,9 @@ class MeshConvert(PyramidsAlgorithm):
         """Declare the algorithm's parameters."""
         self.addParameter(
             QgsProcessingParameterFile(
-                self.INPUT, "Input mesh file", behavior=QgsProcessingParameterFile.File
+                self.INPUT,
+                "Input mesh file",
+                behavior=Qgis.ProcessingFileParameterBehavior.File,
             )
         )
         self.addParameter(

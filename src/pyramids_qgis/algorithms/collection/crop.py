@@ -8,6 +8,7 @@ bounding box; if both are given, the mask wins.
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterExtent,
@@ -55,7 +56,7 @@ class CollectionCrop(PyramidsAlgorithm):
             QgsProcessingParameterFile(
                 self.INPUT,
                 "Input raster collection (directory)",
-                behavior=QgsProcessingParameterFile.Folder,
+                behavior=Qgis.ProcessingFileParameterBehavior.Folder,
             )
         )
         self.addParameter(

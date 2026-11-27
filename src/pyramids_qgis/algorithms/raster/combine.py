@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
@@ -52,7 +53,7 @@ class RasterCombine(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.BAND,
                 "Band to combine (optional; default: every band)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 optional=True,
                 minValue=0,
             )

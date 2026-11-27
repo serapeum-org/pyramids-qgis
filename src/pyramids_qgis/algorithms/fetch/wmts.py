@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsProcessingException,
     QgsProcessingParameterCrs,
@@ -69,7 +70,7 @@ class FetchWmts(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
                 "Output pixel size in the layer's native CRS units (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 optional=True,
                 minValue=0,
             )

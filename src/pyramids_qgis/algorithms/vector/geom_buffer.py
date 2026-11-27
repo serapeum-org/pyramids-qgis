@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
@@ -57,7 +58,7 @@ class VectorGeomBuffer(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.DISTANCE,
                 "Buffer distance",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=0.0,
             )
         )
@@ -65,7 +66,7 @@ class VectorGeomBuffer(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
                 "Segments per quadrant",
-                type=QgsProcessingParameterNumber.Integer,
+                type=Qgis.ProcessingNumberParameterType.Integer,
                 defaultValue=16,
                 minValue=1,
             )

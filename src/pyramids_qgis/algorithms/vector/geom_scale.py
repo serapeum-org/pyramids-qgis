@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
+    Qgis,
     QgsProcessingException,
     QgsProcessingParameterNumber,
     QgsProcessingParameterString,
@@ -49,7 +50,7 @@ class VectorGeomScale(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.XFACT,
                 "X scale factor",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=1.0,
             )
         )
@@ -57,7 +58,7 @@ class VectorGeomScale(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.YFACT,
                 "Y scale factor",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=1.0,
             )
         )
@@ -65,7 +66,7 @@ class VectorGeomScale(PyramidsAlgorithm):
             QgsProcessingParameterNumber(
                 self.ZFACT,
                 "Z scale factor",
-                type=QgsProcessingParameterNumber.Double,
+                type=Qgis.ProcessingNumberParameterType.Double,
                 defaultValue=1.0,
             )
         )
