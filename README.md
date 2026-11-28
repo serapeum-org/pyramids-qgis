@@ -6,7 +6,7 @@ Toolbox under **Pyramids**, so they work in the toolbox, the graphical modeler, 
 Python `processing.run(...)` API, and the `qgis_process` command line — the same as any native QGIS
 algorithm.
 
-> Status: v0.2.1, installable from the official QGIS plugin repository. File-in / file-out algorithms that
+> Status: v0.3.0, installable from the official QGIS plugin repository. File-in / file-out algorithms that
 > mirror the `pyramids` command-line interface.
 
 ## How it works
