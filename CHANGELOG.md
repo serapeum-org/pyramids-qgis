@@ -5,6 +5,16 @@ Commit history on each release (`cz bump`, run by the `github-release` workflow)
 manual changes are overwritten on the next release. The first release (`0.1.0`) populates it from the commit
 history to date.
 
+## 0.3.0 (2026-11-28)
+
+### Feat
+
+- **metadata**: ship as a normal plugin, not experimental (#54)
+
+### Refactor
+
+- **qt6**: use scoped Qgis enums instead of deprecated aliases (#56)
+
 ## 0.2.1 (2026-11-26)
 
 ### Feat
