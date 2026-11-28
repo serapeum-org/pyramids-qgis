@@ -921,12 +921,11 @@
 under <strong>Pyramids</strong>, so they work in the toolbox, the graphical modeler, batch mode, the Python
 <code>processing.run(...)</code> API, and the <code>qgis_process</code> command line — the same as any native QGIS
 algorithm.</p>
-<div class="admonition warning">
-<p class="admonition-title">Status: experimental</p>
-<p>First release ships file-in / file-out raster, conversion, mesh, and Earth-observation
-algorithms. The raster and conversion algorithms mirror the <code>pyramids</code> command-line interface;
-the mesh and EO algorithms call their backing libraries directly (see <em>How it works</em> below). The
-plugin is marked <code>experimental=True</code> in its metadata.</p>
+<div class="admonition info">
+<p class="admonition-title">What ships</p>
+<p>File-in / file-out raster, conversion, mesh, and Earth-observation algorithms. The raster and
+conversion algorithms mirror the <code>pyramids</code> command-line interface; the mesh and EO algorithms
+call their backing libraries directly (see <em>How it works</em> below).</p>
 </div>
 <h2 id="how-it-works"><a class="toclink" href="#how-it-works">How it works</a><a class="headerlink" href="#how-it-works" title="Permanent link">#</a></h2>
 <p>The plugin is a <strong>thin adapter</strong> that carries no GIS logic of its own. There are two ways an
